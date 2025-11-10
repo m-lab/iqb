@@ -1,0 +1,39 @@
+# Continuous integration for all components
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-library:
+    name: Test IQB Library
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Install library
+        run: |
+          cd library
+          uv venv
+          uv pip install -e .
+
+      - name: Test library imports
+        run: |
+          cd library
+          uv run python -c "from iqb import IQB, IQB_CONFIG; print('✓ IQB and IQB_CONFIG imported')"
+
+      - name: Run library smoke test
+        run: |
+          cd library
+          uv run python -c "from iqb import IQB; iqb = IQB(); score = iqb.calculate_iqb_score(); print(f'✓ IQB score calculated: {score}')"

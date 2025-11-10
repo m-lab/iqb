@@ -1,4 +1,4 @@
-from iqb_score import IQB
+from iqb import IQB
 
 IQB1 = IQB(name='test1')
 

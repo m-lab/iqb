@@ -1,4 +1,4 @@
-from iqb_formula_config import IQB_CONFIG
+from .iqb_formula_config import IQB_CONFIG
 from pprint import pprint
 
 

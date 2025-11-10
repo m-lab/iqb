@@ -1,0 +1,62 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "IQB: Setup Development Environment",
+      "type": "shell",
+      "command": "uv",
+      "args": ["sync", "--dev"],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      },
+      "problemMatcher": [],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      }
+    },
+    {
+      "label": "IQB: Run Tests",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "pytest", "-v"],
+      "options": {
+        "cwd": "${workspaceFolder}/library"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IQB: Run Ruff Check",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "ruff", "check", "."],
+      "options": {
+        "cwd": "${workspaceFolder}/library"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "IQB: Run Pyright",
+      "type": "shell",
+      "command": "uv",
+      "args": ["run", "pyright"],
+      "options": {
+        "cwd": "${workspaceFolder}/library"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared"
+      },
+      "problemMatcher": []
+    }
+  ]
+}

@@ -87,6 +87,36 @@ cd prototype
 uv run streamlit run Home.py
 ```
 
+### Using VSCode
+
+This repository is configured for VSCode with Python development tools (Ruff, Pyright, pytest).
+
+**First-time setup:**
+
+1. Open this repository in VSCode
+2. You may see an error: **"Unexpected error while trying to find the Ruff binary"** - this is expected on first open
+3. Run the setup task:
+   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
+   - Type "Tasks: Run Task"
+   - Select **"IQB: Setup Development Environment"**
+   - This runs `uv sync --dev` to install all development dependencies
+
+4. After setup completes, reload VSCode:
+   - Press `Ctrl+Shift+P` → "Developer: Reload Window"
+   - The Ruff error should disappear
+
+**Available tasks** (access via `Ctrl+Shift+P` → "Tasks: Run Task"):
+
+- **IQB: Setup Development Environment** - Run `uv sync --dev` to install/update dependencies
+- **IQB: Run Tests** - Run the pytest test suite
+- **IQB: Run Ruff Check** - Check code style and quality
+- **IQB: Run Pyright** - Run type checking
+
+**Recommended extensions** (VSCode will prompt to install these):
+- Python (ms-python.python)
+- Pylance (ms-python.vscode-pylance)
+- Ruff (charliermarsh.ruff)
+
 See component-specific READMEs for more details:
 
 - [analysis/README.md](analysis/README.md) - Working with Jupyter notebooks

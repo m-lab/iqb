@@ -1,6 +1,6 @@
 from pprint import pprint
 
-from .iqb_formula_config import IQB_CONFIG
+from .config import IQB_CONFIG
 
 
 class IQB:

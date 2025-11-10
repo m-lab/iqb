@@ -101,20 +101,20 @@ class IQB:
         """
         TODO: TEMP function for testing purposes. To be updated/polished (and remove prints)
         """
-        uc_Scores = []
-        uc_Weights = []
+        uc_scores = []
+        uc_weights = []
 
         for uc in self.config["use cases"]:
             uc_w = self.config["use cases"][uc]["w"]
 
-            nr_Scores = []
-            nr_Weights = []
+            nr_scores = []
+            nr_weights = []
             for nr in self.config["use cases"][uc]["network requirements"]:
                 nr_w = self.config["use cases"][uc]["network requirements"][nr]["w"]
                 nr_th = self.config["use cases"][uc]["network requirements"][nr]["threshold min"]
 
                 # TODO: TEMP method for calculating binary requirement scores. To be updated with weighted average of scores per dataset
-                ds_S = []
+                ds_s = []
                 for ds in self.config["use cases"][uc]["network requirements"][nr]["datasets"]:
                     ds_w = self.config["use cases"][uc]["network requirements"][nr]["datasets"][ds][
                         "w"
@@ -123,31 +123,31 @@ class IQB:
                         brs = self.calculate_binary_requirement_score(
                             nr, measurement_data[ds][nr], nr_th
                         )  # binary requirement score (dataset, network requirement)
-                        ds_S.append(brs)
+                        ds_s.append(brs)
                         print(
                             f"Binary score: {uc},{nr},{ds},{nr_th},{measurement_data[ds][nr]}-->{brs}"
                         ) if print_details else None
-                ras = sum(ds_S) / len(
-                    ds_S
+                ras = sum(ds_s) / len(
+                    ds_s
                 )  # requirement agreement score (all datasets for this requirement)
                 print(f"\t Agreement score: {uc},{nr}-->{ras}") if print_details else None
                 #
 
-                nr_Scores.append(ras * nr_w)
-                nr_Weights.append(nr_w)
+                nr_scores.append(ras * nr_w)
+                nr_weights.append(nr_w)
 
-            ucs = sum(nr_Scores) / sum(
-                nr_Weights
+            ucs = sum(nr_scores) / sum(
+                nr_weights
             )  # use case score (all requirements for this use case)
             print(
-                f"\t\t Net requirement score: {nr_Scores},{nr_Weights}-->{ucs}\n"
+                f"\t\t Net requirement score: {nr_scores},{nr_weights}-->{ucs}\n"
             ) if print_details else None
-            uc_Scores.append(ucs * uc_w)
-            uc_Weights.append(uc_w)
+            uc_scores.append(ucs * uc_w)
+            uc_weights.append(uc_w)
 
-        iqb_score = sum(uc_Scores) / sum(uc_Weights)
+        iqb_score = sum(uc_scores) / sum(uc_weights)
         print(
-            f"\t\t\t IQB score: {uc_Scores},{uc_Weights}-->{iqb_score}"
+            f"\t\t\t IQB score: {uc_scores},{uc_weights}-->{iqb_score}"
         ) if print_details else None
 
         return iqb_score

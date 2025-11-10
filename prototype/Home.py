@@ -23,7 +23,7 @@ try:
     iqb = IQB()
     score = iqb.calculate_iqb_score()
 
-    st.success(f"✓ IQB Library loaded successfully")
+    st.success("✓ IQB Library loaded successfully")
     st.metric("Sample IQB Score", f"{score:.3f}")
 
     with st.expander("View IQB Configuration"):

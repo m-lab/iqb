@@ -1,5 +1,6 @@
-from .iqb_formula_config import IQB_CONFIG
 from pprint import pprint
+
+from .iqb_formula_config import IQB_CONFIG
 
 
 class IQB:
@@ -49,7 +50,7 @@ class IQB:
         print()
 
         print("### Weights & Thresholds")
-        print(f"\tUse case\t \tNetwork requirement \tWeight \tThreshold min")
+        print("\tUse case\t \tNetwork requirement \tWeight \tThreshold min")
         for uc in IQB_CONFIG["use cases"]:
             for nr in IQB_CONFIG["use cases"][uc]["network requirements"]:
                 nr_w = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["w"]

@@ -59,7 +59,8 @@ select = [
     "SIM", # flake8-simplify
 ]
 ignore = [
-    "E501",  # line too long (handled by formatter)
+    "E501",   # line too long (handled by formatter)
+    "SIM114", # combine if branches - prefer explicit branches for domain clarity
 ]
 
 [tool.ruff.lint.isort]

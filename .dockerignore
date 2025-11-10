@@ -1,0 +1,37 @@
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# CI/CD
+.github/
+
+# Documentation
+*.md
+!prototype/README.md
+
+# Data and analysis (not needed in container)
+data/
+analysis/
+
+# Test files (pytest pattern: *_test.py)
+*_test.py
+test_*.py

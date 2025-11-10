@@ -20,9 +20,7 @@ class IQB:
         if config is None:
             self.config = IQB_CONFIG
         else:
-            """
-            TODO: load config data from file (json, yaml, or other format) as a dict
-            """
+            # TODO: load config data from file (json, yaml, or other format) as a dict
             raise NotImplementedError(
                 "method for reading from configuration file other than the default not implemented"
             )
@@ -31,8 +29,8 @@ class IQB:
         """
         Prints IQB formula weights and thresholds
         TEMP function for testing purposes.
-        TODO: to be updated
         """
+        # TODO: to be updated
         print("### IQB formula weights and thresholds")
         pprint(IQB_CONFIG)
         print()
@@ -80,9 +78,7 @@ class IQB:
     def calculate_iqb_score(self, data=None, print_details=False):
         """Calculates IQB score based on given data."""
 
-        """
-        TODO: Implement else case and remove this default (if) option
-        """
+        # TODO: Implement else case and remove this default (if) option
         if data is None:
             # TODO: TEMP data sample. To be updated by reading a file or variable or other resource.
             measurement_data = {
@@ -98,9 +94,9 @@ class IQB:
                 "Method for calculating IQB score given a dataset is not implemented"
             )
 
-        """
-        TODO: TEMP function for testing purposes. To be updated/polished (and remove prints)
-        """
+        doprint = print if print_details else lambda *args, **kwargs: None
+
+        # TODO: TEMP function for testing purposes. To be updated/polished (and remove prints)
         uc_scores = []
         uc_weights = []
 
@@ -113,41 +109,36 @@ class IQB:
                 nr_w = self.config["use cases"][uc]["network requirements"][nr]["w"]
                 nr_th = self.config["use cases"][uc]["network requirements"][nr]["threshold min"]
 
-                # TODO: TEMP method for calculating binary requirement scores. To be updated with weighted average of scores per dataset
+                # TODO: TEMP method for calculating binary requirement scores. To be
+                # updated with weighted average of scores per dataset.
                 ds_s = []
                 for ds in self.config["use cases"][uc]["network requirements"][nr]["datasets"]:
                     ds_w = self.config["use cases"][uc]["network requirements"][nr]["datasets"][ds][
                         "w"
                     ]
                     if ds_w > 0:
+                        # binary requirement score (dataset, network requirement)
                         brs = self.calculate_binary_requirement_score(
                             nr, measurement_data[ds][nr], nr_th
-                        )  # binary requirement score (dataset, network requirement)
+                        )
                         ds_s.append(brs)
-                        print(
+                        doprint(
                             f"Binary score: {uc},{nr},{ds},{nr_th},{measurement_data[ds][nr]}-->{brs}"
-                        ) if print_details else None
-                ras = sum(ds_s) / len(
-                    ds_s
-                )  # requirement agreement score (all datasets for this requirement)
-                print(f"\t Agreement score: {uc},{nr}-->{ras}") if print_details else None
-                #
+                        )
+
+                # requirement agreement score (all datasets for this requirement)
+                ras = sum(ds_s) / len(ds_s)
+                doprint(f"\t Agreement score: {uc},{nr}-->{ras}")
 
                 nr_scores.append(ras * nr_w)
                 nr_weights.append(nr_w)
 
-            ucs = sum(nr_scores) / sum(
-                nr_weights
-            )  # use case score (all requirements for this use case)
-            print(
-                f"\t\t Net requirement score: {nr_scores},{nr_weights}-->{ucs}\n"
-            ) if print_details else None
+            # use case score (all requirements for this use case)
+            ucs = sum(nr_scores) / sum(nr_weights)
+            doprint(f"\t\t Net requirement score: {nr_scores},{nr_weights}-->{ucs}\n")
             uc_scores.append(ucs * uc_w)
             uc_weights.append(uc_w)
 
         iqb_score = sum(uc_scores) / sum(uc_weights)
-        print(
-            f"\t\t\t IQB score: {uc_scores},{uc_weights}-->{iqb_score}"
-        ) if print_details else None
-
+        doprint(f"\t\t\t IQB score: {uc_scores},{uc_weights}-->{iqb_score}")
         return iqb_score

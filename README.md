@@ -58,7 +58,7 @@ management tools such as `pip`, `poetry`, etc.
 On Ubuntu:
 
 ```bash
-snap install astral-uv
+sudo snap install astral-uv --classic
 ```
 
 On macOS:

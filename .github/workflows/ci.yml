@@ -26,10 +26,12 @@ jobs:
         run: uv sync
 
       - name: Test library imports
-        run: uv run python -c "from iqb import IQB, IQB_CONFIG; print('✓ IQB and IQB_CONFIG imported')"
+        run: |
+          uv run python -c "from iqb import IQB, IQB_CONFIG; print('✓ IQB and IQB_CONFIG imported')"
 
       - name: Run library smoke test
-        run: uv run python -c "from iqb import IQB; iqb = IQB(); score = iqb.calculate_iqb_score(); print(f'✓ IQB score calculated: {score}')"
+        run: |
+          uv run python -c "from iqb import IQB; iqb = IQB(); score = iqb.calculate_iqb_score(); print(f'✓ IQB score calculated: {score}')"
 
   test-prototype:
     name: Test Streamlit Prototype
@@ -81,3 +83,46 @@ jobs:
           cat /tmp/streamlit.log
           kill $STREAMLIT_PID 2>/dev/null || true
           exit 1
+
+  test-docker:
+    name: Test Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        run: docker build -f prototype/Dockerfile -t iqb-prototype:test .
+
+      - name: Run container
+        run: |
+          # Start container in background
+          docker run -d -p 8501:8501 --name iqb-test iqb-prototype:test
+
+          # Wait for Streamlit to start (max 30 seconds)
+          for i in {1..30}; do
+            if docker logs iqb-test 2>&1 | grep -q "You can now view your Streamlit app"; then
+              echo "✓ Streamlit started successfully in container"
+              break
+            fi
+            if [ $i -eq 30 ]; then
+              echo "✗ Streamlit failed to start in container"
+              docker logs iqb-test
+              exit 1
+            fi
+            sleep 1
+          done
+
+      - name: Check for errors in logs
+        run: |
+          if docker logs iqb-test 2>&1 | grep -iE "(error|exception|traceback)"; then
+            echo "✗ Errors found in container logs"
+            exit 1
+          fi
+          echo "✓ No errors in container logs"
+
+      - name: Stop container
+        if: always()
+        run: docker stop iqb-test && docker rm iqb-test

@@ -23,15 +23,11 @@ jobs:
         run: uv python install 3.13
 
       - name: Sync workspace dependencies
-        run: uv sync
+        run: uv sync --dev
 
-      - name: Test library imports
-        run: |
-          uv run python -c "from iqb import IQB, IQB_CONFIG; print('✓ IQB and IQB_CONFIG imported')"
-
-      - name: Run library smoke test
-        run: |
-          uv run python -c "from iqb import IQB; iqb = IQB(); score = iqb.calculate_iqb_score(); print(f'✓ IQB score calculated: {score}')"
+      - name: Run pytest
+        working-directory: library
+        run: uv run pytest
 
   test-prototype:
     name: Test Streamlit Prototype

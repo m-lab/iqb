@@ -79,6 +79,9 @@ cd iqb
 # Sync all dependencies (creates .venv automatically)
 uv sync
 
+# For development (includes test dependencies)
+uv sync --dev
+
 # Run the Streamlit prototype
 cd prototype
 uv run streamlit run Home.py

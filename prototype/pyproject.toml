@@ -1,0 +1,14 @@
+[project]
+name = "iqb-prototype"
+version = "0.1.0"
+description = "Streamlit prototype for Internet Quality Barometer"
+requires-python = ">=3.13"
+dependencies = [
+    "streamlit>=1.39.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "mlab-iqb",
+]
+
+[tool.uv.sources]
+mlab-iqb = { workspace = true }

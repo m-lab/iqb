@@ -22,18 +22,62 @@ jobs:
       - name: Set up Python
         run: uv python install 3.13
 
-      - name: Install library
-        run: |
-          cd library
-          uv venv
-          uv pip install -e .
+      - name: Sync workspace dependencies
+        run: uv sync
 
       - name: Test library imports
-        run: |
-          cd library
-          uv run python -c "from iqb import IQB, IQB_CONFIG; print('✓ IQB and IQB_CONFIG imported')"
+        run: uv run python -c "from iqb import IQB, IQB_CONFIG; print('✓ IQB and IQB_CONFIG imported')"
 
       - name: Run library smoke test
+        run: uv run python -c "from iqb import IQB; iqb = IQB(); score = iqb.calculate_iqb_score(); print(f'✓ IQB score calculated: {score}')"
+
+  test-prototype:
+    name: Test Streamlit Prototype
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Sync workspace dependencies
+        run: uv sync
+
+      - name: Test prototype imports
         run: |
-          cd library
-          uv run python -c "from iqb import IQB; iqb = IQB(); score = iqb.calculate_iqb_score(); print(f'✓ IQB score calculated: {score}')"
+          uv run python -c "import streamlit; print('✓ Streamlit imported')"
+          uv run python -c "from iqb import IQB; print('✓ Can import IQB library from prototype')"
+
+      - name: Validate Home.py syntax
+        run: |
+          cd prototype
+          uv run python -m py_compile Home.py
+          echo "✓ Home.py syntax valid"
+
+      - name: Test Streamlit app can load
+        run: |
+          cd prototype
+          # Start streamlit in background, wait for it to be ready, then kill it
+          timeout 10s uv run streamlit run Home.py --server.headless=true --server.port=8501 > /tmp/streamlit.log 2>&1 &
+          STREAMLIT_PID=$!
+
+          # Wait for streamlit to start (max 8 seconds)
+          for i in {1..8}; do
+            if grep -q "You can now view your Streamlit app" /tmp/streamlit.log 2>/dev/null; then
+              echo "✓ Streamlit app started successfully"
+              kill $STREAMLIT_PID 2>/dev/null || true
+              exit 0
+            fi
+            sleep 1
+          done
+
+          # If we get here, streamlit didn't start properly
+          echo "✗ Streamlit failed to start"
+          cat /tmp/streamlit.log
+          kill $STREAMLIT_PID 2>/dev/null || true
+          exit 1

@@ -27,30 +27,63 @@ https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf).
 
 ## Repository Architecture
 
-### **`data/`**
-
-Sample datasets used in the IQB app prototype and notebooks. 
-
 ### **`library/`**
 
 The IQB library containing methods for calculating the IQB score and data collection.
 
+See [library/README.md](library/README.md) for details.
+
 ### **`prototype/`**
 
-A simple web application implemented using Python's [streamlit](https://streamlit.io/)
-library for applying and parametrizing the IQB framework in different use cases.
+A Streamlit web application for applying and parametrizing the IQB framework
+in different use cases.
+
+See [prototype/README.md](prototype/README.md) for how to run it locally.
 
 ### **`analysis/`**
 
 Jupyter notebooks for exploratory data analysis, experimentation, and research.
 
-## Development Ennvironment
+### **`data/`**
+
+Sample datasets used in the IQB app prototype and notebooks.
+
+## Development Environment
 
 We use [uv](https://astral.sh/uv) as a replacement for several Python repository
 management tools such as `pip`, `poetry`, etc.
 
-On Ubuntu, you can install `uv` as follows:
+### Installing uv
+
+On Ubuntu:
 
 ```bash
 snap install astral-uv
 ```
+
+On macOS:
+
+```bash
+brew install uv
+```
+
+On other platforms, see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+
+### Quick Start
+
+```bash
+# Clone the repository
+git clone https://github.com/m-lab/iqb.git
+cd iqb
+
+# Sync all dependencies (creates .venv automatically)
+uv sync
+
+# Run the Streamlit prototype
+cd prototype
+uv run streamlit run Home.py
+```
+
+See component-specific READMEs for more details:
+- [library/README.md](library/README.md) - Working with the IQB library
+- [prototype/README.md](prototype/README.md) - Running the Streamlit app

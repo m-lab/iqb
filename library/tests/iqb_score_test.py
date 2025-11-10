@@ -1,6 +1,7 @@
 """Tests for the IQB score calculation module."""
 
 import pytest
+
 from iqb import IQB, IQB_CONFIG
 
 

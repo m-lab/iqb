@@ -14,7 +14,6 @@
 
   // Ruff linter
   "ruff.enable": true,
-  "ruff.lint.run": "onType",
   "ruff.organizeImports": true,
 
   // Type checking (Pylance)

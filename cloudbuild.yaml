@@ -1,0 +1,64 @@
+# Cloud Build configuration for IQB prototype deployment
+# Used for manual deployment: gcloud builds submit --config=cloudbuild.yaml
+#
+# Based on M-Lab token-exchange pattern, adapted for mlab-sandbox environment
+
+substitutions:
+  # Default values, can be overridden when submitting the build
+  _REGION: us-central1
+  _REPOSITORY: cloud-run-source-deploy  # Same as github.com/sermpezis/m-lab-servers-dashboard
+  _SERVICE_NAME: iqb-prototype
+  _MEMORY: 1Gi
+  _CPU: "2"
+
+steps:
+  # 1. Build the Docker image from prototype/Dockerfile
+  - name: "gcr.io/cloud-builders/docker"
+    id: Build
+    args:
+      - "build"
+      - "-f"
+      - "prototype/Dockerfile"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:$BUILD_ID"
+      - "-t"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:latest"
+      - "."
+
+  # 2. Push the container image to Artifact Registry
+  # Note: This explicit push ensures the image exists before Deploy step runs.
+  # The BUILD_ID tag gets pushed again via images: section (harmless, just updates metadata).
+  - name: "gcr.io/cloud-builders/docker"
+    id: Push
+    args:
+      - "push"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:$BUILD_ID"
+    waitFor: ["Build"]
+
+  # 3. Deploy to Cloud Run
+  - name: "gcr.io/google.com/cloudsdktool/cloud-sdk"
+    id: Deploy
+    entrypoint: gcloud
+    args:
+      - "run"
+      - "deploy"
+      - "${_SERVICE_NAME}"
+      - "--image"
+      - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:$BUILD_ID"
+      - "--platform"
+      - "managed"
+      - "--region"
+      - "${_REGION}"
+      - "--allow-unauthenticated"
+      - "--memory=${_MEMORY}"
+      - "--cpu=${_CPU}"
+      - "--project=${PROJECT_ID}"
+    waitFor: ["Push"]
+
+# Push both tagged and latest images to registry
+images:
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:$BUILD_ID"
+  - "${_REGION}-docker.pkg.dev/${PROJECT_ID}/${_REPOSITORY}/${_SERVICE_NAME}:latest"
+
+# Build timeout (20 minutes)
+timeout: 1200s

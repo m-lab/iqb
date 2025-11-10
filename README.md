@@ -73,7 +73,7 @@ On other platforms, see the [uv installation guide](https://docs.astral.sh/uv/ge
 
 ```bash
 # Clone the repository
-git clone https://github.com/m-lab/iqb.git
+git clone git@github.com:m-lab/iqb.git
 cd iqb
 
 # Sync all dependencies (creates .venv automatically)
@@ -85,5 +85,9 @@ uv run streamlit run Home.py
 ```
 
 See component-specific READMEs for more details:
+
+- [analysis/README.md](analysis/README.md) - Working with Jupyter notebooks
+
 - [library/README.md](library/README.md) - Working with the IQB library
+
 - [prototype/README.md](prototype/README.md) - Running the Streamlit app

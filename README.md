@@ -3,7 +3,10 @@
 This repository contains the source for code the Internet Quality Barometer (IQB)
 library, and related applications and notebooks.
 
-IQB is an open-source project initiated by [Measurement Lab (M-Lab)](https://www.measurementlab.net/).
+## About IQB
+
+IQB is an open-source project initiated by
+[Measurement Lab (M-Lab)](https://www.measurementlab.net/).
 
 IQB is motivated by the need to redefine how we measure and understand Internet
 performance to keep pace with evolving technological demands and user
@@ -44,9 +47,13 @@ See [prototype/README.md](prototype/README.md) for how to run it locally.
 
 Jupyter notebooks for exploratory data analysis, experimentation, and research.
 
+See [analysis/README.md](analysis/README.md) for more information.
+
 ### **`data/`**
 
 Sample datasets used in the IQB app prototype and notebooks.
+
+See [data/README.md](data/README.md) for details.
 
 ## Development Environment
 
@@ -77,9 +84,6 @@ git clone git@github.com:m-lab/iqb.git
 cd iqb
 
 # Sync all dependencies (creates .venv automatically)
-uv sync
-
-# For development (includes test dependencies)
 uv sync --dev
 
 # Run the Streamlit prototype
@@ -89,38 +93,66 @@ uv run streamlit run Home.py
 
 ### Using VSCode
 
-This repository is configured for VSCode with Python development tools (Ruff, Pyright, pytest).
+This repository is configured for VSCode with selected Python
+development tools (Ruff, Pyright, pytest).
 
-**First-time setup:**
+When you first open this repository with VSCode, it will prompt you
+to install the required extensions for Python development.
 
-1. Open this repository in VSCode
-2. You may see an error: **"Unexpected error while trying to find the Ruff binary"** - this is expected on first open
-3. Run the setup task:
-   - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
-   - Type "Tasks: Run Task"
-   - Select **"IQB: Setup Development Environment"**
-   - This runs `uv sync --dev` to install all development dependencies
+Make sure you also read the following section to avoid `uv`
+issues: there is no official `uv` extension for VSCode yet and
+it seems more prudent to avoid using unofficial ones.
 
-4. After setup completes, reload VSCode:
-   - Press `Ctrl+Shift+P` → "Developer: Reload Window"
-   - The Ruff error should disappear
+#### First-time uv setup
 
-**Available tasks** (access via `Ctrl+Shift+P` → "Tasks: Run Task"):
+Running `uv sync --dev` creates the required `.venv` directory
+that VSCode needs to find the proper python version and the proper
+development tools.
+
+If you open the repository using VSCode *before* running
+`uv sync --dev`, you see the following error:
+
+```
+Unexpected error while trying to find the Ruff binary
+```
+
+To fix this, either run `uv sync --dev` from the command line or
+use VSCode directly to run `uv` and reload:
+
+1. Run the setup task:
+
+    - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
+
+    - Type "Tasks: Run Task"
+
+    - Select **"IQB: Setup Development Environment"**
+
+    - This runs `uv sync --dev` to install all development dependencies
+
+2. After setup completes, reload VSCode:
+
+    - Press `Ctrl+Shift+P` → "Developer: Reload Window"
+
+    - The Ruff error should disappear
+
+#### Available Tasks
+
+Access them via `Ctrl+Shift+P` → "Tasks: Run Task":
 
 - **IQB: Setup Development Environment** - Run `uv sync --dev` to install/update dependencies
+
 - **IQB: Run Tests** - Run the pytest test suite
+
 - **IQB: Run Ruff Check** - Check code style and quality
+
 - **IQB: Run Pyright** - Run type checking
 
-**Recommended extensions** (VSCode will prompt to install these):
-- Python (ms-python.python)
-- Pylance (ms-python.vscode-pylance)
-- Ruff (charliermarsh.ruff)
+#### Extensions
 
-See component-specific READMEs for more details:
+VSCode will prompt to install these extensions:
 
-- [analysis/README.md](analysis/README.md) - Working with Jupyter notebooks
+- Python (`ms-python.python`)
 
-- [library/README.md](library/README.md) - Working with the IQB library
+- Pylance (`ms-python.vscode-pylance`)
 
-- [prototype/README.md](prototype/README.md) - Running the Streamlit app
+- Ruff (`charliermarsh.ruff`)

@@ -5,35 +5,26 @@ Streamlit-based dashboard for the Internet Quality Barometer (IQB) project.
 ## Prerequisites
 
 - Python 3.13 (see `.python-version` at repo root)
+
 - [uv](https://astral.sh/uv) installed (see root README.md)
 
 ## Running Locally
 
-From the **repository root**:
-
 ```bash
-# Sync dependencies (creates .venv if needed)
-uv sync
-
-# Run Streamlit app
+# Enter into the prototype directory if you're in the repository root
 cd prototype
+
+# Sync dependencies (creates .venv if needed)
+uv sync --dev
+
+# Run the Streamlit app
 uv run streamlit run Home.py
 ```
 
 The app will be available at: http://localhost:8501
 
-## Development Workflow
-
-```bash
-# Install/update dependencies after pulling changes
-uv sync
-
-# Run the app
-cd prototype
-uv run streamlit run Home.py
-
-# Make changes to Home.py - Streamlit auto-reloads on save
-```
+If you make changes to [Home.py](Home.py) or any other file in
+this directory, Streamlit will reload on save.
 
 ## Project Structure
 
@@ -113,9 +104,13 @@ This IAM policy persists across deployments, so it's only needed once.
 ## Dependencies
 
 The prototype depends on:
+
 - **streamlit** - Web framework
+
 - **pandas** - Data manipulation
+
 - **numpy** - Numerical operations
-- **mlab-iqb** - IQB library (from `../library`, managed via uv workspace)
+
+- **mlab-iqb** - IQB library (from [../library](../library), managed via uv workspace)
 
 Dependencies are locked in the workspace `uv.lock` at the repository root.

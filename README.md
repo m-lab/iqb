@@ -16,14 +16,14 @@ Under construction ... Stay tuned!
 
 ### 📁 Repository Structure
 
-#### **`iqb_library/`** 
+#### **`library/`**
 The IQB library containing methods for calculating the IQB score and data collection.
 
-#### **`iqb_app_prototype/`** 
+#### **`prototype/`**
 A simple web application implemented using Python's `streamlit` library for applying and parametrizing the IQB framework in different use cases.
 
-#### **`analysis/`** 
-Jupyter notebooks for exploratory data analysis, experimentation, and research. 
+#### **`analysis/`**
+Jupyter notebooks for exploratory data analysis, experimentation, and research.
 
-#### **`data/`** 
+#### **`data/`**
 Sample datasets used in the IQB app prototype and notebooks. 

@@ -3,11 +3,7 @@
 import streamlit as st
 from iqb import IQB, IQB_CONFIG
 
-st.set_page_config(
-    page_title="IQB Prototype",
-    page_icon="📊",
-    layout="wide"
-)
+st.set_page_config(page_title="IQB Prototype", page_icon="📊", layout="wide")
 
 st.title("Internet Quality Barometer (IQB)")
 st.write("Phase 1 Prototype - Streamlit Dashboard")

@@ -23,7 +23,7 @@ the IQB prototype for Phase 1 development.
 
 Each JSON file contains:
 
-```json
+```JavaScript
 {
   "metadata": {
     "country_code": "US",
@@ -35,10 +35,10 @@ Each JSON file contains:
     "upload_samples": 24288961
   },
   "metrics": {
-    "download_throughput_mbps": {"p1": 0.38, ..., "p99": 891.82},
-    "upload_throughput_mbps": {"p1": 0.06, ..., "p99": 813.73},
-    "latency_ms": {"p1": 0.16, ..., "p99": 254.34},
-    "packet_loss": {"p1": 0.0, ..., "p99": 0.25}
+    "download_throughput_mbps": {"p1": 0.38, /* ... */, "p99": 891.82},
+    "upload_throughput_mbps": {"p1": 0.06, /* ... */, "p99": 813.73},
+    "latency_ms": {"p1": 0.16, /* ... */, "p99": 254.34},
+    "packet_loss": {"p1": 0.0, /* ... */, "p99": 0.25}
   }
 }
 ```

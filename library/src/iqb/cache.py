@@ -71,8 +71,57 @@ class IQBCache:
             FileNotFoundError: If requested data is not available in cache.
             ValueError: If requested percentile is not available in cached data.
         """
-        # Normalize country to be lowercase
+        # Design Note
+        # -----------
+        #
+        # For now, we are going with separate pipelines producing data for
+        # separate data sources, since this scales well incrementally.
+        #
+        # Additionally, note how the data is relatively small regardless
+        # of the time window that we're choosing (it's always four metrics
+        # each of which contains between 25 and 100 percentiles). So,
+        # computationally, gluing together N datasets in here will never
+        # become an expensive operation.
+        #
+        # We may revisit this choice when we approach production readiness.
+
+        # 1. Normalize country to be lowercase
         country_lower = country.lower()
+
+        # 2. Create the dictionary with the results
+        results = {}
+
+        # TODO(bassosimone): a design choice here is whether we want to
+        # allow for partial data (e.g., we have m-lab data but we do not
+        # have cloudflare data), which happens right now with a static
+        # cache and may also happen when fetching from remote. It is not
+        # an issue right now, since there's just the m-lab data source.
+
+        # 3. Attempt to fill the results with m-lab data
+        results["m-lab"] = self._get_mlab_data(
+            country_lower=country_lower,
+            start_date=start_date,
+            end_date=end_date,
+            percentile=percentile,
+        )
+
+        # 4. Attempt to fill the results with cloudflare data
+        # TODO(bassosimone): implement
+
+        # 5. Attempt to fill the results with ookla data
+        # TODO(bassosimone): implement
+
+        # 6. Return assembled result
+        return results
+
+    def _get_mlab_data(
+        self,
+        country_lower: str,
+        start_date: datetime,
+        end_date: datetime | None = None,
+        percentile: int = 95,
+    ) -> dict:
+        """Return m-lab data with the given country code, dates, etc."""
 
         # Hard-coded data we have: October 2024 for US, DE, BR
         # Check if we have this exact data
@@ -87,7 +136,7 @@ class IQBCache:
 
         else:
             raise FileNotFoundError(
-                f"No cached data for country={country}, "
+                f"No cached data for country={country_lower}, "
                 f"start_date={start_date}, end_date={end_date}. "
                 f"Currently only have: US/DE/BR for October 2024."
             )
@@ -98,10 +147,7 @@ class IQBCache:
             data = json.load(filep)
 
         # Extract the requested percentile
-        # TODO(bassosimone): this is a hack to ensure we're passing around the
-        # correct data but we should actually compute the correct data in the first
-        # place rather than bolting in the m-lab dictionary manually here.
-        return {"m-lab": self._extract_percentile(data, percentile)}
+        return self._extract_percentile(data, percentile)
 
     def _extract_percentile(self, data: dict, percentile: int) -> dict:
         """

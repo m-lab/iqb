@@ -2,7 +2,7 @@
 
 import pytest
 
-from iqb import IQBCalculator, IQB_CONFIG
+from iqb import IQB_CONFIG, IQBCalculator
 
 
 class TestIQBCalculatorInitialization:

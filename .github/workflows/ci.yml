@@ -25,6 +25,33 @@ jobs:
       - name: Sync workspace dependencies
         run: uv sync --dev
 
+      - name: Check code formatting with ruff
+        working-directory: library
+        run: |
+          uv run ruff format --check || {
+            echo "❌ Code formatting check failed!"
+            echo "To fix locally, run: cd library && uv run ruff format"
+            exit 1
+          }
+
+      - name: Lint code with ruff
+        working-directory: library
+        run: |
+          uv run ruff check || {
+            echo "❌ Linting check failed!"
+            echo "To fix locally, run: cd library && uv run ruff check --fix"
+            exit 1
+          }
+
+      - name: Type check with pyright
+        working-directory: library
+        run: |
+          uv run pyright || {
+            echo "❌ Type checking failed!"
+            echo "To see errors locally, run: cd library && uv run pyright"
+            exit 1
+          }
+
       - name: Run pytest
         working-directory: library
         run: uv run pytest

@@ -56,9 +56,7 @@ class IQBCalculator:
         for uc in IQB_CONFIG["use cases"]:
             for nr in IQB_CONFIG["use cases"][uc]["network requirements"]:
                 nr_w = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["w"]
-                nr_th = IQB_CONFIG["use cases"][uc]["network requirements"][nr][
-                    "threshold min"
-                ]
+                nr_th = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["threshold min"]
                 print(f"\t{uc:20} \t{nr:20} \t{nr_w} \t{nr_th}")
         print()
 
@@ -113,19 +111,15 @@ class IQBCalculator:
             nr_weights = []
             for nr in self.config["use cases"][uc]["network requirements"]:
                 nr_w = self.config["use cases"][uc]["network requirements"][nr]["w"]
-                nr_th = self.config["use cases"][uc]["network requirements"][nr][
-                    "threshold min"
-                ]
+                nr_th = self.config["use cases"][uc]["network requirements"][nr]["threshold min"]
 
                 # TODO: TEMP method for calculating binary requirement scores. To be
                 # updated with weighted average of scores per dataset.
                 ds_s = []
-                for ds in self.config["use cases"][uc]["network requirements"][nr][
-                    "datasets"
-                ]:
-                    ds_w = self.config["use cases"][uc]["network requirements"][nr][
-                        "datasets"
-                    ][ds]["w"]
+                for ds in self.config["use cases"][uc]["network requirements"][nr]["datasets"]:
+                    ds_w = self.config["use cases"][uc]["network requirements"][nr]["datasets"][ds][
+                        "w"
+                    ]
                     if ds_w > 0:
                         # binary requirement score (dataset, network requirement)
                         brs = self.calculate_binary_requirement_score(

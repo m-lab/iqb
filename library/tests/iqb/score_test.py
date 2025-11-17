@@ -35,49 +35,49 @@ class TestBinaryRequirementScore:
     def test_download_throughput_above_threshold(self):
         """Test download throughput binary score when value exceeds threshold."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("download throughput", 50, 25)
+        score = iqb.calculate_binary_requirement_score("download_throughput_mbps", 50, 25)
         assert score == 1
 
     def test_download_throughput_below_threshold(self):
         """Test download throughput binary score when value is below threshold."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("download throughput", 20, 25)
+        score = iqb.calculate_binary_requirement_score("download_throughput_mbps", 20, 25)
         assert score == 0
 
     def test_upload_throughput_above_threshold(self):
         """Test upload throughput binary score when value exceeds threshold."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("upload throughput", 30, 10)
+        score = iqb.calculate_binary_requirement_score("upload_throughput_mbps", 30, 10)
         assert score == 1
 
     def test_upload_throughput_below_threshold(self):
         """Test upload throughput binary score when value is below threshold."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("upload throughput", 5, 10)
+        score = iqb.calculate_binary_requirement_score("upload_throughput_mbps", 5, 10)
         assert score == 0
 
     def test_latency_below_threshold(self):
         """Test latency binary score when value is below threshold (good)."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("latency", 50, 100)
+        score = iqb.calculate_binary_requirement_score("latency_ms", 50, 100)
         assert score == 1
 
     def test_latency_above_threshold(self):
         """Test latency binary score when value exceeds threshold (bad)."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("latency", 150, 100)
+        score = iqb.calculate_binary_requirement_score("latency_ms", 150, 100)
         assert score == 0
 
     def test_packet_loss_below_threshold(self):
         """Test packet loss binary score when value is below threshold (good)."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("packet loss", 0.005, 0.01)
+        score = iqb.calculate_binary_requirement_score("packet_loss", 0.005, 0.01)
         assert score == 1
 
     def test_packet_loss_above_threshold(self):
         """Test packet loss binary score when value exceeds threshold (bad)."""
         iqb = IQB()
-        score = iqb.calculate_binary_requirement_score("packet loss", 0.02, 0.01)
+        score = iqb.calculate_binary_requirement_score("packet_loss", 0.02, 0.01)
         assert score == 0
 
     def test_invalid_network_requirement_raises_error(self):

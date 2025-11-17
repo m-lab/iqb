@@ -3,22 +3,22 @@ IQB_CONFIG = {
         "web browsing": {
             "w": 1,
             "network requirements": {
-                "download throughput": {
+                "download_throughput_mbps": {
                     "w": 3,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "upload throughput": {
+                "upload_throughput_mbps": {
                     "w": 2,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "latency": {
+                "latency_ms": {
                     "w": 4,
                     "threshold min": 100,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "packet loss": {
+                "packet_loss": {
                     "w": 4,
                     "threshold min": 0.01,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
@@ -28,22 +28,22 @@ IQB_CONFIG = {
         "video streaming": {
             "w": 1,
             "network requirements": {
-                "download throughput": {
+                "download_throughput_mbps": {
                     "w": 4,
                     "threshold min": 25,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "upload throughput": {
+                "upload_throughput_mbps": {
                     "w": 2,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "latency": {
+                "latency_ms": {
                     "w": 4,
                     "threshold min": 100,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "packet loss": {
+                "packet_loss": {
                     "w": 4,
                     "threshold min": 0.01,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
@@ -53,22 +53,22 @@ IQB_CONFIG = {
         "audio streaming": {
             "w": 1,
             "network requirements": {
-                "download throughput": {
+                "download_throughput_mbps": {
                     "w": 4,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "upload throughput": {
+                "upload_throughput_mbps": {
                     "w": 1,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "latency": {
+                "latency_ms": {
                     "w": 3,
                     "threshold min": 100,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "packet loss": {
+                "packet_loss": {
                     "w": 4,
                     "threshold min": 0.01,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
@@ -78,22 +78,22 @@ IQB_CONFIG = {
         "video conferencing": {
             "w": 1,
             "network requirements": {
-                "download throughput": {
+                "download_throughput_mbps": {
                     "w": 4,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "upload throughput": {
+                "upload_throughput_mbps": {
                     "w": 4,
                     "threshold min": 25,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "latency": {
+                "latency_ms": {
                     "w": 4,
                     "threshold min": 50,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "packet loss": {
+                "packet_loss": {
                     "w": 4,
                     "threshold min": 0.005,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
@@ -103,22 +103,22 @@ IQB_CONFIG = {
         "online backup": {
             "w": 1,
             "network requirements": {
-                "download throughput": {
+                "download_throughput_mbps": {
                     "w": 4,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "upload throughput": {
+                "upload_throughput_mbps": {
                     "w": 4,
                     "threshold min": 25,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "latency": {
+                "latency_ms": {
                     "w": 2,
                     "threshold min": 100,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "packet loss": {
+                "packet_loss": {
                     "w": 4,
                     "threshold min": 0.01,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
@@ -128,22 +128,22 @@ IQB_CONFIG = {
         "gaming": {
             "w": 1,
             "network requirements": {
-                "download throughput": {
+                "download_throughput_mbps": {
                     "w": 4,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "upload throughput": {
+                "upload_throughput_mbps": {
                     "w": 4,
                     "threshold min": 10,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "latency": {
+                "latency_ms": {
                     "w": 5,
                     "threshold min": 100,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},
                 },
-                "packet loss": {
+                "packet_loss": {
                     "w": 4,
                     "threshold min": 0.01,
                     "datasets": {"m-lab": {"w": 1}, "cloudflare": {"w": 0}, "ookla": {"w": 0}},

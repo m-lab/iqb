@@ -1,16 +1,20 @@
+"""Module that implements calculating IQB scores."""
+
 from pprint import pprint
 
 from .config import IQB_CONFIG
 
 
-class IQB:
+class IQBCalculator:
+    """Component that calculates IQB scores."""
+
     def __init__(self, config=None, name=None):
         """
-        Initialize a new instance of IQB.
+        Initialize a new instance of IQBCalculator.
 
         Parameters:
             config (str): The file with the configuration of the IQB formula parameters. If "None" (default), it gets the parameters from the IQB_CONFIG dict.
-            name (str): [Optional] name for the IQB instance.
+            name (str): [Optional] name for the IQBCalculator instance.
         """
         self.set_config(config)
         self.name = name
@@ -52,7 +56,9 @@ class IQB:
         for uc in IQB_CONFIG["use cases"]:
             for nr in IQB_CONFIG["use cases"][uc]["network requirements"]:
                 nr_w = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["w"]
-                nr_th = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["threshold min"]
+                nr_th = IQB_CONFIG["use cases"][uc]["network requirements"][nr][
+                    "threshold min"
+                ]
                 print(f"\t{uc:20} \t{nr:20} \t{nr_w} \t{nr_th}")
         print()
 
@@ -107,15 +113,19 @@ class IQB:
             nr_weights = []
             for nr in self.config["use cases"][uc]["network requirements"]:
                 nr_w = self.config["use cases"][uc]["network requirements"][nr]["w"]
-                nr_th = self.config["use cases"][uc]["network requirements"][nr]["threshold min"]
+                nr_th = self.config["use cases"][uc]["network requirements"][nr][
+                    "threshold min"
+                ]
 
                 # TODO: TEMP method for calculating binary requirement scores. To be
                 # updated with weighted average of scores per dataset.
                 ds_s = []
-                for ds in self.config["use cases"][uc]["network requirements"][nr]["datasets"]:
-                    ds_w = self.config["use cases"][uc]["network requirements"][nr]["datasets"][ds][
-                        "w"
-                    ]
+                for ds in self.config["use cases"][uc]["network requirements"][nr][
+                    "datasets"
+                ]:
+                    ds_w = self.config["use cases"][uc]["network requirements"][nr][
+                        "datasets"
+                    ][ds]["w"]
                     if ds_w > 0:
                         # binary requirement score (dataset, network requirement)
                         brs = self.calculate_binary_requirement_score(

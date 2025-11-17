@@ -82,25 +82,21 @@ class IQBCalculator:
     def calculate_iqb_score(self, data=None, print_details=False):
         """Calculates IQB score based on given data."""
 
-        # TODO: Implement else case and remove this default (if) option
-        if data is None:
-            # TODO: TEMP data sample. To be updated by reading a file or variable or other resource.
-            measurement_data = {
-                "m-lab": {
-                    "download_throughput_mbps": 15,
-                    "upload_throughput_mbps": 20,
-                    "latency_ms": 75,
-                    "packet_loss": 0.007,
-                }
+        # TODO(bassosimone): remove the default data sample in a subsequent interation.
+        sample_data = {
+            "m-lab": {
+                "download_throughput_mbps": 15,
+                "upload_throughput_mbps": 20,
+                "latency_ms": 75,
+                "packet_loss": 0.007,
             }
-        else:
-            raise NotImplementedError(
-                "Method for calculating IQB score given a dataset is not implemented"
-            )
+        }
+        data = sample_data if data is None else data
 
+        # TODO(bassosimone): remove printing from the current function and instead
+        # add more tests to gain better confidence about it being WAI
         doprint = print if print_details else lambda *args, **kwargs: None
 
-        # TODO: TEMP function for testing purposes. To be updated/polished (and remove prints)
         uc_scores = []
         uc_weights = []
 
@@ -122,13 +118,9 @@ class IQBCalculator:
                     ]
                     if ds_w > 0:
                         # binary requirement score (dataset, network requirement)
-                        brs = self.calculate_binary_requirement_score(
-                            nr, measurement_data[ds][nr], nr_th
-                        )
+                        brs = self.calculate_binary_requirement_score(nr, data[ds][nr], nr_th)
                         ds_s.append(brs)
-                        doprint(
-                            f"Binary score: {uc},{nr},{ds},{nr_th},{measurement_data[ds][nr]}-->{brs}"
-                        )
+                        doprint(f"Binary score: {uc},{nr},{ds},{nr_th},{data[ds][nr]}-->{brs}")
 
                 # requirement agreement score (all datasets for this requirement)
                 ras = sum(ds_s) / len(ds_s)

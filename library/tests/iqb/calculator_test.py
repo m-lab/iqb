@@ -2,7 +2,7 @@
 
 import pytest
 
-from iqb import IQB_CONFIG, IQBCalculator
+from iqb import IQB_CONFIG, IQBCache, IQBCalculator
 
 
 class TestIQBCalculatorInitialization:
@@ -98,11 +98,20 @@ class TestIQBCalculatorScoreCalculation:
         assert isinstance(score, (int, float))
         assert 0 <= score <= 1
 
-    def test_calculate_iqb_score_with_custom_data_raises_error(self):
+    def test_calculate_iqb_score_with_custom_data(self):
         """Test that passing custom data raises NotImplementedError."""
         iqb = IQBCalculator()
-        with pytest.raises(NotImplementedError):
-            iqb.calculate_iqb_score(data={})
+        sample_data = {
+            "m-lab": {
+                "download_throughput_mbps": 15,
+                "upload_throughput_mbps": 20,
+                "latency_ms": 75,
+                "packet_loss": 0.007,
+            }
+        }
+        score = iqb.calculate_iqb_score(data=sample_data)
+        assert isinstance(score, (int, float))
+        assert 0 <= score <= 1
 
     def test_calculate_iqb_score_print_details(self):
         """Test that IQBCalculator score calculation works with print_details=True."""

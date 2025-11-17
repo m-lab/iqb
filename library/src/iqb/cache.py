@@ -98,7 +98,10 @@ class IQBCache:
             data = json.load(filep)
 
         # Extract the requested percentile
-        return self._extract_percentile(data, percentile)
+        # TODO(bassosimone): this is a hack to ensure we're passing around the
+        # correct data but we should actually compute the correct data in the first
+        # place rather than bolting in the m-lab dictionary manually here.
+        return {"m-lab": self._extract_percentile(data, percentile)}
 
     def _extract_percentile(self, data: dict, percentile: int) -> dict:
         """

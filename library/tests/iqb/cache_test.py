@@ -26,13 +26,17 @@ class TestIQBCacheInitialization:
 class TestIQBCacheGetData:
     """Tests for IQBCache get_data method."""
 
-    def test_get_data_us_october_2024(self):
+    def test_get_data_us_october_2024(self, data_dir):
         """Test fetching US data for October 2024."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
         data = cache.get_data(
             country="US",
             start_date=datetime(2024, 10, 1),
         )
+
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data
+        data = data["m-lab"]
 
         # Check structure
         assert "download_throughput_mbps" in data
@@ -46,31 +50,39 @@ class TestIQBCacheGetData:
         assert isinstance(data["latency_ms"], (int, float))
         assert isinstance(data["packet_loss"], (int, float))
 
-    def test_get_data_de_october_2024(self):
+    def test_get_data_de_october_2024(self, data_dir):
         """Test fetching Germany data for October 2024."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
         data = cache.get_data(
             country="DE",
             start_date=datetime(2024, 10, 1),
         )
 
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data
+        data = data["m-lab"]
+
         assert "download_throughput_mbps" in data
         assert isinstance(data["download_throughput_mbps"], (int, float))
 
-    def test_get_data_br_october_2024(self):
+    def test_get_data_br_october_2024(self, data_dir):
         """Test fetching Brazil data for October 2024."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
         data = cache.get_data(
             country="BR",
             start_date=datetime(2024, 10, 1),
         )
 
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data
+        data = data["m-lab"]
+
         assert "download_throughput_mbps" in data
         assert isinstance(data["download_throughput_mbps"], (int, float))
 
-    def test_get_data_case_insensitive_country(self):
+    def test_get_data_case_insensitive_country(self, data_dir):
         """Test that country code is case-insensitive."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         data_upper = cache.get_data(country="US", start_date=datetime(2024, 10, 1))
         data_lower = cache.get_data(country="us", start_date=datetime(2024, 10, 1))
@@ -78,12 +90,19 @@ class TestIQBCacheGetData:
         # Should return same data regardless of case
         assert data_upper == data_lower
 
-    def test_get_data_with_different_percentile(self):
+    def test_get_data_with_different_percentile(self, data_dir):
         """Test extracting different percentile values."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
         data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
+
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data_p95
+        data_p95 = data_p95["m-lab"]
+
+        assert "m-lab" in data_p50
+        data_p50 = data_p50["m-lab"]
 
         # p95 should be higher than p50 for throughput metrics
         assert data_p95["download_throughput_mbps"] > data_p50["download_throughput_mbps"]
@@ -92,23 +111,23 @@ class TestIQBCacheGetData:
         # p95 should be higher than p50 for latency (higher is worse)
         assert data_p95["latency_ms"] > data_p50["latency_ms"]
 
-    def test_get_data_unavailable_country_raises_error(self):
+    def test_get_data_unavailable_country_raises_error(self, data_dir):
         """Test that requesting data for unavailable country raises FileNotFoundError."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         with pytest.raises(FileNotFoundError, match="No cached data"):
             cache.get_data(country="FR", start_date=datetime(2024, 10, 1))
 
-    def test_get_data_unavailable_date_raises_error(self):
+    def test_get_data_unavailable_date_raises_error(self, data_dir):
         """Test that requesting data for unavailable date raises FileNotFoundError."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         with pytest.raises(FileNotFoundError, match="No cached data"):
             cache.get_data(country="US", start_date=datetime(2024, 11, 1))
 
-    def test_get_data_with_explicit_end_date_raises_error(self):
+    def test_get_data_with_explicit_end_date_raises_error(self, data_dir):
         """Test that specifying end_date raises error (not yet supported)."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         with pytest.raises(FileNotFoundError, match="No cached data"):
             cache.get_data(
@@ -121,9 +140,9 @@ class TestIQBCacheGetData:
 class TestIQBCacheExtractPercentile:
     """Tests for IQBCache _extract_percentile method."""
 
-    def test_extract_percentile_returns_correct_structure(self):
+    def test_extract_percentile_returns_correct_structure(self, data_dir):
         """Test that _extract_percentile returns the expected dict structure."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         # Create sample data matching JSON structure
         sample_data = {
@@ -144,9 +163,9 @@ class TestIQBCacheExtractPercentile:
             "packet_loss": 0.01,
         }
 
-    def test_extract_percentile_invalid_raises_helpful_error(self):
+    def test_extract_percentile_invalid_raises_helpful_error(self, data_dir):
         """Test that requesting invalid percentile raises ValueError with available options."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         # Create sample data with only p50 and p95
         sample_data = {
@@ -169,9 +188,9 @@ class TestIQBCacheExtractPercentile:
         assert "95" in error_msg
         assert "Available percentiles" in error_msg
 
-    def test_get_data_invalid_percentile_from_real_file(self):
+    def test_get_data_invalid_percentile_from_real_file(self, data_dir):
         """Test that requesting unavailable percentile from real data file raises ValueError."""
-        cache = IQBCache(cache_dir="../data")
+        cache = IQBCache(cache_dir=data_dir)
 
         # Request p37 which doesn't exist in the actual data files
         with pytest.raises(ValueError) as exc_info:

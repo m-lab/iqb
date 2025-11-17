@@ -62,13 +62,13 @@ class IQB:
         - If the requirement is **throughput**, then the score is 1 if the given value is **larger** than the given threshold, and otherwise 0.
         - If the requirement is **latency or packet loss**, then the score is 1 if the given value is **smaller** than the given threshold, and otherwise 0.
         """
-        if network_requirement == "download throughput":
+        if network_requirement == "download_throughput_mbps":
             return 1 if value > threshold else 0
-        elif network_requirement == "upload throughput":
+        elif network_requirement == "upload_throughput_mbps":
             return 1 if value > threshold else 0
-        elif network_requirement == "latency":
+        elif network_requirement == "latency_ms":
             return 1 if value < threshold else 0
-        elif network_requirement == "packet loss":
+        elif network_requirement == "packet_loss":
             return 1 if value < threshold else 0
         else:
             raise ValueError(
@@ -83,10 +83,10 @@ class IQB:
             # TODO: TEMP data sample. To be updated by reading a file or variable or other resource.
             measurement_data = {
                 "m-lab": {
-                    "download throughput": 15,
-                    "upload throughput": 20,
-                    "latency": 75,
-                    "packet loss": 0.007,
+                    "download_throughput_mbps": 15,
+                    "upload_throughput_mbps": 20,
+                    "latency_ms": 75,
+                    "packet_loss": 0.007,
                 }
             }
         else:

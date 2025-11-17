@@ -22,5 +22,7 @@ class TestIntegration:
         # Compute the IQB score
         score = calculator.calculate_iqb_score(data)
 
-        # Ensure the score is reasonable
-        assert score >= 0 and score < 1
+        # Ensure the score is reasonable (0.0 to 1.0 inclusive)
+        # NOTE: With current percentile interpretation (p95 for all metrics),
+        # scores may reach 1.0 as we're checking "top ~5% performance"
+        assert score >= 0 and score <= 1

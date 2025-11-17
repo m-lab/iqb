@@ -1,6 +1,19 @@
 SELECT
     client.Geo.CountryCode as country_code,
     COUNT(*) as sample_count,
+
+    -- ============================================================================
+    -- PERCENTILE LABELING CONVENTION FOR IQB QUALITY ASSESSMENT
+    -- ============================================================================
+    --
+    -- Upload throughput is "higher is better", so we use standard percentile
+    -- labels (no inversion).
+    --
+    -- See query_downloads.sql for detailed explanation and rationale.
+    -- ============================================================================
+
+    -- Upload throughput (higher is better - NO INVERSION)
+    -- Standard percentile labels matching statistical definition
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(1)] as upload_p1,
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(5)] as upload_p5,
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(10)] as upload_p10,

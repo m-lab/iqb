@@ -70,6 +70,30 @@ class IQBCache:
         Raises:
             FileNotFoundError: If requested data is not available in cache.
             ValueError: If requested percentile is not available in cached data.
+
+        ⚠️  PERCENTILE INTERPRETATION (CRITICAL!)
+        =========================================
+
+        For "higher is better" metrics (throughput):
+          - Raw p95 = "95% of users have ≤ 625 Mbit/s speed"
+          - Directly usable: download_p95 ≥ threshold?
+          - No inversion needed (standard statistical definition)
+
+        For "lower is better" metrics (latency, packet loss):
+          - Raw p95 = "95% of users have ≤ 80ms latency" (worst-case typical)
+          - We want p95 to represent best-case typical (to match throughput)
+          - Solution: Use p5 raw labeled as p95
+          - Mathematical inversion: p(X)_labeled = p(100-X)_raw
+          - Example: OFFSET(5) raw → labeled as "latency_p95" in JSON
+
+        This inversion happens in BigQuery (see data/query_*.sql),
+        so this cache code treats all percentiles uniformly.
+
+        When you request percentile=95, you get the 95th percentile value
+        that can be compared uniformly against thresholds.
+
+        NOTE: This creates semantics where p95 represents "typical best
+        performance" - empirical validation will determine if appropriate.
         """
         # Design Note
         # -----------

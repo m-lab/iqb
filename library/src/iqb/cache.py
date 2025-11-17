@@ -76,25 +76,13 @@ class IQBCache:
 
         # Hard-coded data we have: October 2024 for US, DE, BR
         # Check if we have this exact data
-        if (
-            country_lower == "us"
-            and start_date == datetime(2024, 10, 1)
-            and end_date is None
-        ):
+        if country_lower == "us" and start_date == datetime(2024, 10, 1) and end_date is None:
             filename = "us_2024_10.json"
 
-        elif (
-            country_lower == "de"
-            and start_date == datetime(2024, 10, 1)
-            and end_date is None
-        ):
+        elif country_lower == "de" and start_date == datetime(2024, 10, 1) and end_date is None:
             filename = "de_2024_10.json"
 
-        elif (
-            country_lower == "br"
-            and start_date == datetime(2024, 10, 1)
-            and end_date is None
-        ):
+        elif country_lower == "br" and start_date == datetime(2024, 10, 1) and end_date is None:
             filename = "br_2024_10.json"
 
         else:
@@ -143,11 +131,7 @@ class IQBCache:
         except KeyError as err:
             # Determine which percentiles ARE available
             available = sorted(
-                [
-                    int(k[1:])
-                    for k in metrics["download_throughput_mbps"]
-                    if k.startswith("p")
-                ]
+                [int(k[1:]) for k in metrics["download_throughput_mbps"] if k.startswith("p")]
             )
             raise ValueError(
                 f"Percentile {percentile} not available in cached data. "

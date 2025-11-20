@@ -200,3 +200,100 @@ class TestIQBCacheExtractPercentile:
         error_msg = str(exc_info.value)
         assert "37" in error_msg
         assert "Available percentiles" in error_msg
+
+
+class TestIQBCacheAllFiles:
+    """Test that all expected cache files are accessible."""
+
+    def test_all_countries_october_2024(self, data_dir):
+        """Test that all countries can be accessed for October 2024."""
+        cache = IQBCache(cache_dir=data_dir)
+        countries = ["US", "DE", "BR"]
+
+        for country in countries:
+            data = cache.get_data(
+                country=country,
+                start_date=datetime(2024, 10, 1),
+            )
+
+            # Verify structure
+            assert "m-lab" in data
+            mlab_data = data["m-lab"]
+
+            assert "download_throughput_mbps" in mlab_data
+            assert "upload_throughput_mbps" in mlab_data
+            assert "latency_ms" in mlab_data
+            assert "packet_loss" in mlab_data
+
+            # Verify all values are numeric
+            assert isinstance(mlab_data["download_throughput_mbps"], (int, float))
+            assert isinstance(mlab_data["upload_throughput_mbps"], (int, float))
+            assert isinstance(mlab_data["latency_ms"], (int, float))
+            assert isinstance(mlab_data["packet_loss"], (int, float))
+
+    def test_all_countries_october_2025(self, data_dir):
+        """Test that all countries can be accessed for October 2025."""
+        cache = IQBCache(cache_dir=data_dir)
+        countries = ["US", "DE", "BR"]
+
+        for country in countries:
+            data = cache.get_data(
+                country=country,
+                start_date=datetime(2025, 10, 1),
+            )
+
+            # Verify structure
+            assert "m-lab" in data
+            mlab_data = data["m-lab"]
+
+            assert "download_throughput_mbps" in mlab_data
+            assert "upload_throughput_mbps" in mlab_data
+            assert "latency_ms" in mlab_data
+            assert "packet_loss" in mlab_data
+
+            # Verify all values are numeric
+            assert isinstance(mlab_data["download_throughput_mbps"], (int, float))
+            assert isinstance(mlab_data["upload_throughput_mbps"], (int, float))
+            assert isinstance(mlab_data["latency_ms"], (int, float))
+            assert isinstance(mlab_data["packet_loss"], (int, float))
+
+    def test_all_supported_combinations(self, data_dir):
+        """Test all combinations of countries and periods that should be available."""
+        cache = IQBCache(cache_dir=data_dir)
+
+        # All combinations we expect to have cached
+        combinations = [
+            ("US", datetime(2024, 10, 1)),
+            ("DE", datetime(2024, 10, 1)),
+            ("BR", datetime(2024, 10, 1)),
+            ("US", datetime(2025, 10, 1)),
+            ("DE", datetime(2025, 10, 1)),
+            ("BR", datetime(2025, 10, 1)),
+        ]
+
+        for country, start_date in combinations:
+            # Should not raise any errors
+            data = cache.get_data(country=country, start_date=start_date)
+
+            # Basic sanity check
+            assert "m-lab" in data
+            assert "download_throughput_mbps" in data["m-lab"]
+
+    def test_all_percentiles_available(self, data_dir):
+        """Test that all expected percentiles are available in cached data."""
+        cache = IQBCache(cache_dir=data_dir)
+
+        # Standard percentiles we generate
+        percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99]
+
+        # Test on one sample file (US, October 2024)
+        for p in percentiles:
+            data = cache.get_data(
+                country="US",
+                start_date=datetime(2024, 10, 1),
+                percentile=p,
+            )
+
+            # Should not raise any errors
+            assert "m-lab" in data
+            assert "download_throughput_mbps" in data["m-lab"]

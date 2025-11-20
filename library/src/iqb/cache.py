@@ -147,22 +147,19 @@ class IQBCache:
     ) -> dict:
         """Return m-lab data with the given country code, dates, etc."""
 
-        # Hard-coded data we have: October 2024 for US, DE, BR
+        # Hard-coded data we have: October 2024 and October 2025 for US, DE, BR
         # Check if we have this exact data
-        if country_lower == "us" and start_date == datetime(2024, 10, 1) and end_date is None:
-            filename = "us_2024_10.json"
+        if country_lower in ("us", "de", "br") and start_date == datetime(2024, 10, 1) and end_date is None:
+            filename = f"{country_lower}_2024_10.json"
 
-        elif country_lower == "de" and start_date == datetime(2024, 10, 1) and end_date is None:
-            filename = "de_2024_10.json"
-
-        elif country_lower == "br" and start_date == datetime(2024, 10, 1) and end_date is None:
-            filename = "br_2024_10.json"
+        elif country_lower in ("us", "de", "br") and start_date == datetime(2025, 10, 1) and end_date is None:
+            filename = f"{country_lower}_2025_10.json"
 
         else:
             raise FileNotFoundError(
                 f"No cached data for country={country_lower}, "
                 f"start_date={start_date}, end_date={end_date}. "
-                f"Currently only have: US/DE/BR for October 2024."
+                f"Currently only have: US/DE/BR for October 2024 and October 2025."
             )
 
         # Load from file

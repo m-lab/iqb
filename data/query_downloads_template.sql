@@ -66,7 +66,7 @@ SELECT
 FROM
     `measurement-lab.ndt.unified_downloads`
 WHERE
-    date BETWEEN "2024-10-01" AND "2024-10-31"
+    date >= "{START_DATE}" AND date < "{END_DATE}"
     AND client.Geo.CountryCode IN ("US", "DE", "BR")
     AND a.MeanThroughputMbps IS NOT NULL
     AND a.MinRTT IS NOT NULL

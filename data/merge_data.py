@@ -36,13 +36,16 @@ def main():
 
         # Extract percentiles into structured format
         download_percentiles = {
-            f"p{p}": float(dl[f"download_p{p}"]) for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
+            f"p{p}": float(dl[f"download_p{p}"])
+            for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
         }
         upload_percentiles = {
-            f"p{p}": float(ul[f"upload_p{p}"]) for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
+            f"p{p}": float(ul[f"upload_p{p}"])
+            for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
         }
         latency_percentiles = {
-            f"p{p}": float(dl[f"latency_p{p}"]) for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
+            f"p{p}": float(dl[f"latency_p{p}"])
+            for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]
         }
         loss_percentiles = {
             f"p{p}": float(dl[f"loss_p{p}"]) for p in [1, 5, 10, 25, 50, 75, 90, 95, 99]

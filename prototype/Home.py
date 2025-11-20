@@ -29,12 +29,14 @@ def get_available_datasets():
                 datasets.update(req_config["datasets"].keys())
     return sorted(list(datasets))
 
+
 def get_available_requirements():
     """Extract list of network requirements from config"""
     requirements = set()
     for use_case_name, use_case_config in IQB_CONFIG["use cases"].items():
         requirements.update(use_case_config["network requirements"].keys())
     return sorted(list(requirements))
+
 
 # Initialize session state for manual entry with test case values
 if "manual_entry" not in st.session_state:
@@ -79,6 +81,7 @@ def build_data_for_calculate():
 
     return data
 
+
 def calculate_component_importance():
     """Calculate the importance of each network component for visualization"""
     importance = {}
@@ -108,6 +111,7 @@ def calculate_component_importance():
 
     return importance
 
+
 def calculate_dataset_importance_per_requirement():
     """Calculate dataset importance within each requirement"""
     dataset_importance = {}
@@ -121,7 +125,9 @@ def calculate_dataset_importance_per_requirement():
     # Initialize
     for req in requirements:
         dataset_importance[req] = {ds: 0.0 for ds in datasets}
-        dataset_exists[req] = {ds: False for ds in datasets}  # Track which datasets are configured
+        dataset_exists[req] = {
+            ds: False for ds in datasets
+        }  # Track which datasets are configured
 
     # Calculate
     for use_case_name, use_case_config in use_cases.items():
@@ -156,6 +162,7 @@ def calculate_dataset_importance_per_requirement():
 
     return dataset_importance, dataset_exists
 
+
 # Create two-column layout
 left_col, right_col = st.columns([1, 3])
 
@@ -173,9 +180,7 @@ with left_col:
         if "download" in req.lower():
             ordered_requirements.insert(0, req)
         elif "upload" in req.lower():
-            ordered_requirements.insert(
-                1 if len(ordered_requirements) > 0 else 0, req
-            )
+            ordered_requirements.insert(1 if len(ordered_requirements) > 0 else 0, req)
         elif "latency" in req.lower():
             ordered_requirements.insert(
                 2 if len(ordered_requirements) > 1 else len(ordered_requirements), req
@@ -261,7 +266,9 @@ with right_col:
 
         # Get importance metrics for sunburst visualization
         component_importance = calculate_component_importance()
-        dataset_importance, dataset_exists = calculate_dataset_importance_per_requirement()
+        dataset_importance, dataset_exists = (
+            calculate_dataset_importance_per_requirement()
+        )
 
         # Build sunburst data
         labels = [""]
@@ -335,7 +342,9 @@ with right_col:
 
         # Create custom hover text
         hover_text = []
-        for i, (id_val, label, parent, value) in enumerate(zip(ids, labels, parents, values)):
+        for i, (id_val, label, parent, value) in enumerate(
+            zip(ids, labels, parents, values)
+        ):
             if parent in ["Download", "Upload", "Latency", "Packet Loss"]:
                 req_name = None
                 for req, display in req_to_display.items():
@@ -349,11 +358,20 @@ with right_col:
                 raw_weight = None
                 if req_name:
                     # Look through config to find this requirement's dataset weight
-                    for use_case_name, use_case_config in IQB_CONFIG["use cases"].items():
+                    for use_case_name, use_case_config in IQB_CONFIG[
+                        "use cases"
+                    ].items():
                         if req_name in use_case_config["network requirements"]:
-                            req_config = use_case_config["network requirements"][req_name]
-                            if "datasets" in req_config and dataset_name in req_config["datasets"]:
-                                raw_weight = req_config["datasets"][dataset_name].get("w", 1.0)
+                            req_config = use_case_config["network requirements"][
+                                req_name
+                            ]
+                            if (
+                                "datasets" in req_config
+                                and dataset_name in req_config["datasets"]
+                            ):
+                                raw_weight = req_config["datasets"][dataset_name].get(
+                                    "w", 1.0
+                                )
                                 break
 
                 # Show "No Data Available" if not in config OR if weight is 0
@@ -363,7 +381,6 @@ with right_col:
                     hover_text.append(f"<b>{label}</b><br>Weight: {raw_weight:.2f}")
             else:
                 hover_text.append("")
-
 
         # Create sunburst
         font_sizes = []
@@ -388,7 +405,7 @@ with right_col:
                 textfont=dict(
                     size=font_sizes,  # Use the list of sizes
                     color="#333333",
-                    family="Arial"
+                    family="Arial",
                 ),
             )
         )
@@ -402,18 +419,13 @@ with right_col:
             yref="paper",
             font=dict(size=22, color="#333333", family="Arial"),
             showarrow=False,
-            align="center"
+            align="center",
         )
         fig.update_layout(
-            height=700,
-            margin=dict(t=10, b=10, l=10, r=10),
-            showlegend=False
+            height=700, margin=dict(t=10, b=10, l=10, r=10), showlegend=False
         )
 
-        st.plotly_chart(
-            fig,
-            use_container_width=True
-        )
+        st.plotly_chart(fig, use_container_width=True)
 
     except Exception as e:
         st.error(f"Error calculating IQB: {e}")

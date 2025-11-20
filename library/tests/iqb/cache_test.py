@@ -104,12 +104,12 @@ class TestIQBCacheGetData:
         assert "m-lab" in data_p50
         data_p50 = data_p50["m-lab"]
 
-        # p95 should be higher than p50 for throughput metrics
+        # p95 should be higher than p50 for throughput metrics (higher percentile = higher speed)
         assert data_p95["download_throughput_mbps"] > data_p50["download_throughput_mbps"]
         assert data_p95["upload_throughput_mbps"] > data_p50["upload_throughput_mbps"]
 
-        # p95 should be higher than p50 for latency (higher is worse)
-        assert data_p95["latency_ms"] > data_p50["latency_ms"]
+        # p95 should be lower than p50 for latency (inverted: p95 label = p5 raw = best latency)
+        assert data_p95["latency_ms"] < data_p50["latency_ms"]
 
     def test_get_data_unavailable_country_raises_error(self, data_dir):
         """Test that requesting data for unavailable country raises FileNotFoundError."""

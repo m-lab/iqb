@@ -67,7 +67,7 @@ FROM
     `measurement-lab.ndt.unified_downloads`
 WHERE
     date >= "{START_DATE}" AND date < "{END_DATE}"
-    AND client.Geo.CountryCode IN ("US", "DE", "BR")
+    AND client.Geo.CountryCode IS NOT NULL
     AND a.MeanThroughputMbps IS NOT NULL
     AND a.MinRTT IS NOT NULL
 GROUP BY country_code

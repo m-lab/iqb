@@ -53,7 +53,7 @@ class IQBCache:
         Fetch measurement data for IQB calculation.
 
         Args:
-            country: ISO 2-letter country code ("US", "DE", "BR").
+            country: ISO 2-letter country code (e.g., "US", "DE", "BR", "FR", etc.).
             start_date: Start of date range (inclusive).
             end_date: End of date range (exclusive). If None, defaults to start_date + 1 month.
             percentile: Which percentile to extract (1-99).
@@ -147,31 +147,40 @@ class IQBCache:
     ) -> dict:
         """Return m-lab data with the given country code, dates, etc."""
 
-        # Hard-coded data we have: October 2024 and October 2025 for US, DE, BR
-        # Check if we have this exact data
-        if (
-            country_lower in ("us", "de", "br")
-            and start_date == datetime(2024, 10, 1)
-            and end_date is None
-        ):
-            filename = f"{country_lower}_2024_10.json"
-
-        elif (
-            country_lower in ("us", "de", "br")
-            and start_date == datetime(2025, 10, 1)
-            and end_date is None
-        ):
-            filename = f"{country_lower}_2025_10.json"
-
-        else:
+        # Map datetime to period string
+        # We only support single-month periods with end_date=None
+        if end_date is not None:
             raise FileNotFoundError(
                 f"No cached data for country={country_lower}, "
                 f"start_date={start_date}, end_date={end_date}. "
-                f"Currently only have: US/DE/BR for October 2024 and October 2025."
+                f"Multi-month periods not yet supported."
+            )
+
+        # Map known periods to their string representation
+        known_periods = {
+            datetime(2024, 10, 1): "2024_10",
+            datetime(2025, 10, 1): "2025_10",
+        }
+
+        if start_date not in known_periods:
+            raise FileNotFoundError(
+                f"No cached data for country={country_lower}, "
+                f"start_date={start_date}, end_date={end_date}. "
+                f"Available periods: {list(known_periods.keys())}"
+            )
+
+        period_str = known_periods[start_date]
+        filename = f"{country_lower}_{period_str}.json"
+        filepath = self.cache_dir / filename
+
+        # Check if file exists
+        if not filepath.exists():
+            raise FileNotFoundError(
+                f"No cached data file found: {filepath}. "
+                f"File does not exist for country={country_lower}, period={period_str}"
             )
 
         # Load from file
-        filepath = self.cache_dir / filename
         with open(filepath) as filep:
             data = json.load(filep)
 

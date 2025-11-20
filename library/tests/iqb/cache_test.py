@@ -111,12 +111,58 @@ class TestIQBCacheGetData:
         # p95 should be lower than p50 for latency (inverted: p95 label = p5 raw = best latency)
         assert data_p95["latency_ms"] < data_p50["latency_ms"]
 
+    def test_get_data_france_october_2024(self, data_dir):
+        """Test fetching France data for October 2024."""
+        cache = IQBCache(cache_dir=data_dir)
+        data = cache.get_data(
+            country="FR",
+            start_date=datetime(2024, 10, 1),
+        )
+
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data
+        data = data["m-lab"]
+
+        assert "download_throughput_mbps" in data
+        assert isinstance(data["download_throughput_mbps"], (int, float))
+
+    def test_get_data_canada_october_2024(self, data_dir):
+        """Test fetching Canada data for October 2024."""
+        cache = IQBCache(cache_dir=data_dir)
+        data = cache.get_data(
+            country="CA",
+            start_date=datetime(2024, 10, 1),
+        )
+
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data
+        data = data["m-lab"]
+
+        assert "download_throughput_mbps" in data
+        assert isinstance(data["download_throughput_mbps"], (int, float))
+
+    def test_get_data_australia_october_2025(self, data_dir):
+        """Test fetching Australia data for October 2025."""
+        cache = IQBCache(cache_dir=data_dir)
+        data = cache.get_data(
+            country="AU",
+            start_date=datetime(2025, 10, 1),
+        )
+
+        # Unwrap the `m-lab` part
+        assert "m-lab" in data
+        data = data["m-lab"]
+
+        assert "download_throughput_mbps" in data
+        assert isinstance(data["download_throughput_mbps"], (int, float))
+
     def test_get_data_unavailable_country_raises_error(self, data_dir):
         """Test that requesting data for unavailable country raises FileNotFoundError."""
         cache = IQBCache(cache_dir=data_dir)
 
-        with pytest.raises(FileNotFoundError, match="No cached data"):
-            cache.get_data(country="FR", start_date=datetime(2024, 10, 1))
+        # Use a fictional country code that won't exist
+        with pytest.raises(FileNotFoundError, match="No cached data file found"):
+            cache.get_data(country="ZZ", start_date=datetime(2024, 10, 1))
 
     def test_get_data_unavailable_date_raises_error(self, data_dir):
         """Test that requesting data for unavailable date raises FileNotFoundError."""

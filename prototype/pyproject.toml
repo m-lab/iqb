@@ -8,6 +8,7 @@ dependencies = [
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "plotly>=5.17.0",
+    "pytest>=8.0.0",
     "mlab-iqb",
 ]
 

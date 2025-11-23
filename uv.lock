@@ -173,6 +173,7 @@ dependencies = [
     { name = "numpy" },
     { name = "pandas" },
     { name = "plotly" },
+    { name = "pytest" },
     { name = "streamlit" },
 ]
 
@@ -182,6 +183,7 @@ requires-dist = [
     { name = "numpy", specifier = ">=1.26.0" },
     { name = "pandas", specifier = ">=2.2.0" },
     { name = "plotly", specifier = ">=5.17.0" },
+    { name = "pytest", specifier = ">=8.0.0" },
     { name = "streamlit", specifier = ">=1.39.0" },
 ]
 

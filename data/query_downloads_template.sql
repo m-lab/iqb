@@ -64,6 +64,8 @@ SELECT
     APPROX_QUANTILES(a.LossRate, 100)[OFFSET(5)] as loss_p95,
     APPROX_QUANTILES(a.LossRate, 100)[OFFSET(1)] as loss_p99
 FROM
+    -- TODO(bassosimone): switch to union tables `measurement-lab.ndt.ndt7_union`
+    -- when they have been blessed as the new stable tables.
     `measurement-lab.ndt.unified_downloads`
 WHERE
     date >= "{START_DATE}" AND date < "{END_DATE}"

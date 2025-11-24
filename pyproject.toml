@@ -1,2 +1,25 @@
 [tool.uv.workspace]
-members = ["library", "prototype"]
+members = ["library", "prototype", "analysis"]
+
+# Pytest configuration for workspace-level test execution
+# This allows running "uv run pytest" from the root to test all workspace members
+[tool.pytest.ini_options]
+testpaths = [
+    "library/tests",
+    "prototype/tests",
+    "analysis/tests",
+]
+python_files = ["*_test.py", "test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+# Add workspace member directories to Python path so tests can import from them
+pythonpath = [
+    "library/src",
+    "prototype",
+    "analysis",
+]
+# Use importlib mode to handle workspace structure correctly
+addopts = [
+    "-v",
+    "--import-mode=importlib",
+]

@@ -12,6 +12,17 @@
     }
   },
 
+  // Jupyter Notebook settings
+  "notebook.formatOnSave.enabled": true,
+  "notebook.codeActionsOnSave": {
+    "source.fixAll": "explicit",
+    "source.organizeImports": "explicit"
+  },
+  "[jupyter]": {
+    "editor.defaultFormatter": "charliermarsh.ruff"
+  },
+  "jupyter.kernels.filter": [],
+
   // Ruff linter
   "ruff.enable": true,
   "ruff.organizeImports": true,

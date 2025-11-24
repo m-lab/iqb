@@ -8,8 +8,8 @@ on:
     branches: [ main ]
 
 jobs:
-  test-library:
-    name: Test IQB Library
+  test-quality:
+    name: Code Quality Checks
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -25,7 +25,7 @@ jobs:
       - name: Sync workspace dependencies
         run: uv sync --dev
 
-      - name: Check code formatting with ruff
+      - name: Check code formatting with ruff (library)
         working-directory: library
         run: |
           uv run ruff format --check || {
@@ -34,7 +34,7 @@ jobs:
             exit 1
           }
 
-      - name: Lint code with ruff
+      - name: Lint code with ruff (library)
         working-directory: library
         run: |
           uv run ruff check || {
@@ -43,7 +43,7 @@ jobs:
             exit 1
           }
 
-      - name: Type check with pyright
+      - name: Type check with pyright (library)
         working-directory: library
         run: |
           uv run pyright || {
@@ -52,12 +52,34 @@ jobs:
             exit 1
           }
 
-      - name: Run pytest
-        working-directory: library
-        run: uv run pytest
+  test-all:
+    name: Test All Components
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
-  test-prototype:
-    name: Test Streamlit Prototype
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Sync workspace dependencies
+        run: uv sync --dev
+
+      - name: Run pytest (all workspace members)
+        run: |
+          uv run pytest || {
+            echo "❌ Tests failed!"
+            echo "To run tests locally: uv run pytest"
+            echo "To run specific component: uv run pytest library/tests"
+            exit 1
+          }
+
+  test-prototype-integration:
+    name: Test Streamlit Prototype Integration
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -72,17 +94,6 @@ jobs:
 
       - name: Sync workspace dependencies
         run: uv sync
-
-      - name: Test prototype imports
-        run: |
-          uv run python -c "import streamlit; print('✓ Streamlit imported')"
-          uv run python -c "from iqb import IQB; print('✓ Can import IQB library from prototype')"
-
-      - name: Validate Home.py syntax
-        run: |
-          cd prototype
-          uv run python -m py_compile Home.py
-          echo "✓ Home.py syntax valid"
 
       - name: Test Streamlit app can load
         run: |

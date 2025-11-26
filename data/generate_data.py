@@ -49,7 +49,7 @@ def generate_for_period(
         [
             "python3",
             str(data_dir / "run_query.py"),
-            str(data_dir / "query_downloads_template.sql"),
+            "downloads_by_country",
             "--start-date",
             start_date,
             "--end-date",
@@ -65,7 +65,7 @@ def generate_for_period(
         [
             "python3",
             str(data_dir / "run_query.py"),
-            str(data_dir / "query_uploads_template.sql"),
+            "uploads_by_country",
             "--start-date",
             start_date,
             "--end-date",

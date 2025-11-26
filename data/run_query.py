@@ -5,7 +5,12 @@ import argparse
 import subprocess
 import sys
 from datetime import datetime
+from importlib.resources import files
 from pathlib import Path
+
+# Add library to path so we can import iqb.queries
+sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
+import iqb.queries
 
 
 def validate_date(date_str: str) -> str:
@@ -31,7 +36,7 @@ def validate_date(date_str: str) -> str:
 
 
 def run_bq_query(
-    query_file: Path,
+    query_name: str,
     output_file: Path | None,
     project_id: str,
     start_date: str,
@@ -55,7 +60,7 @@ def run_bq_query(
     Template becomes: date >= '2024-10-01' AND date < '2024-11-01'
 
     Args:
-        query_file: Path to SQL query template file
+        query_name: Name of SQL query template (e.g., "downloads_by_country")
         output_file: Path where to save JSON output (None = stdout)
         project_id: GCP project ID for billing
         start_date: Start date in YYYY-MM-DD format (inclusive)
@@ -70,12 +75,12 @@ def run_bq_query(
             f"start_date must be <= end_date, got: {start_date} > {end_date}"
         )
 
-    print(f"Running query: {query_file}", file=sys.stderr)
+    print(f"Running query: {query_name}", file=sys.stderr)
     print(f"  Date range: {start_date} to {end_date}", file=sys.stderr)
 
-    # Read query template
-    with open(query_file) as f:
-        query = f.read()
+    # Load query template from iqb.queries package
+    query_file = files(iqb.queries).joinpath(f"{query_name}.sql")
+    query = query_file.read_text()
 
     # Substitute template variables
     query = query.replace("{START_DATE}", start_date)
@@ -125,7 +130,10 @@ def main():
     parser = argparse.ArgumentParser(
         description="Execute BigQuery query template and save results"
     )
-    parser.add_argument("query_file", type=Path, help="Path to SQL query template file")
+    parser.add_argument(
+        "query_name",
+        help="Name of SQL query template (e.g., 'downloads_by_country', 'uploads_by_country')",
+    )
     parser.add_argument(
         "-o", "--output", type=Path, help="Path to output JSON file (default: stdout)"
     )
@@ -147,12 +155,8 @@ def main():
 
     args = parser.parse_args()
 
-    if not args.query_file.exists():
-        print(f"Error: Query file not found: {args.query_file}", file=sys.stderr)
-        sys.exit(1)
-
     run_bq_query(
-        args.query_file,
+        args.query_name,
         args.output,
         args.project_id,
         args.start_date,

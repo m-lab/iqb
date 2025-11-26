@@ -2,8 +2,6 @@
 
 from importlib.resources import files
 
-import pytest
-
 import iqb.queries
 
 

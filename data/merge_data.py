@@ -53,6 +53,10 @@ def main():
 
         # Create clean output
         output = {
+            "sample_counts": {
+                "downloads": int(dl["sample_count"]),
+                "uploads": int(ul["sample_count"]),
+            },
             "metrics": {
                 "download_throughput_mbps": download_percentiles,
                 "upload_throughput_mbps": upload_percentiles,

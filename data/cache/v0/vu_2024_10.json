@@ -1,4 +1,8 @@
 {
+  "sample_counts": {
+    "downloads": 263,
+    "uploads": 164
+  },
   "metrics": {
     "download_throughput_mbps": {
       "p1": 0.19232552240503117,

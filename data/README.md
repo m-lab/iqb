@@ -19,21 +19,14 @@ the IQB prototype for Phase 1 development.
 
 - `br_2024_10.json` - Brazil, ~5M download samples, ~3M upload samples
 
+- ... (more files)
+
 ### Data Structure
 
 Each JSON file contains:
 
 ```JavaScript
 {
-  "metadata": {
-    "country_code": "US",
-    "country_name": "United States",
-    "period": "2024-10",
-    "period_description": "October 2024",
-    "dataset": "M-Lab NDT",
-    "download_samples": 31443312,
-    "upload_samples": 24288961
-  },
   "metrics": {
     "download_throughput_mbps": {"p1": 0.38, /* ... */, "p99": 891.82},
     "upload_throughput_mbps": {"p1": 0.06, /* ... */, "p99": 813.73},
@@ -49,21 +42,8 @@ Each JSON file contains:
 
 ### BigQuery Queries
 
-The data was extracted from M-Lab's public BigQuery tables using two queries:
-
-1. **Downloads** (`query_downloads.sql`): Queries
-`measurement-lab.ndt.unified_downloads` for:
-
-   - Download throughput (`a.MeanThroughputMbps`)
-
-   - Latency (`a.MinRTT`)
-
-   - Packet loss (`a.LossRate`)
-
-2. **Uploads** (`query_uploads.sql`): Queries
-`measurement-lab.ndt.unified_uploads` for:
-
-   - Upload throughput (`a.MeanThroughputMbps`)
+The data was extracted from M-Lab's public BigQuery tables using queries
+inside the [../library/src/iqb/queries](../library/src/iqb/queries) package.
 
 ### Running the Data Generation Pipeline
 
@@ -76,13 +56,13 @@ The data was extracted from M-Lab's public BigQuery tables using two queries:
 - `gcloud`-authenticated with an account subscribed to
 [M-Lab Discuss mailing list](https://groups.google.com/a/measurementlab.net/g/discuss)
 
-- Python 3.11+
+- Python 3.13 using `uv` as documented in the toplevel [README.md](../README.md)
 
 **Complete Pipeline** (recommended):
 
 ```bash
 cd data/
-python3 generate_data.py
+uv run python generate_data.py
 ```
 
 This orchestrates the complete pipeline:
@@ -101,13 +81,13 @@ Generated files: `us_2024_10.json`, `de_2024_10.json`, `br_2024_10.json`.
 cd data/
 
 # Stage 1a: Query downloads
-python3 run_query.py query_downloads.sql -o downloads.json
+uv run python run_query.py query_downloads.sql -o downloads.json
 
 # Stage 1b: Query uploads
-python3 run_query.py query_uploads.sql -o uploads.json
+uv run python run_query.py query_uploads.sql -o uploads.json
 
 # Stage 2: Merge data
-python3 merge_data.py
+uv run python merge_data.py
 ```
 
 **Pipeline Scripts**:
@@ -118,19 +98,6 @@ python3 merge_data.py
 
 - [merge_data.py](merge_data.py) - Merges download and upload data into
 per-country files
-
-### Modifying Queries
-
-To change the time period or countries, edit the SQL files:
-
-```sql
-WHERE
-    date BETWEEN "2024-10-01" AND "2024-10-31"  -- Change dates here
-    AND client.Geo.CountryCode IN ("US", "DE", "BR")  -- Change countries here
-```
-
-Country codes follow the
-[ISO 3166-1 alpha-2](https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2) standard.
 
 ## Notes
 

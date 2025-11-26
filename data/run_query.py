@@ -89,6 +89,7 @@ def run_bq_query(
         "--use_legacy_sql=false",
         f"--project_id={project_id}",
         "--format=json",
+        "--max_rows=10000",  # Override default limit of 100 rows
         query,
     ]
 

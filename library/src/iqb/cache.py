@@ -18,7 +18,7 @@ Example usage:
     cache = IQBCache()
 
     # Or specify custom location
-    cache = IQBCache(cache_dir="/shared/iqb-cache")
+    cache = IQBCache(data_dir="/shared/iqb-cache")
 """
 
 import json
@@ -29,18 +29,18 @@ from pathlib import Path
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""
 
-    def __init__(self, cache_dir: str | Path | None = None):
+    def __init__(self, data_dir: str | Path | None = None):
         """
         Initialize cache with data directory path.
 
         Parameters:
-            cache_dir: Path to directory containing cached data files.
+            data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        if cache_dir is None:
-            self.cache_dir = Path.cwd() / ".iqb"
+        if data_dir is None:
+            self.data_dir = Path.cwd() / ".iqb"
         else:
-            self.cache_dir = Path(cache_dir)
+            self.data_dir = Path(data_dir)
 
     def get_data(
         self,
@@ -171,7 +171,7 @@ class IQBCache:
 
         period_str = known_periods[start_date]
         filename = f"{country_lower}_{period_str}.json"
-        filepath = self.cache_dir / filename
+        filepath = self.data_dir / "cache" / "v0" / filename
 
         # Check if file exists
         if not filepath.exists():

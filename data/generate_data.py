@@ -44,6 +44,8 @@ def generate_for_period(
     print(f"Date range: [{start_date}, {end_date})")
     print(f"{'#' * 60}")
 
+    cache_dir = data_dir / "cache" / "v0"
+
     # Stage 1a: Query downloads
     run_command(
         [
@@ -55,7 +57,7 @@ def generate_for_period(
             "--end-date",
             end_date,
             "-o",
-            str(data_dir / "downloads.json"),
+            str(cache_dir / "downloads.json"),
         ],
         f"Stage 1a: Querying download metrics for {period_str}",
     )
@@ -71,7 +73,7 @@ def generate_for_period(
             "--end-date",
             end_date,
             "-o",
-            str(data_dir / "uploads.json"),
+            str(cache_dir / "uploads.json"),
         ],
         f"Stage 1b: Querying upload metrics for {period_str}",
     )

@@ -10,17 +10,17 @@ from iqb import IQBCache
 class TestIQBCacheInitialization:
     """Tests for IQBCache class initialization."""
 
-    def test_init_with_default_cache_dir(self):
+    def test_init_with_default_data_dir(self):
         """Test that IQBCache uses .iqb/ directory by default."""
         cache = IQBCache()
-        assert cache.cache_dir.name == ".iqb"
+        assert cache.data_dir.name == ".iqb"
         # Should be in current working directory
-        assert cache.cache_dir.parent.samefile(".")
+        assert cache.data_dir.parent.samefile(".")
 
-    def test_init_with_custom_cache_dir(self):
-        """Test that IQBCache can be instantiated with custom cache_dir."""
-        cache = IQBCache(cache_dir="/custom/path")
-        assert str(cache.cache_dir) == "/custom/path"
+    def test_init_with_custom_data_dir(self):
+        """Test that IQBCache can be instantiated with custom data_dir."""
+        cache = IQBCache(data_dir="/custom/path")
+        assert str(cache.data_dir) == "/custom/path"
 
 
 class TestIQBCacheGetData:
@@ -28,7 +28,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_us_october_2024(self, data_dir):
         """Test fetching US data for October 2024."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         data = cache.get_data(
             country="US",
             start_date=datetime(2024, 10, 1),
@@ -52,7 +52,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_de_october_2024(self, data_dir):
         """Test fetching Germany data for October 2024."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         data = cache.get_data(
             country="DE",
             start_date=datetime(2024, 10, 1),
@@ -67,7 +67,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_br_october_2024(self, data_dir):
         """Test fetching Brazil data for October 2024."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         data = cache.get_data(
             country="BR",
             start_date=datetime(2024, 10, 1),
@@ -82,7 +82,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_case_insensitive_country(self, data_dir):
         """Test that country code is case-insensitive."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         data_upper = cache.get_data(country="US", start_date=datetime(2024, 10, 1))
         data_lower = cache.get_data(country="us", start_date=datetime(2024, 10, 1))
@@ -92,7 +92,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_with_different_percentile(self, data_dir):
         """Test extracting different percentile values."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
         data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
@@ -113,7 +113,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_france_october_2024(self, data_dir):
         """Test fetching France data for October 2024."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         data = cache.get_data(
             country="FR",
             start_date=datetime(2024, 10, 1),
@@ -128,7 +128,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_canada_october_2024(self, data_dir):
         """Test fetching Canada data for October 2024."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         data = cache.get_data(
             country="CA",
             start_date=datetime(2024, 10, 1),
@@ -143,7 +143,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_australia_october_2025(self, data_dir):
         """Test fetching Australia data for October 2025."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         data = cache.get_data(
             country="AU",
             start_date=datetime(2025, 10, 1),
@@ -158,7 +158,7 @@ class TestIQBCacheGetData:
 
     def test_get_data_unavailable_country_raises_error(self, data_dir):
         """Test that requesting data for unavailable country raises FileNotFoundError."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         # Use a fictional country code that won't exist
         with pytest.raises(FileNotFoundError, match="No cached data file found"):
@@ -166,14 +166,14 @@ class TestIQBCacheGetData:
 
     def test_get_data_unavailable_date_raises_error(self, data_dir):
         """Test that requesting data for unavailable date raises FileNotFoundError."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         with pytest.raises(FileNotFoundError, match="No cached data"):
             cache.get_data(country="US", start_date=datetime(2024, 11, 1))
 
     def test_get_data_with_explicit_end_date_raises_error(self, data_dir):
         """Test that specifying end_date raises error (not yet supported)."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         with pytest.raises(FileNotFoundError, match="No cached data"):
             cache.get_data(
@@ -188,7 +188,7 @@ class TestIQBCacheExtractPercentile:
 
     def test_extract_percentile_returns_correct_structure(self, data_dir):
         """Test that _extract_percentile returns the expected dict structure."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         # Create sample data matching JSON structure
         sample_data = {
@@ -211,7 +211,7 @@ class TestIQBCacheExtractPercentile:
 
     def test_extract_percentile_invalid_raises_helpful_error(self, data_dir):
         """Test that requesting invalid percentile raises ValueError with available options."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         # Create sample data with only p50 and p95
         sample_data = {
@@ -236,7 +236,7 @@ class TestIQBCacheExtractPercentile:
 
     def test_get_data_invalid_percentile_from_real_file(self, data_dir):
         """Test that requesting unavailable percentile from real data file raises ValueError."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         # Request p37 which doesn't exist in the actual data files
         with pytest.raises(ValueError) as exc_info:
@@ -253,7 +253,7 @@ class TestIQBCacheAllFiles:
 
     def test_all_countries_october_2024(self, data_dir):
         """Test that all countries can be accessed for October 2024."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         countries = ["US", "DE", "BR"]
 
         for country in countries:
@@ -279,7 +279,7 @@ class TestIQBCacheAllFiles:
 
     def test_all_countries_october_2025(self, data_dir):
         """Test that all countries can be accessed for October 2025."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
         countries = ["US", "DE", "BR"]
 
         for country in countries:
@@ -305,7 +305,7 @@ class TestIQBCacheAllFiles:
 
     def test_all_supported_combinations(self, data_dir):
         """Test all combinations of countries and periods that should be available."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         # All combinations we expect to have cached
         combinations = [
@@ -327,7 +327,7 @@ class TestIQBCacheAllFiles:
 
     def test_all_percentiles_available(self, data_dir):
         """Test that all expected percentiles are available in cached data."""
-        cache = IQBCache(cache_dir=data_dir)
+        cache = IQBCache(data_dir=data_dir)
 
         # Standard percentiles we generate
         percentiles = [1, 5, 10, 25, 50, 75, 90, 95, 99]

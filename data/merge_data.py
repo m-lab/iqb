@@ -18,13 +18,13 @@ def main():
     )
     args = parser.parse_args()
 
-    data_dir = Path(__file__).parent
+    cache_dir = Path(__file__).parent / "cache" / "v0"
 
     # Load raw data (always from downloads.json and uploads.json)
-    with open(data_dir / "downloads.json") as f:
+    with open(cache_dir / "downloads.json") as f:
         downloads = json.load(f)
 
-    with open(data_dir / "uploads.json") as f:
+    with open(cache_dir / "uploads.json") as f:
         uploads = json.load(f)
 
     # Merge by country
@@ -62,7 +62,7 @@ def main():
         }
 
         # Write to file using output suffix
-        output_file = data_dir / f"{country_code.lower()}_{args.output_suffix}.json"
+        output_file = cache_dir / f"{country_code.lower()}_{args.output_suffix}.json"
         with open(output_file, "w") as f:
             json.dump(output, f, indent=2)
         print(f"✓ Created {output_file.name}", file=sys.stderr)

@@ -5,21 +5,23 @@ the IQB prototype for Phase 1 development.
 
 ## Current Dataset
 
-**Period**: October 2024 (2024-10-01 to 2024-10-31)
+**Period**: October 2024 (2024-10-01 to 2024-10-31) and October 2025
 
 **Source**: [M-Lab NDT](https://www.measurementlab.net/tests/ndt/) unified views
 
-**Countries**: United States (US), Germany (DE), Brazil (BR)
+**Countries**: all available countries
 
 ### Files
+
+Generated files live inside [./cache/v0](./cache/v0).
+
+Here are some sample files:
 
 - `us_2024_10.json` - United States, ~31M download samples, ~24M upload samples
 
 - `de_2024_10.json` - Germany, ~7M download samples, ~4M upload samples
 
 - `br_2024_10.json` - Brazil, ~5M download samples, ~3M upload samples
-
-- ... (more files)
 
 ### Data Structure
 
@@ -73,7 +75,8 @@ This orchestrates the complete pipeline:
 
 3. Merges the data into per-country JSON files
 
-Generated files: `us_2024_10.json`, `de_2024_10.json`, `br_2024_10.json`.
+Generated files `${country}_2024_10.json` and `${country}_2025_10.json`
+inside the [./cache/v0](./cache/v0) directory.
 
 **Individual Pipeline Stages** (for debugging):
 
@@ -105,8 +108,8 @@ per-country files
 for Phase 1 prototype. Phase 2 will add dynamic data fetching.
 
 - **Time granularity**: Data is aggregated over the entire
-month (October 2024). The analyst decides which time window
-to use when fethcing data for running IQB calculations.
+months of October 2024 and October 2025. The analyst decides which
+time window to use for running IQB calculations.
 
 - **Percentile selection**: The Streamlit UI allows users
 to select which percentile(s) to use for IQB score calculations.

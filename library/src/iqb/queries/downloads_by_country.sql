@@ -72,5 +72,6 @@ WHERE
     AND client.Geo.CountryCode IS NOT NULL
     AND a.MeanThroughputMbps IS NOT NULL
     AND a.MinRTT IS NOT NULL
+    AND a.LossRate IS NOT NULL
 GROUP BY country_code
 ORDER BY country_code

@@ -124,10 +124,7 @@ def run_bq_query(
 
 
 def main():
-    # TODO(bassosimone): Should we use 'measurement-lab' as the project ID instead?
-    # The web console (https://console.cloud.google.com/bigquery?project=measurement-lab)
-    # uses measurement-lab as the project, so I am a bit unsure about what to use here.
-    DEFAULT_PROJECT_ID = "mlab-sandbox"
+    DEFAULT_PROJECT_ID = "measurement-lab"
 
     parser = argparse.ArgumentParser(
         description="Execute BigQuery query template and save results"

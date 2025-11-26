@@ -2,15 +2,16 @@
 """Execute a BigQuery query and save results to a JSON file."""
 
 import argparse
-import subprocess
+import json
 import sys
 from datetime import datetime
-from importlib.resources import files
 from pathlib import Path
 
-# Add library to path so we can import iqb.queries
+import pyarrow.parquet as pq
+
+# Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
-import iqb.queries
+from iqb.pipeline import IQBPipeline
 
 
 def validate_date(date_str: str) -> str:
@@ -45,6 +46,11 @@ def run_bq_query(
     """
     Execute a BigQuery query and save the JSON output.
 
+    This uses IQBPipeline internally to:
+    1. Execute the query and save parquet to ./data/cache/v1/{start}/{end}/{query_name}.parquet
+    2. Convert the parquet to JSON format
+    3. Write JSON to the output file (for backward compatibility with v0 pipeline)
+
     Query templates should contain {START_DATE} and {END_DATE} placeholders
     which will be replaced with the provided date values.
 
@@ -78,47 +84,43 @@ def run_bq_query(
     print(f"Running query: {query_name}", file=sys.stderr)
     print(f"  Date range: {start_date} to {end_date}", file=sys.stderr)
 
-    # Load query template from iqb.queries package
-    query_file = files(iqb.queries).joinpath(f"{query_name}.sql")
-    query = query_file.read_text()
+    # Data directory is ./iqb/data (where this script lives)
+    data_dir = Path(__file__).parent
 
-    # Substitute template variables
-    query = query.replace("{START_DATE}", start_date)
-    query = query.replace("{END_DATE}", end_date)
+    # Step 1: Execute query and save parquet using IQBPipeline
+    # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}.parquet
+    pipeline = IQBPipeline(project_id=project_id, data_dir=data_dir)
+    result = pipeline.execute_query_template(
+        template=query_name,
+        start_date=start_date,
+        end_date=end_date,
+    )
+    info = result.save_parquet()
 
-    # Execute BigQuery command
-    # stdout = data (JSON), stderr = logs
-    cmd = [
-        "bq",
-        "query",
-        "--use_legacy_sql=false",
-        f"--project_id={project_id}",
-        "--format=json",
-        "--max_rows=10000",  # Override default limit of 100 rows
-        query,
-    ]
-
-    try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-
-        # Print logs (stderr) to console
-        if result.stderr:
-            print(result.stderr, file=sys.stderr)
-
-        # Write data (stdout) to output file or stdout
+    if info.no_content:
+        print("⚠ Query returned no results", file=sys.stderr)
         if output_file:
-            with open(output_file, "w") as f:
-                f.write(result.stdout)
-            print(f"✓ Query completed: {output_file}", file=sys.stderr)
+            output_file.write_text("[]")
         else:
-            # Output to stdout for piping
-            print(result.stdout)
+            print("[]")
+        return
 
-    except subprocess.CalledProcessError as e:
-        print(f"✗ Query failed: {e}", file=sys.stderr)
-        if e.stderr:
-            print(e.stderr, file=sys.stderr)
-        sys.exit(1)
+    print(f"✓ Parquet saved: {info.file_path}", file=sys.stderr)
+
+    # Step 2: Convert parquet to JSON
+    print(f"Converting parquet to JSON...", file=sys.stderr)
+    table = pq.read_table(info.file_path)
+    records = table.to_pylist()
+    json_output = json.dumps(records, indent=2)
+
+    # Step 3: Write JSON to output file or stdout
+    if output_file:
+        output_file.parent.mkdir(parents=True, exist_ok=True)
+        output_file.write_text(json_output)
+        print(f"✓ JSON saved: {output_file} ({len(records)} records)", file=sys.stderr)
+    else:
+        # Output to stdout for piping
+        print(json_output)
 
 
 def main():

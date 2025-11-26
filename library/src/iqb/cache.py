@@ -25,6 +25,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
+from . import pipeline
+
 
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""
@@ -37,10 +39,7 @@ class IQBCache:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        if data_dir is None:
-            self.data_dir = Path.cwd() / ".iqb"
-        else:
-            self.data_dir = Path(data_dir)
+        self.data_dir = pipeline.data_dir_or_default(data_dir)
 
     def get_data(
         self,
@@ -218,7 +217,11 @@ class IQBCache:
         except KeyError as err:
             # Determine which percentiles ARE available
             available = sorted(
-                [int(k[1:]) for k in metrics["download_throughput_mbps"] if k.startswith("p")]
+                [
+                    int(k[1:])
+                    for k in metrics["download_throughput_mbps"]
+                    if k.startswith("p")
+                ]
             )
             raise ValueError(
                 f"Percentile {percentile} not available in cached data. "

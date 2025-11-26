@@ -10,13 +10,7 @@ authors = [
 ]
 keywords = ["internet", "quality", "measurement", "network", "performance"]
 
-dependencies = [
-    "google-cloud-bigquery>=3.0.0",
-    "google-cloud-bigquery-storage>=2.0.0",
-    "pyarrow>=14.0.0",
-    "pandas>=2.0.0",
-    "db-dtypes>=1.0.0",
-]
+dependencies = []
 
 [project.urls]
 Homepage = "https://github.com/m-lab/iqb"
@@ -29,9 +23,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/iqb"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/iqb/queries" = "iqb/queries"
 
 [dependency-groups]
 dev = [

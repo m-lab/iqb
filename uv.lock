@@ -1363,6 +1363,7 @@ dependencies = [
     { name = "google-cloud-bigquery-storage" },
     { name = "pandas" },
     { name = "pyarrow" },
+    { name = "python-dateutil" },
 ]
 
 [package.dev-dependencies]
@@ -1379,6 +1380,7 @@ requires-dist = [
     { name = "google-cloud-bigquery-storage", specifier = ">=2.0.0" },
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pyarrow", specifier = ">=14.0.0" },
+    { name = "python-dateutil", specifier = ">=2.9.0.post0" },
 ]
 
 [package.metadata.requires-dev]

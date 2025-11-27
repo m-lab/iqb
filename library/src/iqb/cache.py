@@ -26,6 +26,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from dateutil.relativedelta import relativedelta
 import pandas as pd
 import pyarrow.parquet as pq
 
@@ -311,7 +312,7 @@ class IQBCache:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        self.data_dir = data_dir_or_default(data_dir)
+        self.manager = PipelineCacheManager(data_dir)
 
     def get_cache_entry(
         self,
@@ -348,11 +349,8 @@ class IQBCache:
             >>> # Returns data for October 2025
             >>> entry = cache.get_cache_entry("2025-10-01", "2025-11-01", "country")
         """
-        # 1. create a temporary cache manager instance
-        manager = PipelineCacheManager(self.data_dir)
-
-        # 2. check whether the download entry exists
-        download_entry = manager.get_cache_entry(
+        # 1. check whether the download entry exists
+        download_entry = self.manager.get_cache_entry(
             f"downloads_by_{granularity}",
             start_date,
             end_date,
@@ -364,8 +362,8 @@ class IQBCache:
                 f"Cache entry not found for downloads_by_{granularity} ({start_date} to {end_date})"
             )
 
-        # 3. check whether the upload entry exists
-        upload_entry = manager.get_cache_entry(
+        # 2. check whether the upload entry exists
+        upload_entry = self.manager.get_cache_entry(
             f"uploads_by_{granularity}",
             start_date,
             end_date,
@@ -441,9 +439,6 @@ class IQBCache:
         NOTE: This creates semantics where p95 represents "typical best
         performance" - empirical validation will determine if appropriate.
         """
-        # TODO(bassosimone): we should convert this method to become
-        # a wrapper of `get_cache_entry` in the future.
-
         # Design Note
         # -----------
         #
@@ -496,84 +491,24 @@ class IQBCache:
     ) -> dict:
         """Return m-lab data with the given country code, dates, etc."""
 
-        # Map datetime to period string
-        # We only support single-month periods with end_date=None
-        if end_date is not None:
-            raise FileNotFoundError(
-                f"No cached data for country={country_lower}, "
-                f"start_date={start_date}, end_date={end_date}. "
-                f"Multi-month periods not yet supported."
-            )
+        # 1. Assign a value to end_date if not set
+        if end_date is None:
+            end_date = start_date + relativedelta(months=1)
 
-        # Map known periods to their string representation
-        known_periods = {
-            datetime(2024, 10, 1): "2024_10",
-            datetime(2025, 10, 1): "2025_10",
-        }
+        # TODO(bassosimone): make it possible to query using
+        # different granularities here
 
-        if start_date not in known_periods:
-            raise FileNotFoundError(
-                f"No cached data for country={country_lower}, "
-                f"start_date={start_date}, end_date={end_date}. "
-                f"Available periods: {list(known_periods.keys())}"
-            )
+        # 2. Read the on-disk cache
+        entry = self.get_cache_entry(
+            start_date=start_date.strftime("%Y-%m-%d"),
+            end_date=end_date.strftime("%Y-%m-%d"),
+            granularity="country",
+        )
 
-        period_str = known_periods[start_date]
-        filename = f"{country_lower}_{period_str}.json"
-        filepath = self.data_dir / "cache" / "v0" / filename
+        # 3. Obtain the corresponding download and upload data frames
+        df_pair = entry.get_data_frame_pair(
+            country_code=country_lower.upper(),
+        )
 
-        # Check if file exists
-        if not filepath.exists():
-            raise FileNotFoundError(
-                f"No cached data file found: {filepath}. "
-                f"File does not exist for country={country_lower}, period={period_str}"
-            )
-
-        # Load from file
-        with open(filepath) as filep:
-            data = json.load(filep)
-
-        # Extract the requested percentile
-        return self._extract_percentile(data, percentile)
-
-    def _extract_percentile(self, data: dict, percentile: int) -> dict:
-        """
-        Extract specific percentile from JSON data.
-
-        Converts from JSON format to IQBCalculator format:
-        - Input: {"metrics": {"download_throughput_mbps": {"p95": 123, ...}, ...}}
-        - Output: {"download_throughput_mbps": 123, ...}
-
-        Args:
-            data: Full JSON data structure from cache file.
-            percentile: Which percentile to extract.
-
-        Returns:
-            dict with metric values for the specified percentile.
-
-        Raises:
-            ValueError: If requested percentile is not available in the cached data.
-        """
-        metrics = data["metrics"]
-        p_key = f"p{percentile}"
-
-        try:
-            return {
-                "download_throughput_mbps": metrics["download_throughput_mbps"][p_key],
-                "upload_throughput_mbps": metrics["upload_throughput_mbps"][p_key],
-                "latency_ms": metrics["latency_ms"][p_key],
-                "packet_loss": metrics["packet_loss"][p_key],
-            }
-        except KeyError as err:
-            # Determine which percentiles ARE available
-            available = sorted(
-                [
-                    int(k[1:])
-                    for k in metrics["download_throughput_mbps"]
-                    if k.startswith("p")
-                ]
-            )
-            raise ValueError(
-                f"Percentile {percentile} not available in cached data. "
-                f"Available percentiles: {available}"
-            ) from err
+        # 4. Convert to dictionary and return
+        return df_pair.to_dict(percentile=percentile)

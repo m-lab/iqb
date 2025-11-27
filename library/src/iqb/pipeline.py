@@ -291,7 +291,7 @@ class IQBPipeline:
             )
 
         # 6. execute query and update the cache
-        result = self.execute_query_template(template, start_date, end_date)
+        result = self._execute_query_template(tname, start_time, end_time)
         result.save_parquet()
         result.save_stats()
 

@@ -33,17 +33,112 @@ from .pipeline import PipelineCacheManager, data_dir_or_default
 
 
 @dataclass(frozen=True)
+class DataFramePair:
+    """
+    Pair of download and upload DataFrames containing measurement data.
+
+    This class represents pre-filtered measurement data ready for conversion to
+    various output formats. The DataFrames contain all percentile columns, allowing
+    flexible extraction of any percentile.
+
+    Attributes:
+        download_df: pandas DataFrame with download/latency/loss data
+        upload_df: pandas DataFrame with upload data
+    """
+
+    download_df: pd.DataFrame
+    upload_df: pd.DataFrame
+
+    def to_dict(self, *, percentile: int = 95) -> dict[str, float]:
+        """
+        Converts the DataFramePair to a dictionary suitable for IQBCalculator.
+
+        Args:
+            percentile: The percentile to extract (1-99), default 95
+
+        Returns:
+            dict with keys for IQBCalculator:
+            {
+                "download_throughput_mbps": float,
+                "upload_throughput_mbps": float,
+                "latency_ms": float,
+                "packet_loss": float,
+            }
+
+        Raises:
+            ValueError: If the DataFrames don't have exactly one row, or if
+                the required percentile columns don't exist.
+        """
+        # 1. Ensure we have exactly one row in each DataFrame
+        if len(self.download_df) != 1:
+            raise ValueError(
+                f"Expected exactly 1 row in download DataFrame, "
+                f"but got {len(self.download_df)} rows"
+            )
+
+        if len(self.upload_df) != 1:
+            raise ValueError(
+                f"Expected exactly 1 row in upload DataFrame, but got {len(self.upload_df)} rows"
+            )
+
+        # 2. Construct the percentile column names
+        download_col = f"download_p{percentile}"
+        upload_col = f"upload_p{percentile}"
+        latency_col = f"latency_p{percentile}"
+        loss_col = f"loss_p{percentile}"
+
+        # 3. Check that the percentile columns actually exist
+        for col in [download_col, latency_col, loss_col]:
+            if col not in self.download_df.columns:
+                raise ValueError(
+                    f"Percentile column '{col}' not found in download data. "
+                    f"Available columns: {list(self.download_df.columns)}"
+                )
+
+        if upload_col not in self.upload_df.columns:
+            raise ValueError(
+                f"Percentile column '{upload_col}' not found in upload data. "
+                f"Available columns: {list(self.upload_df.columns)}"
+            )
+
+        # 4. Extract the single row we need
+        download_row = self.download_df.iloc[0]
+        upload_row = self.upload_df.iloc[0]
+
+        # 5. Return the dict with explicit float conversion
+        return {
+            "download_throughput_mbps": float(download_row[download_col]),
+            "upload_throughput_mbps": float(upload_row[upload_col]),
+            "latency_ms": float(download_row[latency_col]),
+            "packet_loss": float(download_row[loss_col]),
+        }
+
+
+@dataclass(frozen=True)
 class CacheEntry:
     """
     Entry inside the data cache.
 
+    The available granularities are:
+
+        1. "country"
+        2. "country_asn"
+        3. "country_city"
+        4. "country_city_asn"
+
     Attributes:
+        granularity: granularity used by this dataset
+        start_date: the start date used by this dataset (YYYY-MM-DD; included)
+        end_date: the end date used by this dataset (YYYY-MM-DD; excluded)
         download_data: full path to data.parquet for download
         upload_data: full path to data.parquet for upload
         download_stats: full path to stats.json for download
         upload_stats: full path to stats.json for upload
     """
 
+    start_date: str
+    end_date: str
+    granularity: str
     download_data: Path
     upload_data: Path
     download_stats: Path
@@ -135,6 +230,72 @@ class CacheEntry:
             columns=columns,
         )
 
+    def get_data_frame_pair(
+        self,
+        *,
+        country_code: str,
+        city: str | None = None,
+        asn: int | None = None,
+    ) -> DataFramePair:
+        """
+        High-level API: Get filtered download/upload data for specific parameters.
+
+        This method provides a convenient way to get measurement data ready for
+        conversion to IQBCalculator format or other analysis. All the columns are
+        loaded, allowing for flexible extraction later.
+
+        Arguments:
+            country_code: ISO 2-letter country code (e.g., "US", "DE")
+            city: Optional city name (required for "country_city" and "country_city_asn" granularity)
+            asn: Optional ASN number (required for "country_city_asn" granularity)
+
+        Returns:
+            DataFramePair containing filtered download and upload DataFrames
+            with all the original percentile columns
+
+        Raises:
+            ValueError: If the requested granularity is incompatible with the
+                cache granularity (e.g., requesting city with country-level data)
+
+        Example:
+            >>> entry = cache.get_cache_entry("2024-10-01", "2024-11-01", "country")
+            >>> pair = entry.get_data_frame_pair(country_code="US")
+            >>> data_p95 = pair.to_dict(percentile=95)
+            >>> data_p50 = pair.to_dict(percentile=50)
+        """
+        # 1. Validate granularity compatibility
+        if city is not None and "city" not in self.granularity:
+            raise ValueError(
+                f"Cannot filter by city with granularity '{self.granularity}'. "
+                f"Use granularity containing 'city' (e.g., 'country_city')."
+            )
+
+        if asn is not None and "asn" not in self.granularity:
+            raise ValueError(
+                f"Cannot filter by ASN with granularity '{self.granularity}'. "
+                f"Use granularity containing 'asn' (e.g., 'country_asn')."
+            )
+
+        # 2. Read download data with filtering (all columns for flexibility)
+        download_df = self.read_download_data_frame(
+            country_code=country_code,
+            city=city,
+            asn=asn,
+        )
+
+        # 3. Read upload data with filtering (all columns for flexibility)
+        upload_df = self.read_upload_data_frame(
+            country_code=country_code,
+            city=city,
+            asn=asn,
+        )
+
+        # 4. Make and return the pair
+        return DataFramePair(
+            download_df=download_df,
+            upload_df=upload_df,
+        )
+
 
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""
@@ -182,7 +343,7 @@ class IQBCache:
 
         Example:
             >>> # Returns data for October 2025
-            >>> result = cache.get_cache_entry("2025-10-01", "2025-11-01", "country")
+            >>> entry = cache.get_cache_entry("2025-10-01", "2025-11-01", "country")
         """
         # 1. create a temporary cache manager instance
         manager = PipelineCacheManager(self.data_dir)
@@ -215,6 +376,9 @@ class IQBCache:
 
         # 4. return the actual cache entry
         return CacheEntry(
+            granularity=granularity,
+            start_date=start_date,
+            end_date=end_date,
             download_data=download_data,
             upload_data=upload_data,
             download_stats=download_stats,

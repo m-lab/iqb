@@ -144,8 +144,8 @@ class CacheEntry:
     download_stats: Path
     upload_stats: Path
 
+    @staticmethod
     def _read_data_frame(
-        self,
         filepath: Path,
         *,
         country_code: str | None,

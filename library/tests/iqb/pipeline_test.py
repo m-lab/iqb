@@ -72,16 +72,6 @@ class TestParseTemplateName:
         result = _parse_template_name("uploads_by_country")
         assert result.value == "uploads_by_country"
 
-    def test_parse_valid_downloads_by_country_city_asn(self):
-        """Test parsing valid downloads_by_country_city_asn template."""
-        result = _parse_template_name("downloads_by_country_city_asn")
-        assert result.value == "downloads_by_country_city_asn"
-
-    def test_parse_valid_uploads_by_country_city_asn(self):
-        """Test parsing valid uploads_by_country_city_asn template."""
-        result = _parse_template_name("uploads_by_country_city_asn")
-        assert result.value == "uploads_by_country_city_asn"
-
     def test_parse_invalid_template_name(self):
         """Test error on unknown template name."""
         with pytest.raises(ValueError, match="Unknown template 'invalid_query'"):

@@ -178,6 +178,7 @@ class QueryResult:
 
         with stats_path.open("w") as f:
             json.dump(stats, f, indent=2)
+            f.write("\n")  # Add newline at EOF for git-friendly diffs
 
         return stats_path
 

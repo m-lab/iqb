@@ -8,10 +8,10 @@ import pyarrow as pa
 import pytest
 
 from iqb.pipeline import (
-    CacheEntry,
     IQBPipeline,
     ParquetFileInfo,
     ParsedTemplateName,
+    PipelineCacheEntry,
     QueryResult,
     _load_query_template,
     _parse_both_dates,
@@ -514,7 +514,7 @@ class TestQueryResultSaveStats:
         assert stats_path.exists()
 
 
-class TestIQBPipelineGetCacheEntry:
+class TestIQBPipelineGetPipelineCacheEntry:
     """Test get_cache_entry method."""
 
     @patch("iqb.pipeline.bigquery.Client")
@@ -540,7 +540,7 @@ class TestIQBPipelineGetCacheEntry:
         # Get cache entry (should not execute query)
         entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
 
-        assert isinstance(entry, CacheEntry)
+        assert isinstance(entry, PipelineCacheEntry)
         assert entry.data_path == cache_dir / "data.parquet"
         assert entry.stats_path == cache_dir / "stats.json"
         assert entry.data_path.exists()
@@ -608,7 +608,7 @@ class TestIQBPipelineGetCacheEntry:
             mock_client_instance.query.assert_called_once()
 
             # Entry should be returned with correct paths
-            assert isinstance(entry, CacheEntry)
+            assert isinstance(entry, PipelineCacheEntry)
             expected_cache_dir = (
                 data_dir
                 / "cache"

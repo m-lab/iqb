@@ -110,7 +110,7 @@ class ParsedTemplateName:
 
 
 @dataclass(frozen=True)
-class CacheEntry:
+class PipelineCacheEntry:
     """
     Reference to a cache entry containing query results and metadata.
 
@@ -252,7 +252,7 @@ class IQBPipeline:
         end_date: str,
         *,
         fetch_if_missing: bool = False,
-    ) -> CacheEntry:
+    ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query.
 
@@ -264,7 +264,7 @@ class IQBPipeline:
                 Default is False (do not fetch automatically).
 
         Returns:
-            CacheEntry with paths to data.parquet and stats.json.
+            PipelineCacheEntry with paths to data.parquet and stats.json.
 
         Raises:
             FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
@@ -282,7 +282,7 @@ class IQBPipeline:
 
         # 4. check if cache exists
         if data_path.exists() and stats_path.exists():
-            return CacheEntry(data_path=data_path, stats_path=stats_path)
+            return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
 
         # 5. handle missing cache without auto-fetching
         if not fetch_if_missing:
@@ -298,7 +298,7 @@ class IQBPipeline:
         result.save_stats()
 
         # 7. return information about the cache entry
-        return CacheEntry(data_path=data_path, stats_path=stats_path)
+        return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
 
     def execute_query_template(
         self,

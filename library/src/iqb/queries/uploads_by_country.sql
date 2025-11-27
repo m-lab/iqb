@@ -9,7 +9,7 @@ SELECT
     -- Upload throughput is "higher is better", so we use standard percentile
     -- labels (no inversion).
     --
-    -- See query_downloads.sql for detailed explanation and rationale.
+    -- See downloads_by_country.sql for detailed explanation and rationale.
     -- ============================================================================
 
     -- Upload throughput (higher is better - NO INVERSION)

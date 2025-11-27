@@ -14,7 +14,7 @@ This directory contains static reference data used by the IQB prototype.
 
 We maintain two data formats in `./cache/`:
 
-### v0 - JSON Format
+### v0 - JSON Format (Golden Files)
 
 Per-country JSON files with pre-aggregated percentiles:
 
@@ -44,9 +44,8 @@ Raw query results stored efficiently for flexible analysis:
   - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
 - **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
 
-**Migration**: We're transitioning to v1 as the primary format. v0 remains available for
-backward compatibility and casual use. If Parquet proves too heavy for some workflows,
-v0 will continue to be maintained.
+**Migration**: The [../library](../library) `IQBCache` uses v1. We are keeping v0 data
+around as golden files, for backward compatibility, and casual use.
 
 ## How This Data Was Generated
 
@@ -159,8 +158,8 @@ for details.
 
 ## Future Improvements (Phase 2+)
 
-- Direct Parquet reading in cache.py (PyArrow predicate pushdown for efficient filtering)
+- Finer geographic resolution (cities, provinces, ASNs) - IN PROGRESS
+- Remote storage for `cache/v1` data (GitHub releases)
 - Additional datasets (Ookla, Cloudflare)
-- Finer geographic resolution (cities, provinces, ASNs)
 - Finer time granularity (daily, weekly)
-- Remote storage for v1 cache (GitHub releases, GCS buckets)
+- Remote storage for `cache/v1` data (GCS buckets)

@@ -40,7 +40,7 @@ Raw query results stored efficiently for flexible analysis:
 
 - **Location**: `./cache/v1/{start_date}/{end_date}/{query_type}/`
 - **Files**:
-  - `data.parquet` - Query results (20-60 MiB, streamable, chunked row groups)
+  - `data.parquet` - Query results (~1-60 MiB, streamable, chunked row groups)
   - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
 - **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
 

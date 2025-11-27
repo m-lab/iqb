@@ -13,14 +13,14 @@ class TestIQBCacheInitialization:
     def test_init_with_default_data_dir(self):
         """Test that IQBCache uses .iqb/ directory by default."""
         cache = IQBCache()
-        assert cache.manager.data_dir.name == ".iqb"
+        assert cache.data_dir.name == ".iqb"
         # Should be in current working directory
-        assert cache.manager.data_dir.parent.samefile(".")
+        assert cache.data_dir.parent.samefile(".")
 
     def test_init_with_custom_data_dir(self):
         """Test that IQBCache can be instantiated with custom data_dir."""
         cache = IQBCache(data_dir="/custom/path")
-        assert str(cache.manager.data_dir) == "/custom/path"
+        assert str(cache.data_dir) == "/custom/path"
 
 
 class TestIQBCacheGetData:
@@ -94,12 +94,8 @@ class TestIQBCacheGetData:
         """Test extracting different percentile values."""
         cache = IQBCache(data_dir=data_dir)
 
-        data_p95 = cache.get_data(
-            country="US", start_date=datetime(2024, 10, 1), percentile=95
-        )
-        data_p50 = cache.get_data(
-            country="US", start_date=datetime(2024, 10, 1), percentile=50
-        )
+        data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
+        data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data_p95
@@ -109,9 +105,7 @@ class TestIQBCacheGetData:
         data_p50 = data_p50["m-lab"]
 
         # p95 should be higher than p50 for throughput metrics (higher percentile = higher speed)
-        assert (
-            data_p95["download_throughput_mbps"] > data_p50["download_throughput_mbps"]
-        )
+        assert data_p95["download_throughput_mbps"] > data_p50["download_throughput_mbps"]
         assert data_p95["upload_throughput_mbps"] > data_p50["upload_throughput_mbps"]
 
         # p95 should be lower than p50 for latency (inverted: p95 label = p5 raw = best latency)

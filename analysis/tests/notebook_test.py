@@ -14,17 +14,20 @@ class TestNotebooks:
         """Return path to analysis directory."""
         return Path(__file__).parent.parent
 
-    def test_00_template_executes(self, analysis_dir):
+    def test_00_template_executes(self, analysis_dir, tmp_path):
         """Test that 00-template.ipynb executes without errors."""
         notebook_path = analysis_dir / "00-template.ipynb"
 
         # Verify notebook exists
         assert notebook_path.exists(), f"Notebook not found: {notebook_path}"
 
+        # Use temporary output path to avoid modifying tracked file
+        output_path = tmp_path / "00-template.ipynb"
+
         # Execute notebook using nbconvert
         # --to notebook: output as notebook (not HTML/PDF)
         # --execute: execute all cells
-        # --inplace: modify notebook in place (update cell outputs)
+        # --output: write to temp directory (don't modify original)
         # --ExecutePreprocessor.timeout=60: 60 second timeout per cell
         result = subprocess.run(
             [
@@ -34,7 +37,7 @@ class TestNotebooks:
                 "notebook",
                 "--execute",
                 "--output",
-                str(notebook_path),  # output path (overwrite original)
+                str(output_path),  # output to temp path
                 "--ExecutePreprocessor.timeout=60",
                 str(notebook_path),  # input path
             ],

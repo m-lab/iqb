@@ -302,7 +302,18 @@ class IQBPipeline:
         """
         self.client = bigquery.Client(project=project_id)
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
-        self.manager = PipelineCacheManager(data_dir)
+        self.data_dir = data_dir_or_default(data_dir)
+
+    def _cache_dir_path(
+        self,
+        tname: ParsedTemplateName,
+        start_time: datetime,
+        end_time: datetime,
+    ) -> Path:
+        fs_date_format = "%Y%m%dT000000Z"
+        start_dir = start_time.strftime(fs_date_format)
+        end_dir = end_time.strftime(fs_date_format)
+        return self.data_dir / "cache" / "v1" / start_dir / end_dir / tname.value
 
     def get_cache_entry(
         self,
@@ -335,7 +346,16 @@ class IQBPipeline:
         if entry.data_path() is not None and entry.stats_path() is not None:
             return entry
 
-        # 3. handle missing cache without auto-fetching
+        # 3. obtain information about the cache dir and files
+        cache_dir = self._cache_dir_path(tname, start_time, end_time)
+        data_path = cache_dir / CACHE_DATA_FILENAME
+        stats_path = cache_dir / CACHE_STATS_FILENAME
+
+        # 4. check if cache exists
+        if data_path.exists() and stats_path.exists():
+            return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
+
+        # 5. handle missing cache without auto-fetching
         if not fetch_if_missing:
             raise FileNotFoundError(
                 f"Cache entry not found for {template} "
@@ -348,10 +368,8 @@ class IQBPipeline:
         result.save_parquet()
         result.save_stats()
 
-        # 5. return information about the cache entry
-        assert entry.data_path() is not None
-        assert entry.stats_path() is not None
-        return entry
+        # 7. return information about the cache entry
+        return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
 
     def execute_query_template(
         self,

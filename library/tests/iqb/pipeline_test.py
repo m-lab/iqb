@@ -12,7 +12,6 @@ from iqb.pipeline import (
     ParquetFileInfo,
     ParsedTemplateName,
     PipelineCacheEntry,
-    PipelineCacheManager,
     QueryResult,
     _load_query_template,
     _parse_both_dates,
@@ -23,7 +22,7 @@ from iqb.pipeline import (
 
 
 class TestDataDirOrDefault:
-    """Test pure functions without external dependencies."""
+    """Test for data_dir_or_default function."""
 
     def test_data_dir_or_default_with_none(self):
         """Test default behavior when data_dir is None."""
@@ -569,15 +568,10 @@ class TestIQBPipelineGetPipelineCacheEntry:
         entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
 
         assert isinstance(entry, PipelineCacheEntry)
-        data_path = entry.data_path()
-        assert data_path is not None
-        assert data_path == cache_dir / "data.parquet"
-        assert data_path.exists()
-
-        stats_path = entry.stats_path()
-        assert stats_path is not None
-        assert stats_path == cache_dir / "stats.json"
-        assert stats_path.exists()
+        assert entry.data_path == cache_dir / "data.parquet"
+        assert entry.stats_path == cache_dir / "stats.json"
+        assert entry.data_path.exists()
+        assert entry.stats_path.exists()
 
         # Query should NOT have been called
         mock_client.return_value.query.assert_not_called()
@@ -660,15 +654,19 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
             # Entry should be returned with correct paths
             assert isinstance(entry, PipelineCacheEntry)
-            data_path = entry.data_path()
-            assert data_path is not None
-            stats_path = entry.stats_path()
-            assert stats_path is not None
-            assert data_path == expected_cache_dir / "data.parquet"
-            assert stats_path == expected_cache_dir / "stats.json"
-            # Both files should exist
-            assert data_path.exists()
-            assert stats_path.exists()
+            expected_cache_dir = (
+                data_dir
+                / "cache"
+                / "v1"
+                / "20241001T000000Z"
+                / "20241101T000000Z"
+                / "downloads_by_country"
+            )
+            assert entry.data_path == expected_cache_dir / "data.parquet"
+            assert entry.stats_path == expected_cache_dir / "stats.json"
+            # Note: stats.json exists (written by save_stats), but data.parquet doesn't
+            # because ParquetWriter is mocked
+            assert entry.stats_path.exists()
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")

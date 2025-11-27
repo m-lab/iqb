@@ -2,10 +2,20 @@ SELECT
     client.Geo.CountryCode as country_code,
     client.Geo.city as city,
     client.Network.ASNumber as asn,
-    client.Network.ASName as asn_name,
     COUNT(*) as sample_count,
 
-    -- Upload throughput percentiles (higher is better - NO INVERSION)
+    -- ============================================================================
+    -- PERCENTILE LABELING CONVENTION FOR IQB QUALITY ASSESSMENT
+    -- ============================================================================
+    --
+    -- Upload throughput is "higher is better", so we use standard percentile
+    -- labels (no inversion).
+    --
+    -- See downloads_by_country.sql for detailed explanation and rationale.
+    -- ============================================================================
+
+    -- Upload throughput (higher is better - NO INVERSION)
+    -- Standard percentile labels matching statistical definition
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(1)] as upload_p1,
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(5)] as upload_p5,
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(10)] as upload_p10,
@@ -14,37 +24,16 @@ SELECT
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(75)] as upload_p75,
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(90)] as upload_p90,
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(95)] as upload_p95,
-    APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(99)] as upload_p99,
-
-    -- Latency percentiles (lower is better - INVERTED LABELS)
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(99)] as latency_p1,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(95)] as latency_p5,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(90)] as latency_p10,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(75)] as latency_p25,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(50)] as latency_p50,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(25)] as latency_p75,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(10)] as latency_p90,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(5)] as latency_p95,
-    APPROX_QUANTILES(a.MinRTT, 100)[OFFSET(1)] as latency_p99,
-
-    -- Packet loss percentiles (lower is better - INVERTED LABELS)
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(99)] as loss_p1,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(95)] as loss_p5,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(90)] as loss_p10,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(75)] as loss_p25,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(50)] as loss_p50,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(25)] as loss_p75,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(10)] as loss_p90,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(5)] as loss_p95,
-    APPROX_QUANTILES(a.LossRate, 100)[OFFSET(1)] as loss_p99
-
-FROM `measurement-lab.ndt.unified_uploads`
+    APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(99)] as upload_p99
+FROM
+    -- TODO(bassosimone): switch to union tables `measurement-lab.ndt.ndt7_union`
+    -- when they have been blessed as the new stable tables.
+    `measurement-lab.ndt.unified_uploads`
 WHERE
     date >= "{START_DATE}" AND date < "{END_DATE}"
     AND client.Geo.CountryCode IS NOT NULL
     AND client.Geo.city IS NOT NULL
     AND client.Network.ASNumber IS NOT NULL
     AND a.MeanThroughputMbps IS NOT NULL
-    AND a.MinRTT IS NOT NULL
-GROUP BY country_code, city, asn, asn_name
+GROUP BY country_code, city, asn
 ORDER BY country_code, city, asn

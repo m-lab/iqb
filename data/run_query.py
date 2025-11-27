@@ -91,7 +91,7 @@ def run_bq_query(
 
     # Step 1: Get or create cache entry
     # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
-    #   - data.parquet: query results
+    #   - data.parquet: query results (empty file if no results)
     #   - stats.json: query metadata
     # fetch_if_missing=True makes this idempotent: skips query if cache exists
     pipeline = IQBPipeline(project_id=project_id, data_dir=data_dir)
@@ -99,17 +99,21 @@ def run_bq_query(
         template=query_name,
         start_date=start_date,
         end_date=end_date,
-        fetch_if_missing=True,  # Execute query only if cache doesn't exist
+        fetch_if_missing=True,
     )
-
     print(f"✓ Cache entry: {entry.data_path.parent.name}", file=sys.stderr)
     print(f"  Data: {entry.data_path}", file=sys.stderr)
     print(f"  Stats: {entry.stats_path}", file=sys.stderr)
 
-    # Step 2: Convert parquet to JSON
+    # Step 2: Convert the parquet file to JSON
     print("Converting parquet to JSON...", file=sys.stderr)
     table = pq.read_table(entry.data_path)
     records = table.to_pylist()
+
+    # Check if query returned no results
+    if len(records) <= 0:
+        print("⚠ Query returned no results", file=sys.stderr)
+
     json_output = json.dumps(records, indent=2)
 
     # Step 3: Write JSON to output file or stdout

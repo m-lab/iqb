@@ -129,7 +129,7 @@ class CacheEntry:
     Attributes:
         granularity: granularity used by this dataset
         start_date: the start date used by this dataset (YYYY-MM-DD; included)
-        end_date: the end date used by this dataset (YYYY-MM-DD; included)
+        end_date: the end date used by this dataset (YYYY-MM-DD; excluded)
         download_data: full path to data.parquet for download
         upload_data: full path to data.parquet for upload
         download_stats: full path to stats.json for download

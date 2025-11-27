@@ -223,11 +223,7 @@ class IQBCache:
         except KeyError as err:
             # Determine which percentiles ARE available
             available = sorted(
-                [
-                    int(k[1:])
-                    for k in metrics["download_throughput_mbps"]
-                    if k.startswith("p")
-                ]
+                [int(k[1:]) for k in metrics["download_throughput_mbps"] if k.startswith("p")]
             )
             raise ValueError(
                 f"Percentile {percentile} not available in cached data. "

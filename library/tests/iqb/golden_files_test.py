@@ -109,9 +109,7 @@ def load_v1_data(country: str, start_date: str, end_date: str, query_type: str) 
     """
     iqb_dir = Path(__file__).parent.parent.parent.parent
     cache_dir = iqb_dir / "data" / "cache"
-    parquet_file = (
-        cache_dir / "v1" / start_date / end_date / f"{query_type}.parquet"
-    )
+    parquet_file = cache_dir / "v1" / start_date / end_date / f"{query_type}.parquet"
 
     assert parquet_file.exists(), f"v1 golden file missing: {parquet_file}"
 
@@ -119,13 +117,9 @@ def load_v1_data(country: str, start_date: str, end_date: str, query_type: str) 
     table = pq.read_table(parquet_file)
     records = table.to_pylist()
 
-    country_record = next(
-        (r for r in records if r["country_code"] == country.upper()), None
-    )
+    country_record = next((r for r in records if r["country_code"] == country.upper()), None)
 
-    assert (
-        country_record is not None
-    ), f"Country {country} not found in {parquet_file}"
+    assert country_record is not None, f"Country {country} not found in {parquet_file}"
 
     return country_record
 
@@ -151,14 +145,20 @@ def values_match(v0_val: float, v1_val: float, metric_name: str) -> tuple[bool, 
         diff = abs(v0_val - v1_val)
         if diff <= ABSOLUTE_TOLERANCE:
             return True, ""
-        return False, f"{metric_name}: |{v0_val} - {v1_val}| = {diff} > {ABSOLUTE_TOLERANCE} (absolute)"
+        return (
+            False,
+            f"{metric_name}: |{v0_val} - {v1_val}| = {diff} > {ABSOLUTE_TOLERANCE} (absolute)",
+        )
 
     # For normal values, use relative tolerance
     rel_diff = abs(v0_val - v1_val) / max(abs(v0_val), abs(v1_val))
     if rel_diff <= RELATIVE_TOLERANCE:
         return True, ""
 
-    return False, f"{metric_name}: {v0_val} vs {v1_val} (rel diff: {rel_diff:.6f} > {RELATIVE_TOLERANCE})"
+    return (
+        False,
+        f"{metric_name}: {v0_val} vs {v1_val} (rel diff: {rel_diff:.6f} > {RELATIVE_TOLERANCE})",
+    )
 
 
 class TestGoldenFilesComparison:
@@ -198,10 +198,7 @@ class TestGoldenFilesComparison:
                 mismatches.append(error)
 
         if mismatches:
-            pytest.fail(
-                f"Mismatches for {country} {period} downloads:\n"
-                + "\n".join(mismatches)
-            )
+            pytest.fail(f"Mismatches for {country} {period} downloads:\n" + "\n".join(mismatches))
 
     @pytest.mark.parametrize("country", GOLDEN_COUNTRIES)
     @pytest.mark.parametrize("period,start_date,end_date", GOLDEN_PERIODS)
@@ -221,9 +218,7 @@ class TestGoldenFilesComparison:
                 mismatches.append(error)
 
         if mismatches:
-            pytest.fail(
-                f"Mismatches for {country} {period} uploads:\n" + "\n".join(mismatches)
-            )
+            pytest.fail(f"Mismatches for {country} {period} uploads:\n" + "\n".join(mismatches))
 
     @pytest.mark.parametrize("country", GOLDEN_COUNTRIES)
     @pytest.mark.parametrize("period,start_date,end_date", GOLDEN_PERIODS)
@@ -241,12 +236,8 @@ class TestGoldenFilesComparison:
         iqb_dir = Path(__file__).parent.parent.parent.parent
         cache_dir = iqb_dir / "data" / "cache"
 
-        downloads_file = (
-            cache_dir / "v1" / start_date / end_date / "downloads_by_country.parquet"
-        )
-        uploads_file = (
-            cache_dir / "v1" / start_date / end_date / "uploads_by_country.parquet"
-        )
+        downloads_file = cache_dir / "v1" / start_date / end_date / "downloads_by_country.parquet"
+        uploads_file = cache_dir / "v1" / start_date / end_date / "uploads_by_country.parquet"
 
         assert downloads_file.exists(), f"Missing v1 golden file: {downloads_file}"
         assert uploads_file.exists(), f"Missing v1 golden file: {uploads_file}"
@@ -254,12 +245,12 @@ class TestGoldenFilesComparison:
         # Verify country exists in parquet files
         downloads_table = pq.read_table(downloads_file)
         downloads_records = downloads_table.to_pylist()
-        assert any(
-            r["country_code"] == country.upper() for r in downloads_records
-        ), f"Country {country} not found in {downloads_file}"
+        assert any(r["country_code"] == country.upper() for r in downloads_records), (
+            f"Country {country} not found in {downloads_file}"
+        )
 
         uploads_table = pq.read_table(uploads_file)
         uploads_records = uploads_table.to_pylist()
-        assert any(
-            r["country_code"] == country.upper() for r in uploads_records
-        ), f"Country {country} not found in {uploads_file}"
+        assert any(r["country_code"] == country.upper() for r in uploads_records), (
+            f"Country {country} not found in {uploads_file}"
+        )

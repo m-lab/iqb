@@ -108,7 +108,7 @@ def run_bq_query(
     print(f"✓ Parquet saved: {info.file_path}", file=sys.stderr)
 
     # Step 2: Convert parquet to JSON
-    print(f"Converting parquet to JSON...", file=sys.stderr)
+    print("Converting parquet to JSON...", file=sys.stderr)
     table = pq.read_table(info.file_path)
     records = table.to_pylist()
     json_output = json.dumps(records, indent=2)

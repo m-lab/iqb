@@ -62,16 +62,15 @@ can directly access the data without intermediate formats.
 
 from dataclasses import dataclass
 from datetime import datetime
-from pathlib import Path
-from . import cache, queries
 from importlib.resources import files
+from pathlib import Path
 from typing import Final
 
-from google.cloud import bigquery_storage_v1
-from google.cloud.bigquery import job, table
-from google.cloud import bigquery
 import pyarrow.parquet as pq
+from google.cloud import bigquery, bigquery_storage_v1
+from google.cloud.bigquery import job, table
 
+from . import cache, queries
 
 VALID_TEMPLATE_NAMES: Final[set[str]] = {
     "downloads_by_country",
@@ -169,9 +168,7 @@ class IQBPipeline:
         start_time = _parse_date(start_date)
         end_time = _parse_date(end_date)
         if start_time > end_time:
-            raise ValueError(
-                f"start_date must be <= end_date, got: {start_date} > {end_date}"
-            )
+            raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
 
         # 2. load the query template
         if template not in VALID_TEMPLATE_NAMES:

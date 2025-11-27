@@ -4,12 +4,9 @@ This test verifies that the parquet format itself is not introducing precision
 loss when storing and retrieving floating point values.
 """
 
-import tempfile
-from pathlib import Path
 
 import pyarrow as pa
 import pyarrow.parquet as pq
-import pytest
 
 
 class TestParquetPrecision:
@@ -45,9 +42,9 @@ class TestParquetPrecision:
 
         # Verify exact equality (no precision loss)
         for i, record in enumerate(records):
-            assert (
-                record["metric_value"] == test_values[i]
-            ), f"Precision lost at index {i}: {test_values[i]} != {record['metric_value']}"
+            assert record["metric_value"] == test_values[i], (
+                f"Precision lost at index {i}: {test_values[i]} != {record['metric_value']}"
+            )
 
     def test_parquet_schema_is_float64(self, tmp_path):
         """Verify parquet stores values as float64, not float32."""

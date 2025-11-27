@@ -72,9 +72,7 @@ class TestIQBPipelineExecuteQuery:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_execute_query_template_path_construction(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_execute_query_template_path_construction(self, mock_storage, mock_client, tmp_path):
         """Test that execute_query_template constructs correct parquet path."""
         # Setup mocks
         mock_job = Mock()
@@ -242,9 +240,7 @@ class TestQueryResultSaveParquet:
         mock_batch3 = MagicMock()
 
         mock_rows = Mock()
-        mock_rows.to_arrow_iterable.return_value = iter(
-            [mock_batch1, mock_batch2, mock_batch3]
-        )
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch1, mock_batch2, mock_batch3])
 
         with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()

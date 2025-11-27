@@ -118,12 +118,8 @@ class TestIQBCacheGetData:
         """Test extracting different percentile values."""
         cache = IQBCache(data_dir=data_dir)
 
-        data_p95 = cache.get_data(
-            country="US", start_date=datetime(2024, 10, 1), percentile=95
-        )
-        data_p50 = cache.get_data(
-            country="US", start_date=datetime(2024, 10, 1), percentile=50
-        )
+        data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
+        data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data_p95
@@ -133,9 +129,7 @@ class TestIQBCacheGetData:
         data_p50 = data_p50["m-lab"]
 
         # p95 should be higher than p50 for throughput metrics (higher percentile = higher speed)
-        assert (
-            data_p95["download_throughput_mbps"] > data_p50["download_throughput_mbps"]
-        )
+        assert data_p95["download_throughput_mbps"] > data_p50["download_throughput_mbps"]
         assert data_p95["upload_throughput_mbps"] > data_p50["upload_throughput_mbps"]
 
         # p95 should be lower than p50 for latency (inverted: p95 label = p5 raw = best latency)
@@ -270,9 +264,7 @@ class TestIQBCacheExtractPercentile:
 
         # Request p37 which doesn't exist in the actual data files
         with pytest.raises(ValueError) as exc_info:
-            cache.get_data(
-                country="US", start_date=datetime(2024, 10, 1), percentile=37
-            )
+            cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=37)
 
         # Error should list available percentiles (1, 5, 10, 25, 50, 75, 90, 95, 99)
         error_msg = str(exc_info.value)

@@ -130,6 +130,10 @@ time window to use for running IQB calculations.
 - **Percentile selection**: The Streamlit UI allows users
 to select which percentile(s) to use for IQB score calculations.
 
+- **File size**: Each per-country JSON file is ~1.4KB (uncompressed). No
+compression needed. For more fine grained queries, the Parquet files
+allow for more efficient storage and data processing.
+
 ## M-Lab NDT Data Schema
 
 M-Lab provides two unified views:

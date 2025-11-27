@@ -13,17 +13,20 @@ We store files named after the following pattern:
     $datadir/cache/v1/$since/$until/$query_type/stats.json
 
 Each query result is stored in a directory containing the data file (data.parquet)
-and query metadata (stats.json). The stats file records query execution details
+and the query metadata (stats.json). The stats file records query execution details
 such as start time (RFC3339 format with Z suffix), duration, and bytes processed
 for transparency and debugging
 
-The `$since` and `$until` variables are timestamps using the ISO8601 format
+The `$since` and `$until` variables are timestamps using the RFC3339 format
 with UTC timezone, formatted to be file-system friendly (i.e., without
-including the ":" character). For example: `20251126T123600Z`.
+including the ":" character). For example: `20251126T100000Z`.
 
 The `$since` timestamp is included and the `$until` one is excluded. This
 simplifies specifying time ranges significantly (e.g., October 2025 is
 represented using `since=20251001T000000Z` and `until=20251101T000000Z`).
+
+Note that when using BigQuery the second component of the path will always
+be `T000000Z` because we do not support hourly range queries for now.
 
 The fact that we use explicit timestamps allows the cache to contain any
 kind of time range, including partially overlapping ones. This content-
@@ -91,6 +94,36 @@ VALID_TEMPLATE_NAMES: Final[set[str]] = {
     "uploads_by_country",
 }
 
+# Cache file names
+CACHE_DATA_FILENAME: Final[str] = "data.parquet"
+CACHE_STATS_FILENAME: Final[str] = "stats.json"
+
+
+@dataclass(frozen=True)
+class ParsedTemplateName:
+    """Container for a parsed template name."""
+
+    value: str
+
+
+@dataclass(frozen=True)
+class CacheEntry:
+    """
+    Reference to a cache entry containing query results and metadata.
+
+    Attributes:
+        data_path: Path to data.parquet file
+        stats_path: Path to stats.json file
+    """
+
+    data_path: Path
+    stats_path: Path
+
+
+# TODO(bassosimone): create an empty parquet file rather than
+# returning "no_content=True" in a subsequent diff. I realized
+# that the current approach is easy to get wrong.
+
 
 @dataclass(frozen=True)
 class ParquetFileInfo:
@@ -131,7 +164,7 @@ class QueryResult:
     def save_parquet(self) -> ParquetFileInfo:
         """Streams and saves the query results to data.parquet in cache_dir."""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        parquet_path = self.cache_dir / "data.parquet"
+        parquet_path = self.cache_dir / CACHE_DATA_FILENAME
 
         # Access the first batch to obtain the schema
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
@@ -156,7 +189,7 @@ class QueryResult:
             Path to the written stats.json file.
         """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        stats_path = self.cache_dir / "stats.json"
+        stats_path = self.cache_dir / CACHE_STATS_FILENAME
 
         # Calculate query duration from BigQuery job
         query_duration_seconds = None
@@ -199,6 +232,72 @@ class IQBPipeline:
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
         self.data_dir = cache.data_dir_or_default(data_dir)
 
+    def _cache_dir_path(
+        self,
+        tname: ParsedTemplateName,
+        start_time: datetime,
+        end_time: datetime,
+    ) -> Path:
+        fs_date_format = "%Y%m%dT000000Z"
+        start_dir = start_time.strftime(fs_date_format)
+        end_dir = end_time.strftime(fs_date_format)
+        return self.data_dir / "cache" / "v1" / start_dir / end_dir / tname.value
+
+    def get_cache_entry(
+        self,
+        template: str,
+        start_date: str,
+        end_date: str,
+        *,
+        fetch_if_missing: bool = False,
+    ) -> CacheEntry:
+        """
+        Get or create a cache entry for the given query.
+
+        Args:
+            template: name for the query template (e.g., "downloads_by_country")
+            start_date: Date when to start the query (included) -- format YYYY-MM-DD
+            end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+            fetch_if_missing: if True, execute query and save if cache doesn't exist.
+                Default is False (do not fetch automatically).
+
+        Returns:
+            CacheEntry with paths to data.parquet and stats.json.
+
+        Raises:
+            FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
+        """
+        # 1. parse the start and the end dates
+        start_time, end_time = _parse_both_dates(start_date, end_date)
+
+        # 2. ensure the template name is correct
+        tname = _parse_template_name(template)
+
+        # 3. obtain information about the cache dir and files
+        cache_dir = self._cache_dir_path(tname, start_time, end_time)
+        data_path = cache_dir / CACHE_DATA_FILENAME
+        stats_path = cache_dir / CACHE_STATS_FILENAME
+
+        # 4. check if cache exists
+        if data_path.exists() and stats_path.exists():
+            return CacheEntry(data_path=data_path, stats_path=stats_path)
+
+        # 5. handle missing cache without auto-fetching
+        if not fetch_if_missing:
+            raise FileNotFoundError(
+                f"Cache entry not found for {template} "
+                f"({start_date} to {end_date}). "
+                f"Set fetch_if_missing=True to execute query."
+            )
+
+        # 6. execute query and update the cache
+        result = self._execute_query_template(tname, start_time, end_time)
+        result.save_parquet()
+        result.save_stats()
+
+        # 7. return information about the cache entry
+        return CacheEntry(data_path=data_path, stats_path=stats_path)
+
     def execute_query_template(
         self,
         template: str,
@@ -217,31 +316,38 @@ class IQBPipeline:
             A QueryResult instance.
         """
         # 1. parse the start and the end dates
-        start_time = _parse_date(start_date)
-        end_time = _parse_date(end_date)
-        if start_time > end_time:
-            raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
+        start_time, end_time = _parse_both_dates(start_date, end_date)
 
-        # 2. load the query template and get its hash
-        if template not in VALID_TEMPLATE_NAMES:
-            valid = ", ".join(sorted(VALID_TEMPLATE_NAMES))
-            raise ValueError(f"Unknown template {template!r}; valid templates: {valid}")
-        query, template_hash = _load_query_template(template, start_date, end_date)
+        # 2. ensure the template name is correct
+        tname = _parse_template_name(template)
 
-        # 3. record query start time (RFC3339 format with Z suffix)
+        # 3. defer to the private implementation
+        return self._execute_query_template(
+            tname=tname,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+    def _execute_query_template(
+        self,
+        tname: ParsedTemplateName,
+        start_time: datetime,
+        end_time: datetime,
+    ) -> QueryResult:
+        # 1. load the actual query
+        query, template_hash = _load_query_template(tname, start_time, end_time)
+
+        # 2. record query start time (RFC3339 format with Z suffix)
         query_start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
-        # 4. execute the query and get job and iterable rows
+        # 3. execute the query and get job and iterable rows
         job = self.client.query(query)
         rows = job.result()
 
-        # 5. compute the directory where we would save the results
-        fs_date_format = "%Y%m%dT000000Z"
-        start_dir = start_time.strftime(fs_date_format)
-        end_dir = end_time.strftime(fs_date_format)
-        cache_dir = self.data_dir / "cache" / "v1" / start_dir / end_dir / template
+        # 4. compute the directory where we would save the results
+        cache_dir = self._cache_dir_path(tname, start_time, end_time)
 
-        # 6. return the result object
+        # 5. return the result object
         return QueryResult(
             bq_read_client=self.bq_read_clnt,
             job=job,
@@ -252,28 +358,50 @@ class IQBPipeline:
         )
 
 
+def _parse_both_dates(start_date: str, end_date: str) -> tuple[datetime, datetime]:
+    """Parses both dates and ensures start_date <= end_date."""
+    start_time = _parse_date(start_date)
+    end_time = _parse_date(end_date)
+    if start_time > end_time:
+        raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
+    return start_time, end_time
+
+
+def _parse_template_name(value: str) -> ParsedTemplateName:
+    """Ensure that the template name is a valid template name."""
+    if value not in VALID_TEMPLATE_NAMES:
+        valid = ", ".join(sorted(VALID_TEMPLATE_NAMES))
+        raise ValueError(f"Unknown template {value!r}; valid templates: {valid}")
+    return ParsedTemplateName(value=value)
+
+
 def _parse_date(value: str) -> datetime:
+    """Ensure that a single date is consistent with the format and return it parsed."""
     try:
         return datetime.strptime(value, "%Y-%m-%d")
     except ValueError as e:
         raise ValueError(f"Invalid date format: {value} (expected YYYY-MM-DD)") from e
 
 
-def _load_query_template(name: str, start_date: str, end_date: str) -> tuple[str, str]:
+def _load_query_template(
+    tname: ParsedTemplateName,
+    start_date: datetime,
+    end_date: datetime,
+) -> tuple[str, str]:
     """Load and instantiate a query template.
 
     Returns:
         Tuple of (instantiated_query, template_hash) where template_hash is
         the SHA256 hash of the original template file.
     """
-    query_file = files(queries).joinpath(f"{name}.sql")
+    query_file = files(queries).joinpath(f"{tname.value}.sql")
     template_text = query_file.read_text()
 
     # Compute hash of the original template (before substitution)
     template_hash = hashlib.sha256(template_text.encode("utf-8")).hexdigest()
 
     # Instantiate the template
-    query = template_text.replace("{START_DATE}", start_date)
-    query = query.replace("{END_DATE}", end_date)
+    query = template_text.replace("{START_DATE}", start_date.strftime("%Y-%m-%d"))
+    query = query.replace("{END_DATE}", end_date.strftime("%Y-%m-%d"))
 
     return query, template_hash

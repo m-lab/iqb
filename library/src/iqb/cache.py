@@ -25,13 +25,7 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-
-def data_dir_or_default(data_dir: str | Path | None) -> Path:
-    """
-    Return data_dir as a Path if not empty. Otherwise return the
-    default value for the data_dir (i.e., `./.iqb` like git).
-    """
-    return Path.cwd() / ".iqb" if data_dir is None else Path(data_dir)
+from . import pipeline
 
 
 class IQBCache:
@@ -45,7 +39,7 @@ class IQBCache:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        self.data_dir = data_dir_or_default(data_dir)
+        self.data_dir = pipeline.data_dir_or_default(data_dir)
 
     def get_data(
         self,

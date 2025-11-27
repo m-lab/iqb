@@ -88,7 +88,7 @@ import pyarrow.parquet as pq
 from google.cloud import bigquery, bigquery_storage_v1
 from google.cloud.bigquery import job, table
 
-from . import cache, queries
+from . import queries
 
 VALID_TEMPLATE_NAMES: Final[set[str]] = {
     "downloads_by_country",
@@ -110,7 +110,7 @@ class ParsedTemplateName:
 
 
 @dataclass(frozen=True)
-class CacheEntry:
+class PipelineCacheEntry:
     """
     Reference to a cache entry containing query results and metadata.
 
@@ -232,7 +232,7 @@ class IQBPipeline:
         """
         self.client = bigquery.Client(project=project_id)
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
-        self.data_dir = cache.data_dir_or_default(data_dir)
+        self.data_dir = data_dir_or_default(data_dir)
 
     def _cache_dir_path(
         self,
@@ -252,7 +252,7 @@ class IQBPipeline:
         end_date: str,
         *,
         fetch_if_missing: bool = False,
-    ) -> CacheEntry:
+    ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query.
 
@@ -264,7 +264,7 @@ class IQBPipeline:
                 Default is False (do not fetch automatically).
 
         Returns:
-            CacheEntry with paths to data.parquet and stats.json.
+            PipelineCacheEntry with paths to data.parquet and stats.json.
 
         Raises:
             FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
@@ -282,7 +282,7 @@ class IQBPipeline:
 
         # 4. check if cache exists
         if data_path.exists() and stats_path.exists():
-            return CacheEntry(data_path=data_path, stats_path=stats_path)
+            return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
 
         # 5. handle missing cache without auto-fetching
         if not fetch_if_missing:
@@ -298,7 +298,7 @@ class IQBPipeline:
         result.save_stats()
 
         # 7. return information about the cache entry
-        return CacheEntry(data_path=data_path, stats_path=stats_path)
+        return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
 
     def execute_query_template(
         self,
@@ -358,6 +358,14 @@ class IQBPipeline:
             query_start_time=query_start_time,
             template_hash=template_hash,
         )
+
+
+def data_dir_or_default(data_dir: str | Path | None) -> Path:
+    """
+    Return data_dir as a Path if not empty. Otherwise return the
+    default value for the data_dir (i.e., `./.iqb` like git).
+    """
+    return Path.cwd() / ".iqb" if data_dir is None else Path(data_dir)
 
 
 def _parse_both_dates(start_date: str, end_date: str) -> tuple[datetime, datetime]:

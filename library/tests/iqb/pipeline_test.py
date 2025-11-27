@@ -8,16 +8,39 @@ import pyarrow as pa
 import pytest
 
 from iqb.pipeline import (
-    CacheEntry,
     IQBPipeline,
     ParquetFileInfo,
     ParsedTemplateName,
+    PipelineCacheEntry,
     QueryResult,
     _load_query_template,
     _parse_both_dates,
     _parse_date,
     _parse_template_name,
+    data_dir_or_default,
 )
+
+
+class TestDataDirOrDefault:
+    """Test pure functions without external dependencies."""
+
+    def test_data_dir_or_default_with_none(self):
+        """Test default behavior when data_dir is None."""
+        result = data_dir_or_default(None)
+        expected = Path.cwd() / ".iqb"
+        assert result == expected
+
+    def test_data_dir_or_default_with_string(self, tmp_path):
+        """Test conversion of string path."""
+        test_path = str(tmp_path / "test")
+        result = data_dir_or_default(test_path)
+        assert result == Path(test_path)
+
+    def test_data_dir_or_default_with_path(self, tmp_path):
+        """Test pass-through of Path object."""
+        input_path = tmp_path / "test"
+        result = data_dir_or_default(input_path)
+        assert result == input_path
 
 
 class TestHelperFunctions:
@@ -514,7 +537,7 @@ class TestQueryResultSaveStats:
         assert stats_path.exists()
 
 
-class TestIQBPipelineGetCacheEntry:
+class TestIQBPipelineGetPipelineCacheEntry:
     """Test get_cache_entry method."""
 
     @patch("iqb.pipeline.bigquery.Client")
@@ -540,7 +563,7 @@ class TestIQBPipelineGetCacheEntry:
         # Get cache entry (should not execute query)
         entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
 
-        assert isinstance(entry, CacheEntry)
+        assert isinstance(entry, PipelineCacheEntry)
         assert entry.data_path == cache_dir / "data.parquet"
         assert entry.stats_path == cache_dir / "stats.json"
         assert entry.data_path.exists()
@@ -608,7 +631,7 @@ class TestIQBPipelineGetCacheEntry:
             mock_client_instance.query.assert_called_once()
 
             # Entry should be returned with correct paths
-            assert isinstance(entry, CacheEntry)
+            assert isinstance(entry, PipelineCacheEntry)
             expected_cache_dir = (
                 data_dir
                 / "cache"

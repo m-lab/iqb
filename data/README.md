@@ -1,6 +1,6 @@
 # IQB Static Data Files
 
-This directory contains static measurement data used by the IQB prototype.
+This directory contains static reference data used by the IQB prototype.
 
 ## Current Dataset
 
@@ -14,7 +14,7 @@ This directory contains static measurement data used by the IQB prototype.
 
 We maintain two data formats in `./cache/`:
 
-### v0 - JSON Format (Legacy)
+### v0 - JSON Format
 
 Per-country JSON files with pre-aggregated percentiles:
 
@@ -48,57 +48,87 @@ Raw query results stored efficiently for flexible analysis:
 backward compatibility and casual use. If Parquet proves too heavy for some workflows,
 v0 will continue to be maintained.
 
-## Generating Data
+## How This Data Was Generated
 
-### Prerequisites
+### BigQuery Queries
 
-- Google Cloud SDK authenticated with M-Lab access
-- Python 3.13 with `uv` (see root [README.md](../README.md))
+The data was extracted from M-Lab's public BigQuery tables using queries
+inside the [../library/src/iqb/queries](../library/src/iqb/queries) package.
 
-### Pipeline
+### Running the Data Generation Pipeline
 
-**Using IQBPipeline** (generates both v0 and v1):
+**Prerequisites**:
+
+- Google Cloud SDK (`gcloud`) installed
+
+- BigQuery CLI (`bq`) installed
+
+- `gcloud`-authenticated with an account subscribed to
+[M-Lab Discuss mailing list](https://groups.google.com/a/measurementlab.net/g/discuss)
+
+- Python 3.13 using `uv` as documented in the toplevel [README.md](../README.md)
+
+**Complete Pipeline** (recommended):
+
+```bash
+cd data/
+uv run python generate_data.py
+```
+
+This orchestrates the complete pipeline:
+
+1. Queries BigQuery for download metrics (throughput, latency, packet loss)
+
+2. Queries BigQuery for upload metrics (throughput)
+
+3. Merges the data into per-country JSON files
+
+Generated files: v0 JSON files `${country}_2024_10.json` and `${country}_2025_10.json`
+inside [./cache/v0](./cache/v0), plus v1 Parquet cache with query metadata.
+
+**Individual Pipeline Stages** (for debugging):
 
 ```bash
 cd data/
 
-# Query and cache (creates v1 parquet + stats, plus v0 JSON)
+# Stage 1a: Query downloads
 uv run python run_query.py downloads_by_country \
   --start-date 2024-10-01 --end-date 2024-11-01 \
-  -o cache/v0/downloads_2024_10.json
+  -o downloads.json
 
+# Stage 1b: Query uploads
 uv run python run_query.py uploads_by_country \
   --start-date 2024-10-01 --end-date 2024-11-01 \
-  -o cache/v0/uploads_2024_10.json
+  -o uploads.json
 
-# Merge into per-country v0 JSON files
+# Stage 2: Merge data
 uv run python merge_data.py
 ```
 
-**What happens**:
+**Pipeline Scripts**:
 
-1. `run_query.py` uses [IQBPipeline](../library/src/iqb/pipeline.py) to:
-   - Execute BigQuery query from [templates](../library/src/iqb/queries/)
-   - Save v1 cache: `cache/v1/{start}/{end}/{query_type}/data.parquet` + `stats.json`
-   - Convert to v0 JSON for backward compatibility
+- [generate_data.py](generate_data.py) - Orchestrates the complete pipeline
 
-2. `merge_data.py` merges download/upload data into per-country v0 files
+- [run_query.py](run_query.py) - Executes BigQuery queries using IQBPipeline,
+saves v1 cache (parquet + stats) and v0 JSON output
 
-**Scripts**:
-
-- [run_query.py](run_query.py) - Query BigQuery, save v1 (parquet+stats) and v0 (JSON)
-- [merge_data.py](merge_data.py) - Merge downloads/uploads into per-country v0 files
-- [generate_data.py](generate_data.py) - Full pipeline orchestration (deprecated, use run_query.py)
+- [merge_data.py](merge_data.py) - Merges download and upload data into
+per-country v0 files
 
 ## Notes
 
-- **v0 vs v1**: v0 JSON files (~1.4KB each) are convenient for quick analysis.
-  v1 Parquet files (~1-60 MiB) enable efficient filtering and large-scale processing.
+- **Static data**: These files contain pre-aggregated percentiles
+for Phase 1 prototype. Phase 2 will add dynamic data fetching.
 
-- **Time granularity**: Current data covers October 2024 and October 2025 (full months).
+- **Data formats**: v0 JSON files (~1.4KB) for quick analysis;
+v1 Parquet files (~1-60 MiB) with stats.json for efficient processing and cost tracking.
 
-- **Query metadata**: v1 `stats.json` files track query timing, BigQuery bytes
-  processed/billed, and template hash for cost tracking and reproducibility.
+- **Time granularity**: Data is aggregated over the entire
+months of October 2024 and October 2025. The analyst decides which
+time window to use for running IQB calculations.
+
+- **Percentile selection**: The Streamlit UI allows users
+to select which percentile(s) to use for IQB score calculations.
 
 ## M-Lab NDT Data Schema
 

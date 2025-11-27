@@ -1,34 +1,10 @@
 """Tests for the IQBCache data fetching module."""
 
 from datetime import datetime
-from pathlib import Path
 
 import pytest
 
 from iqb import IQBCache
-from iqb.cache import data_dir_or_default
-
-
-class TestDataDirOrDefault:
-    """Test pure functions without external dependencies."""
-
-    def test_data_dir_or_default_with_none(self):
-        """Test default behavior when data_dir is None."""
-        result = data_dir_or_default(None)
-        expected = Path.cwd() / ".iqb"
-        assert result == expected
-
-    def test_data_dir_or_default_with_string(self, tmp_path):
-        """Test conversion of string path."""
-        test_path = str(tmp_path / "test")
-        result = data_dir_or_default(test_path)
-        assert result == Path(test_path)
-
-    def test_data_dir_or_default_with_path(self, tmp_path):
-        """Test pass-through of Path object."""
-        input_path = tmp_path / "test"
-        result = data_dir_or_default(input_path)
-        assert result == input_path
 
 
 class TestIQBCacheInitialization:

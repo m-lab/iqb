@@ -9,7 +9,13 @@ Design
 
 We store files named after the following pattern:
 
-    $datadir/cache/v1/$since/$until/$query_type.parquet
+    $datadir/cache/v1/$since/$until/$query_type/data.parquet
+    $datadir/cache/v1/$since/$until/$query_type/stats.json
+
+Each query result is stored in a directory containing the data file (data.parquet)
+and query metadata (stats.json). The stats file records query execution details
+such as start time (RFC3339 format with Z suffix), duration, and bytes processed
+for transparency and debugging
 
 The `$since` and `$until` variables are timestamps using the ISO8601 format
 with UTC timezone, formatted to be file-system friendly (i.e., without
@@ -37,7 +43,8 @@ The $query_type is one of the following query granularity types:
 Where $kind is either "download" or "upload". The final implementation
 of this design will have all the required queries implemented.
 
-For each query type, we have a corresponding parquet file.
+For each query type, we have a corresponding directory containing the data
+and metadata files.
 
 We use parquet as the file format because:
 
@@ -65,8 +72,10 @@ dumped raw query outputs is fast enough, we can directly access the data
 without producing intermediate formats.
 """
 
+import hashlib
+import json
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
@@ -107,33 +116,71 @@ class QueryResult:
         bq_read_client: the client to stream results.
         job: the corresponding BigQuery job.
         rows: the iterable rows.
-        parquet_path: path where to save the parquet file
+        cache_dir: directory where to save data.parquet and stats.json
+        query_start_time: RFC3339 UTC timestamp when query was started (with Z suffix)
+        template_hash: SHA256 hash of the original query template
     """
 
     bq_read_client: bigquery_storage_v1.BigQueryReadClient
     job: job.QueryJob
     rows: table.RowIterator
-    parquet_path: Path
+    cache_dir: Path
+    query_start_time: str
+    template_hash: str
 
     def save_parquet(self) -> ParquetFileInfo:
-        """Streams and saves the query results to `self.parquet_path`."""
-        self.parquet_path.parent.mkdir(parents=True, exist_ok=True)
+        """Streams and saves the query results to data.parquet in cache_dir."""
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        parquet_path = self.cache_dir / "data.parquet"
 
         # Access the first batch to obtain the schema
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
         first_batch = next(batches, None)
         if first_batch is None:
-            return ParquetFileInfo(no_content=True, file_path=self.parquet_path)
+            return ParquetFileInfo(no_content=True, file_path=parquet_path)
 
         # Note: using .as_posix to avoid paths with backslashes
         # that can cause issues with PyArrow on Windows
-        posix_path = self.parquet_path.as_posix()
+        posix_path = parquet_path.as_posix()
         with pq.ParquetWriter(posix_path, first_batch.schema) as writer:
             writer.write_batch(first_batch)
             for batch in batches:
                 writer.write_batch(batch)
 
-        return ParquetFileInfo(no_content=False, file_path=self.parquet_path)
+        return ParquetFileInfo(no_content=False, file_path=parquet_path)
+
+    def save_stats(self) -> Path:
+        """Writes query statistics to stats.json in cache_dir.
+
+        Returns:
+            Path to the written stats.json file.
+        """
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+        stats_path = self.cache_dir / "stats.json"
+
+        # Calculate query duration from BigQuery job
+        query_duration_seconds = None
+        if self.job.ended and self.job.started:
+            duration = self.job.ended - self.job.started
+            query_duration_seconds = duration.total_seconds()
+
+        # Extract bytes processed/billed from job statistics
+        total_bytes_processed = self.job.total_bytes_processed
+        total_bytes_billed = self.job.total_bytes_billed
+
+        stats = {
+            "query_start_time": self.query_start_time,
+            "query_duration_seconds": query_duration_seconds,
+            "template_hash": self.template_hash,
+            "total_bytes_processed": total_bytes_processed,
+            "total_bytes_billed": total_bytes_billed,
+        }
+
+        with stats_path.open("w") as f:
+            json.dump(stats, f, indent=2)
+            f.write("\n")  # Add newline at EOF for git-friendly diffs
+
+        return stats_path
 
 
 class IQBPipeline:
@@ -175,29 +222,33 @@ class IQBPipeline:
         if start_time > end_time:
             raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
 
-        # 2. load the query template
+        # 2. load the query template and get its hash
         if template not in VALID_TEMPLATE_NAMES:
             valid = ", ".join(sorted(VALID_TEMPLATE_NAMES))
             raise ValueError(f"Unknown template {template!r}; valid templates: {valid}")
-        query = _load_query_template(template, start_date, end_date)
+        query, template_hash = _load_query_template(template, start_date, end_date)
 
-        # 3. execute the query and get job and iterable rows
+        # 3. record query start time (RFC3339 format with Z suffix)
+        query_start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+
+        # 4. execute the query and get job and iterable rows
         job = self.client.query(query)
         rows = job.result()
 
-        # 4. compute the path where we would save the results
+        # 5. compute the directory where we would save the results
         fs_date_format = "%Y%m%dT000000Z"
         start_dir = start_time.strftime(fs_date_format)
         end_dir = end_time.strftime(fs_date_format)
-        filename = f"{template}.parquet"
-        parquet_path = self.data_dir / "cache" / "v1" / start_dir / end_dir / filename
+        cache_dir = self.data_dir / "cache" / "v1" / start_dir / end_dir / template
 
-        # 5. return the result object
+        # 6. return the result object
         return QueryResult(
             bq_read_client=self.bq_read_clnt,
             job=job,
             rows=rows,
-            parquet_path=parquet_path,
+            cache_dir=cache_dir,
+            query_start_time=query_start_time,
+            template_hash=template_hash,
         )
 
 
@@ -208,9 +259,21 @@ def _parse_date(value: str) -> datetime:
         raise ValueError(f"Invalid date format: {value} (expected YYYY-MM-DD)") from e
 
 
-def _load_query_template(name: str, start_date: str, end_date: str) -> str:
+def _load_query_template(name: str, start_date: str, end_date: str) -> tuple[str, str]:
+    """Load and instantiate a query template.
+
+    Returns:
+        Tuple of (instantiated_query, template_hash) where template_hash is
+        the SHA256 hash of the original template file.
+    """
     query_file = files(queries).joinpath(f"{name}.sql")
-    query = query_file.read_text()
-    query = query.replace("{START_DATE}", start_date)
+    template_text = query_file.read_text()
+
+    # Compute hash of the original template (before substitution)
+    template_hash = hashlib.sha256(template_text.encode("utf-8")).hexdigest()
+
+    # Instantiate the template
+    query = template_text.replace("{START_DATE}", start_date)
     query = query.replace("{END_DATE}", end_date)
-    return query
+
+    return query, template_hash

@@ -26,6 +26,14 @@ from datetime import datetime
 from pathlib import Path
 
 
+def data_dir_or_default(data_dir: str | Path | None) -> Path:
+    """
+    Return data_dir as a Path if not empty. Otherwise return the
+    default value for the data_dir (i.e., `./.iqb` like git).
+    """
+    return Path.cwd() / ".iqb" if data_dir is None else Path(data_dir)
+
+
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""
 
@@ -37,10 +45,7 @@ class IQBCache:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        if data_dir is None:
-            self.data_dir = Path.cwd() / ".iqb"
-        else:
-            self.data_dir = Path(data_dir)
+        self.data_dir = data_dir_or_default(data_dir)
 
     def get_data(
         self,

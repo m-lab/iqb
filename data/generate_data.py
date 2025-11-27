@@ -3,6 +3,7 @@
 Orchestrate the data generation pipeline for IQB static data.
 
 This script:
+0. Syncs cached files from GitHub (if available)
 1. Runs BigQuery queries for downloads and uploads for multiple time periods
 2. Merges the results into per-country JSON files
 """
@@ -131,6 +132,16 @@ def main():
 
     print("IQB Data Generation Pipeline")
     print("=" * 60)
+
+    # Stage 0: Sync cached files from GitHub (if manifest exists)
+    ghcache_script = data_dir / "ghcache.py"
+    if ghcache_script.exists():
+        run_command(
+            ["python3", str(ghcache_script), "sync"],
+            "Stage 0: Syncing cached files from GitHub",
+        )
+    else:
+        print("\nNote: ghcache.py not found, skipping cache sync")
 
     # Generate data for October 2024
     generate_for_period(data_dir, "2024-10-01", "2024-11-01", "2024_10")

@@ -21,15 +21,15 @@ Example usage:
     cache = IQBCache(data_dir="/shared/iqb-cache")
 """
 
-import json
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
 import pyarrow.parquet as pq
+from dateutil.relativedelta import relativedelta
 
-from .pipeline import PipelineCacheManager, data_dir_or_default
+from .pipeline import PipelineCacheManager
 
 
 @dataclass(frozen=True)
@@ -308,7 +308,12 @@ class IQBCache:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        self.data_dir = data_dir_or_default(data_dir)
+        self.manager = PipelineCacheManager(data_dir)
+
+    @property
+    def data_dir(self) -> Path:
+        """Return the data directory used by the cache."""
+        return self.manager.data_dir
 
     def get_cache_entry(
         self,
@@ -455,8 +460,8 @@ class IQBCache:
         #
         # We may revisit this choice when we approach production readiness.
 
-        # 1. Normalize country to be lowercase
-        country_lower = country.lower()
+        # 1. Normalize country to be uppercase
+        country_upper = country.upper()
 
         # 2. Create the dictionary with the results
         results = {}
@@ -469,7 +474,7 @@ class IQBCache:
 
         # 3. Attempt to fill the results with m-lab data
         results["m-lab"] = self._get_mlab_data(
-            country_lower=country_lower,
+            country_upper=country_upper,
             start_date=start_date,
             end_date=end_date,
             percentile=percentile,
@@ -486,7 +491,7 @@ class IQBCache:
 
     def _get_mlab_data(
         self,
-        country_lower: str,
+        country_upper: str,
         start_date: datetime,
         end_date: datetime | None = None,
         percentile: int = 95,
@@ -509,7 +514,7 @@ class IQBCache:
 
         # 3. Obtain the corresponding download and upload data frames
         df_pair = entry.get_data_frame_pair(
-            country_code=country_lower.upper(),
+            country_code=country_upper,
         )
 
         # 4. Convert to dictionary and return

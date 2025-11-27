@@ -14,7 +14,7 @@ This directory contains static reference data used by the IQB prototype.
 
 We maintain two data formats in `./cache/`:
 
-### v0 - JSON Format
+### v0 - JSON Format (Golden Files)
 
 Per-country JSON files with pre-aggregated percentiles:
 
@@ -44,9 +44,52 @@ Raw query results stored efficiently for flexible analysis:
   - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
 - **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
 
-**Migration**: We're transitioning to v1 as the primary format. v0 remains available for
-backward compatibility and casual use. If Parquet proves too heavy for some workflows,
-v0 will continue to be maintained.
+**Migration**: The [../library](../library) `IQBCache` uses v1. We are keeping v0 data
+around as golden files, for backward compatibility, and casual use.
+
+## GitHub Cache Synchronization (Interim Solution)
+
+**IMPORTANT**: This is a throwaway interim solution that will be replaced by GCS.
+
+Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
+constraints, we use GitHub releases to distribute pre-generated cache files.
+
+### For Data Scientists (Manual Workflow)
+
+Sync cached files from GitHub before analysis:
+
+```bash
+cd data/
+./ghcache.py sync
+```
+
+This downloads any missing cache files listed in `ghcache.json` and verifies SHA256.
+
+### For Pipeline Users (Automatic)
+
+The `generate_data.py` script automatically syncs cached files before running queries,
+so you don't need to run `ghcache.py` manually.
+
+### For Maintainers (Publishing New Cache)
+
+When you generate new cache files locally:
+
+```bash
+cd data/
+./ghcache.py scan
+```
+
+This:
+1. Scans `cache/v1/` for git-ignored files
+2. Computes SHA256 hashes
+3. Copies files to `data/` with mangled names (ready for upload)
+4. Updates `ghcache.json` manifest
+
+Then manually:
+1. Upload mangled files to GitHub release (e.g., v0.1.0)
+2. Commit updated `ghcache.json` to repository
+
+**Note**: This system assumes Unix paths and won't work on Windows.
 
 ## How This Data Was Generated
 
@@ -159,8 +202,7 @@ for details.
 
 ## Future Improvements (Phase 2+)
 
-- Direct Parquet reading in cache.py (PyArrow predicate pushdown for efficient filtering)
+- Finer geographic resolution (cities, provinces, ASNs) - IN PROGRESS
+- Replace GitHub releases with GCS buckets for cache distribution
 - Additional datasets (Ookla, Cloudflare)
-- Finer geographic resolution (cities, provinces, ASNs)
 - Finer time granularity (daily, weekly)
-- Remote storage for v1 cache (GitHub releases, GCS buckets)

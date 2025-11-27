@@ -91,7 +91,7 @@ def run_bq_query(
 
     # Step 1: Execute query and save results using IQBPipeline
     # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
-    #   - data.parquet: query results
+    #   - data.parquet: query results (empty file if no results)
     #   - stats.json: query metadata
     pipeline = IQBPipeline(project_id=project_id, data_dir=data_dir)
     result = pipeline.execute_query_template(
@@ -100,14 +100,6 @@ def run_bq_query(
         end_date=end_date,
     )
     info = result.save_parquet()
-
-    if info.no_content:
-        print("⚠ Query returned no results", file=sys.stderr)
-        if output_file:
-            output_file.write_text("[]")
-        else:
-            print("[]")
-        return
 
     print(f"✓ Parquet saved: {info.file_path}", file=sys.stderr)
 
@@ -119,6 +111,11 @@ def run_bq_query(
     print("Converting parquet to JSON...", file=sys.stderr)
     table = pq.read_table(info.file_path)
     records = table.to_pylist()
+
+    # Check if query returned no results
+    if len(records) <= 0:
+        print("⚠ Query returned no results", file=sys.stderr)
+
     json_output = json.dumps(records, indent=2)
 
     # Step 3: Write JSON to output file or stdout

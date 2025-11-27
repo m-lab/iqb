@@ -83,6 +83,7 @@ from importlib.resources import files
 from pathlib import Path
 from typing import Final
 
+import pyarrow as pa
 import pyarrow.parquet as pq
 from google.cloud import bigquery, bigquery_storage_v1
 from google.cloud.bigquery import job, table
@@ -120,23 +121,17 @@ class CacheEntry:
     stats_path: Path
 
 
-# TODO(bassosimone): create an empty parquet file rather than
-# returning "no_content=True" in a subsequent diff. I realized
-# that the current approach is easy to get wrong.
-
-
 @dataclass(frozen=True)
 class ParquetFileInfo:
     """
     Result of serializing a query result into the cache using parquet.
 
+    An empty parquet file is written if the query returns no rows.
+
     Attributes:
-        no_content: true if the query returned no content, in which case
-            no parquet file is actually being written.
         file_path: full path to the written file.
     """
 
-    no_content: bool
     file_path: Path
 
 
@@ -162,25 +157,30 @@ class QueryResult:
     template_hash: str
 
     def save_parquet(self) -> ParquetFileInfo:
-        """Streams and saves the query results to data.parquet in cache_dir."""
+        """Streams and saves the query results to data.parquet in cache_dir.
+
+        If the query returns no rows, an empty parquet file is written.
+        """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         parquet_path = self.cache_dir / CACHE_DATA_FILENAME
-
-        # Access the first batch to obtain the schema
-        batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
-        first_batch = next(batches, None)
-        if first_batch is None:
-            return ParquetFileInfo(no_content=True, file_path=parquet_path)
 
         # Note: using .as_posix to avoid paths with backslashes
         # that can cause issues with PyArrow on Windows
         posix_path = parquet_path.as_posix()
-        with pq.ParquetWriter(posix_path, first_batch.schema) as writer:
-            writer.write_batch(first_batch)
+
+        # Access the first batch to obtain the schema
+        batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
+        first_batch = next(batches, None)
+        schema = first_batch.schema if first_batch is not None else pa.schema([])
+
+        # Write the possibly-empty parquet file
+        with pq.ParquetWriter(posix_path, schema) as writer:
+            if first_batch is not None:
+                writer.write_batch(first_batch)
             for batch in batches:
                 writer.write_batch(batch)
 
-        return ParquetFileInfo(no_content=False, file_path=parquet_path)
+        return ParquetFileInfo(file_path=parquet_path)
 
     def save_stats(self) -> Path:
         """Writes query statistics to stats.json in cache_dir.

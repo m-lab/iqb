@@ -4,6 +4,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
+import pyarrow as pa
 import pytest
 
 from iqb.pipeline import (
@@ -299,38 +300,53 @@ class TestQueryResultSaveParquet:
 
             info = result.save_parquet()
 
-            # Verify
-            assert info.no_content is False
+            # Verify file path and directory creation
             expected_path = cache_dir / "data.parquet"
             assert info.file_path == expected_path
             assert cache_dir.exists()
             mock_writer_instance.write_batch.assert_called_once_with(mock_batch)
 
     def test_save_parquet_empty_results(self, tmp_path):
-        """Test handling of empty query results."""
+        """Test handling of empty query results - writes empty parquet file."""
         cache_dir = tmp_path / "cache"
 
         # Mock empty iterator
         mock_rows = Mock()
         mock_rows.to_arrow_iterable.return_value = iter([])
 
-        result = QueryResult(
-            bq_read_client=Mock(),
-            job=Mock(),
-            rows=mock_rows,
-            cache_dir=cache_dir,
-            query_start_time="2024-11-27T10:00:00.000000Z",
-            template_hash="abc123",
-        )
+        # Mock ParquetWriter to verify it's called with empty schema
+        with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
-        info = result.save_parquet()
+            result = QueryResult(
+                bq_read_client=Mock(),
+                job=Mock(),
+                rows=mock_rows,
+                cache_dir=cache_dir,
+                query_start_time="2024-11-27T10:00:00.000000Z",
+                template_hash="abc123",
+            )
 
-        # Verify no file created, but directory exists
-        assert info.no_content is True
-        expected_path = cache_dir / "data.parquet"
-        assert info.file_path == expected_path
-        assert cache_dir.exists()
-        assert not expected_path.exists()
+            info = result.save_parquet()
+
+            # Verify empty parquet file would be created
+            expected_path = cache_dir / "data.parquet"
+            assert info.file_path == expected_path
+            assert cache_dir.exists()
+
+            # Verify ParquetWriter was called with empty schema
+            mock_writer.assert_called_once()
+            call_args = mock_writer.call_args
+            assert call_args[0][0] == expected_path.as_posix()
+
+            # Verify schema is empty (no fields)
+            schema_arg = call_args[0][1]
+            assert isinstance(schema_arg, pa.Schema)
+            assert len(schema_arg) == 0
+
+            # Verify no batches were written (first_batch is None, for loop has nothing)
+            mock_writer_instance.write_batch.assert_not_called()
 
     def test_save_parquet_multiple_batches(self, tmp_path):
         """Test saving multiple Arrow batches."""
@@ -362,7 +378,8 @@ class TestQueryResultSaveParquet:
 
             # Verify all batches written
             assert mock_writer_instance.write_batch.call_count == 3
-            assert info.no_content is False
+            expected_path = cache_dir / "data.parquet"
+            assert info.file_path == expected_path
 
     def test_save_parquet_creates_nested_directories(self, tmp_path):
         """Test that save_parquet creates nested cache directory."""
@@ -392,7 +409,8 @@ class TestQueryResultSaveParquet:
 
             # Verify cache directory created
             assert cache_dir.exists()
-            assert info.no_content is False
+            expected_path = cache_dir / "data.parquet"
+            assert info.file_path == expected_path
 
 
 class TestQueryResultSaveStats:
@@ -672,18 +690,9 @@ class TestIQBPipelineGetCacheEntry:
 class TestParquetFileInfo:
     """Test ParquetFileInfo dataclass."""
 
-    def test_parquet_file_info_with_content(self, tmp_path):
-        """Test ParquetFileInfo creation with content."""
+    def test_parquet_file_info_creation(self, tmp_path):
+        """Test ParquetFileInfo creation."""
         test_file = tmp_path / "test.parquet"
-        info = ParquetFileInfo(no_content=False, file_path=test_file)
+        info = ParquetFileInfo(file_path=test_file)
 
-        assert info.no_content is False
-        assert info.file_path == test_file
-
-    def test_parquet_file_info_no_content(self, tmp_path):
-        """Test ParquetFileInfo creation without content."""
-        test_file = tmp_path / "test.parquet"
-        info = ParquetFileInfo(no_content=True, file_path=test_file)
-
-        assert info.no_content is True
         assert info.file_path == test_file

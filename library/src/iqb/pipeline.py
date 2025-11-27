@@ -63,7 +63,7 @@ can directly access the data without intermediate formats.
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from . import queries
+from . import cache, queries
 from importlib.resources import files
 from typing import Final
 
@@ -132,14 +132,6 @@ class QueryResult:
         return ParquetFileInfo(no_content=False, file_path=self.parquet_path)
 
 
-def data_dir_or_default(data_dir: str | Path | None) -> Path:
-    """
-    Return data_dir as a Path if not empty. Otherwise return the
-    default value for the data_dir (i.e., `./.iqb` like git).
-    """
-    return Path.cwd() / ".iqb" if data_dir is None else Path(data_dir)
-
-
 class IQBPipeline:
     """Component for populating the IQB-measurement-data cache."""
 
@@ -154,7 +146,7 @@ class IQBPipeline:
         """
         self.client = bigquery.Client(project=project_id)
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
-        self.data_dir = data_dir_or_default(data_dir)
+        self.data_dir = cache.data_dir_or_default(data_dir)
 
     def execute_query_template(
         self,

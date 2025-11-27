@@ -93,6 +93,8 @@ from . import cache, queries
 VALID_TEMPLATE_NAMES: Final[set[str]] = {
     "downloads_by_country",
     "uploads_by_country",
+    "downloads_by_country_city_asn",
+    "uploads_by_country_city_asn",
 }
 
 # Cache file names

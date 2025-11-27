@@ -48,26 +48,20 @@ Raw query results stored efficiently for flexible analysis:
 backward compatibility and casual use. If Parquet proves too heavy for some workflows,
 v0 will continue to be maintained.
 
-Raw query results stored efficiently for flexible analysis:
+## How This Data Was Generated
 
-- **Location**: `./cache/v1/{start_date}/{end_date}/{query_type}/`
-- **Files**:
-  - `data.parquet` - Query results (20-60 MiB, streamable, chunked row groups)
-  - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
-- **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
+### BigQuery Queries
 
-**Migration**: We're transitioning to v1 as the primary format. v0 remains available for
-backward compatibility and casual use. If Parquet proves too heavy for some workflows,
-v0 will continue to be maintained.
+The data was extracted from M-Lab's public BigQuery tables using queries
+inside the [../library/src/iqb/queries](../library/src/iqb/queries) package.
 
-## Generating Data
+### Running the Data Generation Pipeline
 
-### Prerequisites
+**Prerequisites**:
 
-- Google Cloud SDK authenticated with M-Lab access
-- Python 3.13 with `uv` (see root [README.md](../README.md))
+- Google Cloud SDK (`gcloud`) installed
 
-### Pipeline
+- BigQuery CLI (`bq`) installed
 
 - `gcloud`-authenticated with an account subscribed to
 [M-Lab Discuss mailing list](https://groups.google.com/a/measurementlab.net/g/discuss)
@@ -107,16 +101,13 @@ uv run python run_query.py uploads_by_country \
   --start-date 2024-10-01 --end-date 2024-11-01 \
   -o uploads.json
 
-# Merge into per-country v0 JSON files
+# Stage 2: Merge data
 uv run python merge_data.py
 ```
 
-**What happens**:
+**Pipeline Scripts**:
 
-1. `run_query.py` uses [IQBPipeline](../library/src/iqb/pipeline.py) to:
-   - Execute BigQuery query from [templates](../library/src/iqb/queries/)
-   - Save v1 cache: `cache/v1/{start}/{end}/{query_type}/data.parquet` + `stats.json`
-   - Convert to v0 JSON for backward compatibility
+- [generate_data.py](generate_data.py) - Orchestrates the complete pipeline
 
 - [run_query.py](run_query.py) - Executes BigQuery queries using IQBPipeline,
 saves v1 cache (parquet + stats) and v0 JSON output
@@ -126,8 +117,8 @@ per-country v0 files
 
 ## Notes
 
-- **v0 vs v1**: v0 JSON files (~1.4KB each) are convenient for quick analysis.
-  v1 Parquet files (~1-60 MiB) enable efficient filtering and large-scale processing.
+- **Static data**: These files contain pre-aggregated percentiles
+for Phase 1 prototype. Phase 2 will add dynamic data fetching.
 
 - **Data formats**: v0 JSON files (~1.4KB) for quick analysis;
 v1 Parquet files (~1-60 MiB) with stats.json for efficient processing and cost tracking.

@@ -47,7 +47,9 @@ def run_bq_query(
     Execute a BigQuery query and save the JSON output.
 
     This uses IQBPipeline internally to:
-    1. Execute the query and save parquet to ./data/cache/v1/{start}/{end}/{query_name}.parquet
+    1. Execute the query and save to ./data/cache/v1/{start}/{end}/{query_name}/
+       - data.parquet: Query results
+       - stats.json: Query metadata (timing, bytes processed, template hash)
     2. Convert the parquet to JSON format
     3. Write JSON to the output file (for backward compatibility with v0 pipeline)
 
@@ -87,8 +89,10 @@ def run_bq_query(
     # Data directory is ./iqb/data (where this script lives)
     data_dir = Path(__file__).parent
 
-    # Step 1: Execute query and save parquet using IQBPipeline
-    # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}.parquet
+    # Step 1: Execute query and save results using IQBPipeline
+    # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
+    #   - data.parquet: query results
+    #   - stats.json: query metadata
     pipeline = IQBPipeline(project_id=project_id, data_dir=data_dir)
     result = pipeline.execute_query_template(
         template=query_name,
@@ -106,6 +110,10 @@ def run_bq_query(
         return
 
     print(f"✓ Parquet saved: {info.file_path}", file=sys.stderr)
+
+    # Save query statistics (timing, bytes processed, template hash)
+    stats_path = result.save_stats()
+    print(f"✓ Stats saved: {stats_path}", file=sys.stderr)
 
     # Step 2: Convert parquet to JSON
     print("Converting parquet to JSON...", file=sys.stderr)

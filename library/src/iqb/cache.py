@@ -26,7 +26,114 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-from . import pipeline
+import pandas as pd
+import pyarrow.parquet as pq
+
+from .pipeline import PipelineCacheManager, data_dir_or_default
+
+
+@dataclass(frozen=True)
+class CacheEntry:
+    """
+    Entry inside the data cache.
+
+    Attributes:
+        download_data: full path to data.parquet for download
+        upload_data: full path to data.parquet for upload
+        download_stats: full path to stats.json for download
+        upload_stats: full path to stats.json for upload
+    """
+
+    download_data: Path
+    upload_data: Path
+    download_stats: Path
+    upload_stats: Path
+
+    @staticmethod
+    def _read_data_frame(
+        filepath: Path,
+        *,
+        country_code: str | None,
+        asn: int | None,
+        city: str | None,
+        columns: list[str] | None,
+    ) -> pd.DataFrame:
+        # 1. setup the reading filters to efficiently skip groups of rows
+        # PyArrow filters: list of tuples (column, operator, value)
+        filters = []
+        if asn is not None:
+            filters.append(("asn", "=", asn))
+        if city is not None:
+            filters.append(("city", "=", city))
+        if country_code is not None:
+            filters.append(("country_code", "=", country_code))
+
+        # 2. load in memory using the filters and potentially cutting the columns
+        # Note: PyArrow requires filters=None (not []) when there are no filters
+        table = pq.read_table(filepath, filters=filters if filters else None, columns=columns)
+
+        # 3. finally convert to data frame
+        return table.to_pandas()
+
+    def read_download_data_frame(
+        self,
+        *,
+        country_code: str | None = None,
+        asn: int | None = None,
+        city: str | None = None,
+        columns: list[str] | None = None,
+    ) -> pd.DataFrame:
+        """
+        Load the download dataset as a dataframe.
+
+        The arguments allow to select a subset of the entire dataset.
+
+        Arguments:
+          country_code: either None or the desired country code (e.g., "IT")
+          asn: either None or the desired ASN (e.g., 137)
+          city: either None or the desired city (e.g., "Boston")
+          columns: either None (all columns) or list of column names to read
+
+        Return:
+          A pandas DataFrame.
+        """
+        return self._read_data_frame(
+            self.download_data,
+            country_code=country_code,
+            asn=asn,
+            city=city,
+            columns=columns,
+        )
+
+    def read_upload_data_frame(
+        self,
+        *,
+        country_code: str | None = None,
+        asn: int | None = None,
+        city: str | None = None,
+        columns: list[str] | None = None,
+    ) -> pd.DataFrame:
+        """
+        Load the upload dataset as a dataframe.
+
+        The arguments allow to select a subset of the entire dataset.
+
+        Arguments:
+          country_code: either None or the desired country code (e.g., "IT")
+          asn: either None or the desired ASN (e.g., 137)
+          city: either None or the desired city (e.g., "Boston")
+          columns: either None (all columns) or list of column names to read
+
+        Return:
+          A pandas DataFrame.
+        """
+        return self._read_data_frame(
+            self.upload_data,
+            country_code=country_code,
+            asn=asn,
+            city=city,
+            columns=columns,
+        )
 
 
 class IQBCache:
@@ -40,7 +147,79 @@ class IQBCache:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        self.data_dir = pipeline.data_dir_or_default(data_dir)
+        self.data_dir = data_dir_or_default(data_dir)
+
+    def get_cache_entry(
+        self,
+        *,
+        start_date: str,
+        end_date: str,
+        granularity: str,
+    ) -> CacheEntry:
+        """
+        Get cache entry associated with given dates and granularity.
+
+        The available granularities are:
+
+        1. "country"
+        2. "country_asn"
+        3. "country_city"
+        4. "country_city_asn"
+
+        Note that this function is a low level building block allowing you to
+        access and filter data very efficiently. Consider using higher-level
+        user-friendlty APIs when they are actually available.
+
+        The returned CacheEntry allows you to read raw data as DataFrame.
+
+        Arguments:
+            start_date: start measurement date expressed as YYYY-MM-DD (included)
+            end_date: end measurement date expressed as YYYY-MM-DD (excluded)
+            granularity: the granularity to use
+
+        Return:
+            A CacheEntry instance.
+
+        Example:
+            >>> # Returns data for October 2025
+            >>> result = cache.get_cache_entry("2025-10-01", "2025-11-01", "country")
+        """
+        # 1. create a temporary cache manager instance
+        manager = PipelineCacheManager(self.data_dir)
+
+        # 2. check whether the download entry exists
+        download_entry = manager.get_cache_entry(
+            f"downloads_by_{granularity}",
+            start_date,
+            end_date,
+        )
+        download_data = download_entry.data_path()
+        download_stats = download_entry.stats_path()
+        if download_data is None or download_stats is None:
+            raise FileNotFoundError(
+                f"Cache entry not found for downloads_by_{granularity} ({start_date} to {end_date})"
+            )
+
+        # 3. check whether the upload entry exists
+        upload_entry = manager.get_cache_entry(
+            f"uploads_by_{granularity}",
+            start_date,
+            end_date,
+        )
+        upload_data = upload_entry.data_path()
+        upload_stats = upload_entry.stats_path()
+        if upload_data is None or upload_stats is None:
+            raise FileNotFoundError(
+                f"Cache entry not found for uploads_by_{granularity} ({start_date} to {end_date})"
+            )
+
+        # 4. return the actual cache entry
+        return CacheEntry(
+            download_data=download_data,
+            upload_data=upload_data,
+            download_stats=download_stats,
+            upload_stats=upload_stats,
+        )
 
     def get_data(
         self,
@@ -95,6 +274,9 @@ class IQBCache:
         NOTE: This creates semantics where p95 represents "typical best
         performance" - empirical validation will determine if appropriate.
         """
+        # TODO(bassosimone): we should convert this method to become
+        # a wrapper of `get_cache_entry` in the future.
+
         # Design Note
         # -----------
         #

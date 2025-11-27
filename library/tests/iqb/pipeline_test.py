@@ -22,7 +22,7 @@ from iqb.pipeline import (
 
 
 class TestDataDirOrDefault:
-    """Test pure functions without external dependencies."""
+    """Test for data_dir_or_default function."""
 
     def test_data_dir_or_default_with_none(self):
         """Test default behavior when data_dir is None."""

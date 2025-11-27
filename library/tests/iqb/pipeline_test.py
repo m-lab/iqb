@@ -35,13 +35,18 @@ class TestHelperFunctions:
 
     def test_load_query_template_substitution(self):
         """Test that query template placeholders are substituted."""
-        query = _load_query_template("downloads_by_country", "2024-10-01", "2024-11-01")
+        query, template_hash = _load_query_template("downloads_by_country", "2024-10-01", "2024-11-01")
 
         # Verify placeholders replaced
         assert "{START_DATE}" not in query
         assert "{END_DATE}" not in query
         assert "2024-10-01" in query
         assert "2024-11-01" in query
+
+        # Verify hash is present and is a SHA256 hex string (64 chars)
+        assert template_hash is not None
+        assert len(template_hash) == 64
+        assert all(c in "0123456789abcdef" for c in template_hash)
 
 
 class TestIQBPipelineInit:
@@ -73,7 +78,7 @@ class TestIQBPipelineExecuteQuery:
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
     def test_execute_query_template_path_construction(self, mock_storage, mock_client, tmp_path):
-        """Test that execute_query_template constructs correct parquet path."""
+        """Test that execute_query_template constructs correct cache directory."""
         # Setup mocks
         mock_job = Mock()
         mock_rows = Mock()
@@ -99,18 +104,23 @@ class TestIQBPipelineExecuteQuery:
         assert "2024-10-01" in query_arg
         assert "2024-11-01" in query_arg
 
-        # Verify path construction
-        expected_path = (
+        # Verify cache directory construction
+        expected_dir = (
             data_dir
             / "cache"
             / "v1"
             / "20241001T000000Z"
             / "20241101T000000Z"
-            / "downloads_by_country.parquet"
+            / "downloads_by_country"
         )
-        assert result.parquet_path == expected_path
+        assert result.cache_dir == expected_dir
         assert result.rows == mock_rows
         assert result.job == mock_job
+
+        # Verify metadata fields
+        assert result.query_start_time is not None
+        assert result.template_hash is not None
+        assert len(result.template_hash) == 64
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
@@ -159,16 +169,16 @@ class TestIQBPipelineExecuteQuery:
             end_date="2024-11-01",
         )
 
-        # Verify correct filename
-        expected_path = (
+        # Verify correct cache directory
+        expected_dir = (
             data_dir
             / "cache"
             / "v1"
             / "20241001T000000Z"
             / "20241101T000000Z"
-            / "uploads_by_country.parquet"
+            / "uploads_by_country"
         )
-        assert result.parquet_path == expected_path
+        assert result.cache_dir == expected_dir
 
 
 class TestQueryResultSaveParquet:
@@ -176,7 +186,7 @@ class TestQueryResultSaveParquet:
 
     def test_save_parquet_with_data(self, tmp_path):
         """Test saving parquet file with mock data."""
-        parquet_path = tmp_path / "test.parquet"
+        cache_dir = tmp_path / "cache"
 
         # Mock Arrow batches
         mock_batch = MagicMock()
@@ -195,20 +205,23 @@ class TestQueryResultSaveParquet:
                 bq_read_client=Mock(),
                 job=Mock(),
                 rows=mock_rows,
-                parquet_path=parquet_path,
+                cache_dir=cache_dir,
+                query_start_time="2024-11-27T10:00:00.000000Z",
+                template_hash="abc123",
             )
 
             info = result.save_parquet()
 
             # Verify
             assert info.no_content is False
-            assert info.file_path == parquet_path
-            assert parquet_path.parent.exists()
+            expected_path = cache_dir / "data.parquet"
+            assert info.file_path == expected_path
+            assert cache_dir.exists()
             mock_writer_instance.write_batch.assert_called_once_with(mock_batch)
 
     def test_save_parquet_empty_results(self, tmp_path):
         """Test handling of empty query results."""
-        parquet_path = tmp_path / "test.parquet"
+        cache_dir = tmp_path / "cache"
 
         # Mock empty iterator
         mock_rows = Mock()
@@ -218,20 +231,23 @@ class TestQueryResultSaveParquet:
             bq_read_client=Mock(),
             job=Mock(),
             rows=mock_rows,
-            parquet_path=parquet_path,
+            cache_dir=cache_dir,
+            query_start_time="2024-11-27T10:00:00+00:00",
+            template_hash="abc123",
         )
 
         info = result.save_parquet()
 
         # Verify no file created, but directory exists
         assert info.no_content is True
-        assert info.file_path == parquet_path
-        assert parquet_path.parent.exists()
-        assert not parquet_path.exists()
+        expected_path = cache_dir / "data.parquet"
+        assert info.file_path == expected_path
+        assert cache_dir.exists()
+        assert not expected_path.exists()
 
     def test_save_parquet_multiple_batches(self, tmp_path):
         """Test saving multiple Arrow batches."""
-        parquet_path = tmp_path / "test.parquet"
+        cache_dir = tmp_path / "cache"
 
         # Mock multiple batches
         mock_batch1 = MagicMock()
@@ -250,7 +266,9 @@ class TestQueryResultSaveParquet:
                 bq_read_client=Mock(),
                 job=Mock(),
                 rows=mock_rows,
-                parquet_path=parquet_path,
+                cache_dir=cache_dir,
+                query_start_time="2024-11-27T10:00:00.000000Z",
+                template_hash="abc123",
             )
 
             info = result.save_parquet()
@@ -260,9 +278,9 @@ class TestQueryResultSaveParquet:
             assert info.no_content is False
 
     def test_save_parquet_creates_nested_directories(self, tmp_path):
-        """Test that save_parquet creates nested parent directories."""
+        """Test that save_parquet creates nested cache directory."""
         # Deep nested path
-        parquet_path = tmp_path / "a" / "b" / "c" / "test.parquet"
+        cache_dir = tmp_path / "a" / "b" / "c"
 
         mock_batch = MagicMock()
         mock_batch.schema = MagicMock()
@@ -278,14 +296,117 @@ class TestQueryResultSaveParquet:
                 bq_read_client=Mock(),
                 job=Mock(),
                 rows=mock_rows,
-                parquet_path=parquet_path,
+                cache_dir=cache_dir,
+                query_start_time="2024-11-27T10:00:00.000000Z",
+                template_hash="abc123",
             )
 
             info = result.save_parquet()
 
-            # Verify all parent directories created
-            assert parquet_path.parent.exists()
+            # Verify cache directory created
+            assert cache_dir.exists()
             assert info.no_content is False
+
+
+class TestQueryResultSaveStats:
+    """Test stats.json file writing."""
+
+    def test_save_stats_with_complete_job_info(self, tmp_path):
+        """Test saving stats with complete BigQuery job information."""
+        import json
+        from datetime import datetime, timedelta, timezone
+
+        cache_dir = tmp_path / "cache"
+
+        # Mock BigQuery job with complete info
+        mock_job = Mock()
+        mock_job.started = datetime(2024, 11, 27, 10, 0, 0, tzinfo=timezone.utc)
+        mock_job.ended = datetime(2024, 11, 27, 10, 5, 30, tzinfo=timezone.utc)
+        mock_job.total_bytes_processed = 1000000000  # 1 GB
+        mock_job.total_bytes_billed = 1073741824  # 1 GiB
+
+        result = QueryResult(
+            bq_read_client=Mock(),
+            job=mock_job,
+            rows=Mock(),
+            cache_dir=cache_dir,
+            query_start_time="2024-11-27T10:00:00.000000Z",
+            template_hash="abc123def456",
+        )
+
+        stats_path = result.save_stats()
+
+        # Verify file created
+        assert stats_path == cache_dir / "stats.json"
+        assert stats_path.exists()
+
+        # Verify content
+        with stats_path.open() as f:
+            stats = json.load(f)
+
+        assert stats["query_start_time"] == "2024-11-27T10:00:00.000000Z"
+        assert stats["query_duration_seconds"] == 330.0  # 5 min 30 sec
+        assert stats["template_hash"] == "abc123def456"
+        assert stats["total_bytes_processed"] == 1000000000
+        assert stats["total_bytes_billed"] == 1073741824
+
+    def test_save_stats_with_incomplete_job_info(self, tmp_path):
+        """Test saving stats when job timing info is incomplete."""
+        import json
+
+        cache_dir = tmp_path / "cache"
+
+        # Mock job without timing info
+        mock_job = Mock()
+        mock_job.started = None
+        mock_job.ended = None
+        mock_job.total_bytes_processed = 500000
+        mock_job.total_bytes_billed = 524288
+
+        result = QueryResult(
+            bq_read_client=Mock(),
+            job=mock_job,
+            rows=Mock(),
+            cache_dir=cache_dir,
+            query_start_time="2024-11-27T10:00:00.000000Z",
+            template_hash="xyz789",
+        )
+
+        stats_path = result.save_stats()
+
+        # Verify content
+        with stats_path.open() as f:
+            stats = json.load(f)
+
+        assert stats["query_start_time"] == "2024-11-27T10:00:00.000000Z"
+        assert stats["query_duration_seconds"] is None
+        assert stats["template_hash"] == "xyz789"
+        assert stats["total_bytes_processed"] == 500000
+        assert stats["total_bytes_billed"] == 524288
+
+    def test_save_stats_creates_directory(self, tmp_path):
+        """Test that save_stats creates cache directory if needed."""
+        cache_dir = tmp_path / "a" / "b" / "c"
+
+        mock_job = Mock()
+        mock_job.started = None
+        mock_job.ended = None
+        mock_job.total_bytes_processed = 0
+        mock_job.total_bytes_billed = 0
+
+        result = QueryResult(
+            bq_read_client=Mock(),
+            job=mock_job,
+            rows=Mock(),
+            cache_dir=cache_dir,
+            query_start_time="2024-11-27T10:00:00.000000Z",
+            template_hash="test123",
+        )
+
+        stats_path = result.save_stats()
+
+        assert cache_dir.exists()
+        assert stats_path.exists()
 
 
 class TestParquetFileInfo:

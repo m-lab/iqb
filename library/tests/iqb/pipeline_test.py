@@ -1,6 +1,6 @@
 """Tests for the iqb.pipeline module."""
 
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
@@ -35,7 +35,9 @@ class TestHelperFunctions:
 
     def test_load_query_template_substitution(self):
         """Test that query template placeholders are substituted."""
-        query, template_hash = _load_query_template("downloads_by_country", "2024-10-01", "2024-11-01")
+        query, template_hash = _load_query_template(
+            "downloads_by_country", "2024-10-01", "2024-11-01"
+        )
 
         # Verify placeholders replaced
         assert "{START_DATE}" not in query
@@ -314,14 +316,14 @@ class TestQueryResultSaveStats:
     def test_save_stats_with_complete_job_info(self, tmp_path):
         """Test saving stats with complete BigQuery job information."""
         import json
-        from datetime import datetime, timedelta, timezone
+        from datetime import datetime
 
         cache_dir = tmp_path / "cache"
 
         # Mock BigQuery job with complete info
         mock_job = Mock()
-        mock_job.started = datetime(2024, 11, 27, 10, 0, 0, tzinfo=timezone.utc)
-        mock_job.ended = datetime(2024, 11, 27, 10, 5, 30, tzinfo=timezone.utc)
+        mock_job.started = datetime(2024, 11, 27, 10, 0, 0, tzinfo=UTC)
+        mock_job.ended = datetime(2024, 11, 27, 10, 5, 30, tzinfo=UTC)
         mock_job.total_bytes_processed = 1000000000  # 1 GB
         mock_job.total_bytes_billed = 1073741824  # 1 GiB
 

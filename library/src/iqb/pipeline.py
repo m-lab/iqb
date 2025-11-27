@@ -75,7 +75,7 @@ without producing intermediate formats.
 import hashlib
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from importlib.resources import files
 from pathlib import Path
 from typing import Final
@@ -229,7 +229,7 @@ class IQBPipeline:
         query, template_hash = _load_query_template(template, start_date, end_date)
 
         # 3. record query start time (RFC3339 format with Z suffix)
-        query_start_time = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        query_start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
         # 4. execute the query and get job and iterable rows
         job = self.client.query(query)

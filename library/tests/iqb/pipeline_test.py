@@ -12,6 +12,7 @@ from iqb.pipeline import (
     ParquetFileInfo,
     ParsedTemplateName,
     PipelineCacheEntry,
+    PipelineCacheManager,
     QueryResult,
     _load_query_template,
     _parse_both_dates,
@@ -171,7 +172,9 @@ class TestIQBPipelineInit:
 
         mock_client.assert_called_once_with(project="test-project")
         mock_storage.assert_called_once()
-        assert pipeline.data_dir == Path.cwd() / ".iqb"
+        # Verify manager is initialized (internal implementation)
+        assert pipeline.manager is not None
+        assert isinstance(pipeline.manager, PipelineCacheManager)
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
@@ -180,7 +183,9 @@ class TestIQBPipelineInit:
         custom_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=custom_dir)
 
-        assert pipeline.data_dir == custom_dir
+        # Verify manager is initialized with custom data_dir
+        assert isinstance(pipeline.manager, PipelineCacheManager)
+        assert pipeline.manager.data_dir == custom_dir
 
 
 class TestIQBPipelineExecuteQuery:
@@ -188,7 +193,9 @@ class TestIQBPipelineExecuteQuery:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_execute_query_template_path_construction(self, mock_storage, mock_client, tmp_path):
+    def test_execute_query_template_path_construction(
+        self, mock_storage, mock_client, tmp_path
+    ):
         """Test that execute_query_template constructs correct cache directory."""
         # Setup mocks
         mock_job = Mock()
@@ -382,7 +389,9 @@ class TestQueryResultSaveParquet:
         mock_batch3 = MagicMock()
 
         mock_rows = Mock()
-        mock_rows.to_arrow_iterable.return_value = iter([mock_batch1, mock_batch2, mock_batch3])
+        mock_rows.to_arrow_iterable.return_value = iter(
+            [mock_batch1, mock_batch2, mock_batch3]
+        )
 
         with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()
@@ -561,20 +570,29 @@ class TestIQBPipelineGetPipelineCacheEntry:
         (cache_dir / "stats.json").write_text("{}")
 
         # Get cache entry (should not execute query)
-        entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
+        entry = pipeline.get_cache_entry(
+            "downloads_by_country", "2024-10-01", "2024-11-01"
+        )
 
         assert isinstance(entry, PipelineCacheEntry)
-        assert entry.data_path == cache_dir / "data.parquet"
-        assert entry.stats_path == cache_dir / "stats.json"
-        assert entry.data_path.exists()
-        assert entry.stats_path.exists()
+        data_path = entry.data_path()
+        assert data_path is not None
+        assert data_path == cache_dir / "data.parquet"
+        assert data_path.exists()
+
+        stats_path = entry.stats_path()
+        assert stats_path is not None
+        assert stats_path == cache_dir / "stats.json"
+        assert stats_path.exists()
 
         # Query should NOT have been called
         mock_client.return_value.query.assert_not_called()
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_missing_without_fetch(self, mock_storage, mock_client, tmp_path):
+    def test_get_cache_entry_missing_without_fetch(
+        self, mock_storage, mock_client, tmp_path
+    ):
         """Test get_cache_entry raises FileNotFoundError when cache missing and fetch_if_missing=False."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -590,7 +608,9 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_fetch_if_missing(self, mock_storage, mock_client, tmp_path):
+    def test_get_cache_entry_fetch_if_missing(
+        self, mock_storage, mock_client, tmp_path
+    ):
         """Test get_cache_entry executes query when cache missing and fetch_if_missing=True."""
         data_dir = tmp_path / "iqb"
 
@@ -614,10 +634,28 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
 
-        # Mock ParquetWriter
+        # Expected cache directory
+        expected_cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+
+        # Mock ParquetWriter and ensure the file is created
         with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                expected_cache_dir.mkdir(parents=True, exist_ok=True)
+                (expected_cache_dir / "data.parquet").write_text("fake data")
+                return MagicMock()
+
+            mock_writer.side_effect = create_parquet_file
 
             # Get cache entry with fetch_if_missing=True
             entry = pipeline.get_cache_entry(
@@ -632,23 +670,21 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
             # Entry should be returned with correct paths
             assert isinstance(entry, PipelineCacheEntry)
-            expected_cache_dir = (
-                data_dir
-                / "cache"
-                / "v1"
-                / "20241001T000000Z"
-                / "20241101T000000Z"
-                / "downloads_by_country"
-            )
-            assert entry.data_path == expected_cache_dir / "data.parquet"
-            assert entry.stats_path == expected_cache_dir / "stats.json"
-            # Note: stats.json exists (written by save_stats), but data.parquet doesn't
-            # because ParquetWriter is mocked
-            assert entry.stats_path.exists()
+            data_path = entry.data_path()
+            assert data_path is not None
+            stats_path = entry.stats_path()
+            assert stats_path is not None
+            assert data_path == expected_cache_dir / "data.parquet"
+            assert stats_path == expected_cache_dir / "stats.json"
+            # Both files should exist
+            assert data_path.exists()
+            assert stats_path.exists()
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_partial_cache_data_only(self, mock_storage, mock_client, tmp_path):
+    def test_get_cache_entry_partial_cache_data_only(
+        self, mock_storage, mock_client, tmp_path
+    ):
         """Test get_cache_entry when only data.parquet exists (missing stats.json)."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -672,7 +708,9 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_partial_cache_stats_only(self, mock_storage, mock_client, tmp_path):
+    def test_get_cache_entry_partial_cache_stats_only(
+        self, mock_storage, mock_client, tmp_path
+    ):
         """Test get_cache_entry when only stats.json exists (missing data.parquet)."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -696,7 +734,9 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_validation_before_fs_check(self, mock_storage, mock_client, tmp_path):
+    def test_get_cache_entry_validation_before_fs_check(
+        self, mock_storage, mock_client, tmp_path
+    ):
         """Test that input validation happens before filesystem check."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -708,6 +748,137 @@ class TestIQBPipelineGetPipelineCacheEntry:
         # Invalid date range should fail immediately
         with pytest.raises(ValueError, match="start_date must be <= end_date"):
             pipeline.get_cache_entry("downloads_by_country", "2024-11-01", "2024-10-01")
+
+
+class TestPipelineCacheManager:
+    """Test PipelineCacheManager (internal component)."""
+
+    def test_init_default_data_dir(self):
+        """Test manager initialization with default data directory."""
+        manager = PipelineCacheManager()
+        assert manager.data_dir == Path.cwd() / ".iqb"
+
+    def test_init_custom_data_dir(self, tmp_path):
+        """Test manager initialization with custom data directory."""
+        custom_dir = tmp_path / "custom"
+        manager = PipelineCacheManager(data_dir=custom_dir)
+        assert manager.data_dir == custom_dir
+
+    def test_get_cache_entry_returns_entry(self, tmp_path):
+        """Test that get_cache_entry returns PipelineCacheEntry."""
+        manager = PipelineCacheManager(data_dir=tmp_path)
+        entry = manager.get_cache_entry(
+            template="downloads_by_country",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+
+        assert isinstance(entry, PipelineCacheEntry)
+        assert entry.data_dir == tmp_path
+        assert entry.tname.value == "downloads_by_country"
+        assert entry.start_time == datetime(2024, 10, 1)
+        assert entry.end_time == datetime(2024, 11, 1)
+
+    def test_get_cache_entry_validates_template(self, tmp_path):
+        """Test that get_cache_entry validates template name."""
+        manager = PipelineCacheManager(data_dir=tmp_path)
+
+        with pytest.raises(ValueError, match="Unknown template"):
+            manager.get_cache_entry(
+                template="invalid_template",
+                start_date="2024-10-01",
+                end_date="2024-11-01",
+            )
+
+    def test_get_cache_entry_validates_dates(self, tmp_path):
+        """Test that get_cache_entry validates date range."""
+        manager = PipelineCacheManager(data_dir=tmp_path)
+
+        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+            manager.get_cache_entry(
+                template="downloads_by_country",
+                start_date="2024-11-01",
+                end_date="2024-10-01",
+            )
+
+
+class TestPipelineCacheEntry:
+    """Test PipelineCacheEntry value object."""
+
+    def test_dir_path_construction(self, tmp_path):
+        """Test that dir_path constructs correct cache directory path."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            tname=ParsedTemplateName(value="downloads_by_country"),
+            start_time=datetime(2024, 10, 1),
+            end_time=datetime(2024, 11, 1),
+        )
+
+        expected = (
+            tmp_path
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        assert entry.dir_path() == expected
+
+    def test_data_path_when_file_exists(self, tmp_path):
+        """Test data_path returns path when file exists."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            tname=ParsedTemplateName(value="downloads_by_country"),
+            start_time=datetime(2024, 10, 1),
+            end_time=datetime(2024, 11, 1),
+        )
+
+        # Create the file
+        cache_dir = entry.dir_path()
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        data_file = cache_dir / "data.parquet"
+        data_file.write_text("fake data")
+
+        assert entry.data_path() == data_file
+
+    def test_data_path_when_file_missing(self, tmp_path):
+        """Test data_path returns None when file doesn't exist."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            tname=ParsedTemplateName(value="downloads_by_country"),
+            start_time=datetime(2024, 10, 1),
+            end_time=datetime(2024, 11, 1),
+        )
+
+        assert entry.data_path() is None
+
+    def test_stats_path_when_file_exists(self, tmp_path):
+        """Test stats_path returns path when file exists."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            tname=ParsedTemplateName(value="downloads_by_country"),
+            start_time=datetime(2024, 10, 1),
+            end_time=datetime(2024, 11, 1),
+        )
+
+        # Create the file
+        cache_dir = entry.dir_path()
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        stats_file = cache_dir / "stats.json"
+        stats_file.write_text("{}")
+
+        assert entry.stats_path() == stats_file
+
+    def test_stats_path_when_file_missing(self, tmp_path):
+        """Test stats_path returns None when file doesn't exist."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            tname=ParsedTemplateName(value="downloads_by_country"),
+            start_time=datetime(2024, 10, 1),
+            end_time=datetime(2024, 11, 1),
+        )
+
+        assert entry.stats_path() is None
 
 
 class TestParquetFileInfo:

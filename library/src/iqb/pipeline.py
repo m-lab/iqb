@@ -98,8 +98,8 @@ VALID_TEMPLATE_NAMES: Final[set[str]] = {
 }
 
 # Cache file names
-CACHE_DATA_FILENAME: Final[str] = "data.parquet"
-CACHE_STATS_FILENAME: Final[str] = "stats.json"
+PIPELINE_CACHE_DATA_FILENAME: Final[str] = "data.parquet"
+PIPELINE_CACHE_STATS_FILENAME: Final[str] = "stats.json"
 
 
 @dataclass(frozen=True)
@@ -115,12 +115,37 @@ class PipelineCacheEntry:
     Reference to a cache entry containing query results and metadata.
 
     Attributes:
-        data_path: Path to data.parquet file
-        stats_path: Path to stats.json file
+        data_dir: the Path that points to the data dir
+        tname: the ParsedTemplateName to use
+        start_time: the datetime containing the start time
+        end_time: the datetime containing the end time
     """
 
-    data_path: Path
-    stats_path: Path
+    data_dir: Path
+    tname: ParsedTemplateName
+    start_time: datetime
+    end_time: datetime
+
+    def dir_path(self) -> Path:
+        """Returns the directory path where to write files."""
+        fs_date_format = "%Y%m%dT000000Z"
+        start_dir = self.start_time.strftime(fs_date_format)
+        end_dir = self.end_time.strftime(fs_date_format)
+        return self.data_dir / "cache" / "v1" / start_dir / end_dir / self.tname.value
+
+    def data_path(self) -> Path | None:
+        """Returns the path to the parquet data file, if it exists, or None."""
+        value = self.dir_path() / PIPELINE_CACHE_DATA_FILENAME
+        if not value.exists():
+            return None
+        return value
+
+    def stats_path(self) -> Path | None:
+        """Returns the path to the JSON stats file, if it exists, or None."""
+        value = self.dir_path() / PIPELINE_CACHE_STATS_FILENAME
+        if not value.exists():
+            return None
+        return value
 
 
 @dataclass(frozen=True)
@@ -164,7 +189,7 @@ class QueryResult:
         If the query returns no rows, an empty parquet file is written.
         """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        parquet_path = self.cache_dir / CACHE_DATA_FILENAME
+        parquet_path = self.cache_dir / PIPELINE_CACHE_DATA_FILENAME
 
         # Note: using .as_posix to avoid paths with backslashes
         # that can cause issues with PyArrow on Windows
@@ -191,7 +216,7 @@ class QueryResult:
             Path to the written stats.json file.
         """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        stats_path = self.cache_dir / CACHE_STATS_FILENAME
+        stats_path = self.cache_dir / PIPELINE_CACHE_STATS_FILENAME
 
         # Calculate query duration from BigQuery job
         query_duration_seconds = None
@@ -218,6 +243,51 @@ class QueryResult:
         return stats_path
 
 
+class PipelineCacheManager:
+    """Manages the cache populated by the IQBPipeline."""
+
+    def __init__(self, data_dir: str | Path | None = None):
+        """
+        Initialize cache with data directory path.
+
+        Parameters:
+            data_dir: Path to directory containing cached data files.
+                If None, defaults to .iqb/ in current working directory.
+        """
+        self.data_dir = data_dir_or_default(data_dir)
+
+    def get_cache_entry(
+        self,
+        template: str,
+        start_date: str,
+        end_date: str,
+    ) -> PipelineCacheEntry:
+        """
+        Get cache entry for the given query.
+
+        Args:
+            template: name for the query template (e.g., "downloads_by_country")
+            start_date: Date when to start the query (included) -- format YYYY-MM-DD
+            end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+
+        Returns:
+            PipelineCacheEntry with correctly initialized fields.
+        """
+        # 1. parse the start and the end dates
+        start_time, end_time = _parse_both_dates(start_date, end_date)
+
+        # 2. ensure the template name is correct
+        tname = _parse_template_name(template)
+
+        # 3. return the corresponding entry
+        return PipelineCacheEntry(
+            data_dir=self.data_dir,
+            tname=tname,
+            start_time=start_time,
+            end_time=end_time,
+        )
+
+
 class IQBPipeline:
     """Component for populating the IQB-measurement-data cache."""
 
@@ -232,18 +302,7 @@ class IQBPipeline:
         """
         self.client = bigquery.Client(project=project_id)
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
-        self.data_dir = data_dir_or_default(data_dir)
-
-    def _cache_dir_path(
-        self,
-        tname: ParsedTemplateName,
-        start_time: datetime,
-        end_time: datetime,
-    ) -> Path:
-        fs_date_format = "%Y%m%dT000000Z"
-        start_dir = start_time.strftime(fs_date_format)
-        end_dir = end_time.strftime(fs_date_format)
-        return self.data_dir / "cache" / "v1" / start_dir / end_dir / tname.value
+        self.manager = PipelineCacheManager(data_dir)
 
     def get_cache_entry(
         self,
@@ -269,22 +328,14 @@ class IQBPipeline:
         Raises:
             FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
         """
-        # 1. parse the start and the end dates
-        start_time, end_time = _parse_both_dates(start_date, end_date)
+        # 1. get the cache entry
+        entry = self.manager.get_cache_entry(template, start_date, end_date)
 
-        # 2. ensure the template name is correct
-        tname = _parse_template_name(template)
+        # 2. make sure the entry exists
+        if entry.data_path() is not None and entry.stats_path() is not None:
+            return entry
 
-        # 3. obtain information about the cache dir and files
-        cache_dir = self._cache_dir_path(tname, start_time, end_time)
-        data_path = cache_dir / CACHE_DATA_FILENAME
-        stats_path = cache_dir / CACHE_STATS_FILENAME
-
-        # 4. check if cache exists
-        if data_path.exists() and stats_path.exists():
-            return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
-
-        # 5. handle missing cache without auto-fetching
+        # 3. handle missing cache without auto-fetching
         if not fetch_if_missing:
             raise FileNotFoundError(
                 f"Cache entry not found for {template} "
@@ -292,13 +343,15 @@ class IQBPipeline:
                 f"Set fetch_if_missing=True to execute query."
             )
 
-        # 6. execute query and update the cache
-        result = self._execute_query_template(tname, start_time, end_time)
+        # 4. execute query and update the cache
+        result = self._execute_query_template(entry)
         result.save_parquet()
         result.save_stats()
 
-        # 7. return information about the cache entry
-        return PipelineCacheEntry(data_path=data_path, stats_path=stats_path)
+        # 5. return information about the cache entry
+        assert entry.data_path() is not None
+        assert entry.stats_path() is not None
+        return entry
 
     def execute_query_template(
         self,
@@ -317,27 +370,13 @@ class IQBPipeline:
         Returns:
             A QueryResult instance.
         """
-        # 1. parse the start and the end dates
-        start_time, end_time = _parse_both_dates(start_date, end_date)
-
-        # 2. ensure the template name is correct
-        tname = _parse_template_name(template)
-
-        # 3. defer to the private implementation
         return self._execute_query_template(
-            tname=tname,
-            start_time=start_time,
-            end_time=end_time,
+            self.manager.get_cache_entry(template, start_date, end_date)
         )
 
-    def _execute_query_template(
-        self,
-        tname: ParsedTemplateName,
-        start_time: datetime,
-        end_time: datetime,
-    ) -> QueryResult:
+    def _execute_query_template(self, entry: PipelineCacheEntry) -> QueryResult:
         # 1. load the actual query
-        query, template_hash = _load_query_template(tname, start_time, end_time)
+        query, template_hash = _load_query_template(entry.tname, entry.start_time, entry.end_time)
 
         # 2. record query start time (RFC3339 format with Z suffix)
         query_start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
@@ -347,7 +386,7 @@ class IQBPipeline:
         rows = job.result()
 
         # 4. compute the directory where we would save the results
-        cache_dir = self._cache_dir_path(tname, start_time, end_time)
+        cache_dir = entry.dir_path()
 
         # 5. return the result object
         return QueryResult(

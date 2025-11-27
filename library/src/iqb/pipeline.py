@@ -169,11 +169,13 @@ class IQBPipeline:
         Returns:
             A QueryResult instance.
         """
-        # 1. validate the start and the end dates
+        # 1. parse the start and the end dates
         start_time = _parse_date(start_date)
         end_time = _parse_date(end_date)
         if start_time > end_time:
-            raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
+            raise ValueError(
+                f"start_date must be <= end_date, got: {start_date} > {end_date}"
+            )
 
         # 2. load the query template
         if template not in VALID_TEMPLATE_NAMES:

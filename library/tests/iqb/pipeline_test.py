@@ -193,9 +193,7 @@ class TestIQBPipelineExecuteQuery:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_execute_query_template_path_construction(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_execute_query_template_path_construction(self, mock_storage, mock_client, tmp_path):
         """Test that execute_query_template constructs correct cache directory."""
         # Setup mocks
         mock_job = Mock()
@@ -389,9 +387,7 @@ class TestQueryResultSaveParquet:
         mock_batch3 = MagicMock()
 
         mock_rows = Mock()
-        mock_rows.to_arrow_iterable.return_value = iter(
-            [mock_batch1, mock_batch2, mock_batch3]
-        )
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch1, mock_batch2, mock_batch3])
 
         with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()
@@ -570,9 +566,7 @@ class TestIQBPipelineGetPipelineCacheEntry:
         (cache_dir / "stats.json").write_text("{}")
 
         # Get cache entry (should not execute query)
-        entry = pipeline.get_cache_entry(
-            "downloads_by_country", "2024-10-01", "2024-11-01"
-        )
+        entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
 
         assert isinstance(entry, PipelineCacheEntry)
         data_path = entry.data_path()
@@ -590,9 +584,7 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_missing_without_fetch(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_get_cache_entry_missing_without_fetch(self, mock_storage, mock_client, tmp_path):
         """Test get_cache_entry raises FileNotFoundError when cache missing and fetch_if_missing=False."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -608,9 +600,7 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_fetch_if_missing(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_get_cache_entry_fetch_if_missing(self, mock_storage, mock_client, tmp_path):
         """Test get_cache_entry executes query when cache missing and fetch_if_missing=True."""
         data_dir = tmp_path / "iqb"
 
@@ -682,9 +672,7 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_partial_cache_data_only(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_get_cache_entry_partial_cache_data_only(self, mock_storage, mock_client, tmp_path):
         """Test get_cache_entry when only data.parquet exists (missing stats.json)."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -708,9 +696,7 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_partial_cache_stats_only(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_get_cache_entry_partial_cache_stats_only(self, mock_storage, mock_client, tmp_path):
         """Test get_cache_entry when only stats.json exists (missing data.parquet)."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
@@ -734,9 +720,7 @@ class TestIQBPipelineGetPipelineCacheEntry:
 
     @patch("iqb.pipeline.bigquery.Client")
     @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
-    def test_get_cache_entry_validation_before_fs_check(
-        self, mock_storage, mock_client, tmp_path
-    ):
+    def test_get_cache_entry_validation_before_fs_check(self, mock_storage, mock_client, tmp_path):
         """Test that input validation happens before filesystem check."""
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)

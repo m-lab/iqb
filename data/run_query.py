@@ -89,35 +89,26 @@ def run_bq_query(
     # Data directory is ./iqb/data (where this script lives)
     data_dir = Path(__file__).parent
 
-    # Step 1: Execute query and save results using IQBPipeline
+    # Step 1: Get or create cache entry
     # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
     #   - data.parquet: query results
     #   - stats.json: query metadata
+    # fetch_if_missing=True makes this idempotent: skips query if cache exists
     pipeline = IQBPipeline(project_id=project_id, data_dir=data_dir)
-    result = pipeline.execute_query_template(
+    entry = pipeline.get_cache_entry(
         template=query_name,
         start_date=start_date,
         end_date=end_date,
+        fetch_if_missing=True,  # Execute query only if cache doesn't exist
     )
-    info = result.save_parquet()
 
-    if info.no_content:
-        print("⚠ Query returned no results", file=sys.stderr)
-        if output_file:
-            output_file.write_text("[]")
-        else:
-            print("[]")
-        return
-
-    print(f"✓ Parquet saved: {info.file_path}", file=sys.stderr)
-
-    # Save query statistics (timing, bytes processed, template hash)
-    stats_path = result.save_stats()
-    print(f"✓ Stats saved: {stats_path}", file=sys.stderr)
+    print(f"✓ Cache entry: {entry.data_path.parent.name}", file=sys.stderr)
+    print(f"  Data: {entry.data_path}", file=sys.stderr)
+    print(f"  Stats: {entry.stats_path}", file=sys.stderr)
 
     # Step 2: Convert parquet to JSON
     print("Converting parquet to JSON...", file=sys.stderr)
-    table = pq.read_table(info.file_path)
+    table = pq.read_table(entry.data_path)
     records = table.to_pylist()
     json_output = json.dumps(records, indent=2)
 

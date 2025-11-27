@@ -89,7 +89,27 @@ from . import cache, queries
 VALID_TEMPLATE_NAMES: Final[set[str]] = {
     "downloads_by_country",
     "uploads_by_country",
+    "downloads_by_country_city_asn",
+    "uploads_by_country_city_asn",
 }
+
+# Cache file names
+CACHE_DATA_FILENAME: Final[str] = "data.parquet"
+CACHE_STATS_FILENAME: Final[str] = "stats.json"
+
+
+@dataclass(frozen=True)
+class CacheEntry:
+    """
+    Reference to a cache entry containing query results and metadata.
+
+    Attributes:
+        data_path: Path to data.parquet file
+        stats_path: Path to stats.json file
+    """
+
+    data_path: Path
+    stats_path: Path
 
 
 @dataclass(frozen=True)
@@ -131,7 +151,7 @@ class QueryResult:
     def save_parquet(self) -> ParquetFileInfo:
         """Streams and saves the query results to data.parquet in cache_dir."""
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        parquet_path = self.cache_dir / "data.parquet"
+        parquet_path = self.cache_dir / CACHE_DATA_FILENAME
 
         # Access the first batch to obtain the schema
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
@@ -156,7 +176,7 @@ class QueryResult:
             Path to the written stats.json file.
         """
         self.cache_dir.mkdir(parents=True, exist_ok=True)
-        stats_path = self.cache_dir / "stats.json"
+        stats_path = self.cache_dir / CACHE_STATS_FILENAME
 
         # Calculate query duration from BigQuery job
         query_duration_seconds = None
@@ -199,6 +219,79 @@ class IQBPipeline:
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
         self.data_dir = cache.data_dir_or_default(data_dir)
 
+    def _cache_dir_path(
+        self,
+        template: str,
+        start_date: str,
+        end_date: str,
+    ) -> Path:
+        """
+        Compute the cache directory path for a query.
+
+        Args:
+            template: name for the query template (e.g., "downloads_by_country")
+            start_date: Date when to start the query (included) -- format YYYY-MM-DD
+            end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+
+        Returns:
+            Path to the cache directory.
+        """
+        start_time = _parse_date(start_date)
+        end_time = _parse_date(end_date)
+
+        fs_date_format = "%Y%m%dT000000Z"
+        start_dir = start_time.strftime(fs_date_format)
+        end_dir = end_time.strftime(fs_date_format)
+
+        return self.data_dir / "cache" / "v1" / start_dir / end_dir / template
+
+    def get_cache_entry(
+        self,
+        template: str,
+        start_date: str,
+        end_date: str,
+        *,
+        fetch_if_missing: bool = False,
+    ) -> CacheEntry:
+        """
+        Get or create a cache entry for the given query.
+
+        Args:
+            template: name for the query template (e.g., "downloads_by_country")
+            start_date: Date when to start the query (included) -- format YYYY-MM-DD
+            end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+            fetch_if_missing: if True, execute query and save if cache doesn't exist.
+                Default is False (do not fetch automatically).
+
+        Returns:
+            CacheEntry with paths to data.parquet and stats.json.
+
+        Raises:
+            FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
+        """
+        cache_dir = self._cache_dir_path(template, start_date, end_date)
+        data_path = cache_dir / CACHE_DATA_FILENAME
+        stats_path = cache_dir / CACHE_STATS_FILENAME
+
+        # Check if cache exists
+        if data_path.exists() and stats_path.exists():
+            return CacheEntry(data_path=data_path, stats_path=stats_path)
+
+        # Cache doesn't exist
+        if not fetch_if_missing:
+            raise FileNotFoundError(
+                f"Cache entry not found for {template} "
+                f"({start_date} to {end_date}). "
+                f"Set fetch_if_missing=True to execute query."
+            )
+
+        # Execute query and save to cache
+        result = self.execute_query_template(template, start_date, end_date)
+        result.save_parquet()
+        result.save_stats()
+
+        return CacheEntry(data_path=data_path, stats_path=stats_path)
+
     def execute_query_template(
         self,
         template: str,
@@ -236,10 +329,7 @@ class IQBPipeline:
         rows = job.result()
 
         # 5. compute the directory where we would save the results
-        fs_date_format = "%Y%m%dT000000Z"
-        start_dir = start_time.strftime(fs_date_format)
-        end_dir = end_time.strftime(fs_date_format)
-        cache_dir = self.data_dir / "cache" / "v1" / start_dir / end_dir / template
+        cache_dir = self._cache_dir_path(template, start_date, end_date)
 
         # 6. return the result object
         return QueryResult(

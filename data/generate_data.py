@@ -78,8 +78,42 @@ def generate_for_period(
         f"Stage 1b: Querying upload metrics for {period_str}",
     )
 
+    # Stage 1c: Query downloads by country/city/ASN (parquet cache only, no JSON output yet)
+    run_command(
+        [
+            "python3",
+            str(data_dir / "run_query.py"),
+            "downloads_by_country_city_asn",
+            "--start-date",
+            start_date,
+            "--end-date",
+            end_date,
+            "-o",
+            str(cache_dir / "downloads_by_country_city_asn.json"),
+        ],
+        f"Stage 1c: Querying download metrics by country/city/ASN for {period_str}",
+    )
+
+    # Stage 1d: Query uploads by country/city/ASN (parquet cache only, no JSON output yet)
+    run_command(
+        [
+            "python3",
+            str(data_dir / "run_query.py"),
+            "uploads_by_country_city_asn",
+            "--start-date",
+            start_date,
+            "--end-date",
+            end_date,
+            "-o",
+            str(cache_dir / "uploads_by_country_city_asn.json"),
+        ],
+        f"Stage 1d: Querying upload metrics by country/city/ASN for {period_str}",
+    )
+
     # Stage 2: Merge data
     # Creates: {country}_{period_str}.json (e.g., us_2024_10.json)
+    # Note: This only merges downloads_by_country and uploads_by_country
+    # The country/city/ASN queries are cached as parquet only for now
     run_command(
         [
             "python3",

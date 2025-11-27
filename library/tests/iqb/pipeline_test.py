@@ -7,6 +7,7 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from iqb.pipeline import (
+    CacheEntry,
     IQBPipeline,
     ParquetFileInfo,
     QueryResult,
@@ -409,6 +410,120 @@ class TestQueryResultSaveStats:
 
         assert cache_dir.exists()
         assert stats_path.exists()
+
+
+class TestIQBPipelineGetCacheEntry:
+    """Test get_cache_entry method."""
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_when_exists(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry returns existing cache."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Create cache directory and files
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "data.parquet").write_text("fake parquet data")
+        (cache_dir / "stats.json").write_text("{}")
+
+        # Get cache entry (should not execute query)
+        entry = pipeline.get_cache_entry(
+            "downloads_by_country", "2024-10-01", "2024-11-01"
+        )
+
+        assert isinstance(entry, CacheEntry)
+        assert entry.data_path == cache_dir / "data.parquet"
+        assert entry.stats_path == cache_dir / "stats.json"
+        assert entry.data_path.exists()
+        assert entry.stats_path.exists()
+
+        # Query should NOT have been called
+        mock_client.return_value.query.assert_not_called()
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_missing_without_fetch(
+        self, mock_storage, mock_client, tmp_path
+    ):
+        """Test get_cache_entry raises FileNotFoundError when cache missing and fetch_if_missing=False."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Don't create cache
+        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
+            pipeline.get_cache_entry(
+                "downloads_by_country",
+                "2024-10-01",
+                "2024-11-01",
+                fetch_if_missing=False,
+            )
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_fetch_if_missing(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry executes query when cache missing and fetch_if_missing=True."""
+        data_dir = tmp_path / "iqb"
+
+        # Setup mocks for query execution
+        mock_job = Mock()
+        mock_job.started = None
+        mock_job.ended = None
+        mock_job.total_bytes_processed = 0
+        mock_job.total_bytes_billed = 0
+
+        mock_batch = MagicMock()
+        mock_batch.schema = MagicMock()
+
+        mock_rows = Mock()
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch])
+
+        mock_client_instance = Mock()
+        mock_client_instance.query.return_value = mock_job
+        mock_job.result.return_value = mock_rows
+        mock_client.return_value = mock_client_instance
+
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Mock ParquetWriter
+        with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            # Get cache entry with fetch_if_missing=True
+            entry = pipeline.get_cache_entry(
+                "downloads_by_country",
+                "2024-10-01",
+                "2024-11-01",
+                fetch_if_missing=True,
+            )
+
+            # Query should have been called
+            mock_client_instance.query.assert_called_once()
+
+            # Entry should be returned with correct paths
+            assert isinstance(entry, CacheEntry)
+            expected_cache_dir = (
+                data_dir
+                / "cache"
+                / "v1"
+                / "20241001T000000Z"
+                / "20241101T000000Z"
+                / "downloads_by_country"
+            )
+            assert entry.data_path == expected_cache_dir / "data.parquet"
+            assert entry.stats_path == expected_cache_dir / "stats.json"
+            # Note: stats.json exists (written by save_stats), but data.parquet doesn't
+            # because ParquetWriter is mocked
+            assert entry.stats_path.exists()
 
 
 class TestParquetFileInfo:

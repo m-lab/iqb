@@ -101,13 +101,17 @@ def run_bq_query(
         end_date=end_date,
         fetch_if_missing=True,
     )
-    print(f"✓ Cache entry: {entry.data_path.parent.name}", file=sys.stderr)
-    print(f"  Data: {entry.data_path}", file=sys.stderr)
-    print(f"  Stats: {entry.stats_path}", file=sys.stderr)
+    data_path = entry.data_path()
+    assert data_path is not None
+    stats_path = entry.stats_path()
+    assert stats_path is not None
+    print(f"✓ Cache entry: {data_path.parent.name}", file=sys.stderr)
+    print(f"  Data: {data_path}", file=sys.stderr)
+    print(f"  Stats: {stats_path}", file=sys.stderr)
 
     # Step 2: Convert the parquet file to JSON
     print("Converting parquet to JSON...", file=sys.stderr)
-    table = pq.read_table(entry.data_path)
+    table = pq.read_table(data_path)
     records = table.to_pylist()
 
     # Check if query returned no results

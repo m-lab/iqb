@@ -1,0 +1,29 @@
+{
+  "files": {
+    "cache/v1/20241001T000000Z/20241101T000000Z/downloads_by_country_city_asn/data.parquet": {
+      "sha256": "92162c968ff13bf975816f0e01f05d36c448ab78c7933daf5a4dda4117ed6fae",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/92162c968ff1__cache__v1__20241001T000000Z__20241101T000000Z__downloads_by_country_city_asn__data.parquet"
+    },
+    "cache/v1/20241001T000000Z/20241101T000000Z/downloads_by_country_city_asn/stats.json": {
+      "sha256": "51053e78cee26caed62d4146513592ff619de2df812e68ce3960a91c50a023e4",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/51053e78cee2__cache__v1__20241001T000000Z__20241101T000000Z__downloads_by_country_city_asn__stats.json"
+    },
+    "cache/v1/20241001T000000Z/20241101T000000Z/uploads_by_country_city_asn/data.parquet": {
+      "sha256": "f86833aee1439116e8fc5194dcf76c0cbc6cc9f202b664826577392b2bbfa581",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/f86833aee143__cache__v1__20241001T000000Z__20241101T000000Z__uploads_by_country_city_asn__data.parquet"
+    },
+    "cache/v1/20241001T000000Z/20241101T000000Z/uploads_by_country_city_asn/stats.json": {
+      "sha256": "5bf42dc256d2602a9228c018146c2ad0aa38ec69e9553e89afd854487eee57dd",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/5bf42dc256d2__cache__v1__20241001T000000Z__20241101T000000Z__uploads_by_country_city_asn__stats.json"
+    },
+    "cache/v1/20251001T000000Z/20251101T000000Z/downloads_by_country_city_asn/data.parquet": {
+      "sha256": "31f70c002e82044662c8afa3b90dd6d970cb46edede5196d54864e104c87fccb",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/31f70c002e82__cache__v1__20251001T000000Z__20251101T000000Z__downloads_by_country_city_asn__data.parquet"
+    },
+    "cache/v1/20251001T000000Z/20251101T000000Z/downloads_by_country_city_asn/stats.json": {
+      "sha256": "8498d95733361e6e19dd10c613129917abadf7dae933c7b8684da203f8258802",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/8498d9573336__cache__v1__20251001T000000Z__20251101T000000Z__downloads_by_country_city_asn__stats.json"
+    }
+  },
+  "v": 0
+}

@@ -16,7 +16,8 @@ with UTC timezone, formatted to be file-system friendly (i.e., without
 including the ":" character). For example: `20251126T123600Z`.
 
 The `$since` timestamp is included and the `$until` one is excluded. This
-simplifies specifying time ranges significantly.
+simplifies specifying time ranges significantly (e.g., October 2025 is
+represented using `since=20251001T000000Z` and `until=20251101T000000Z`).
 
 The fact that we use explicit timestamps allows the cache to contain any
 kind of time range, including partially overlapping ones. This content-
@@ -40,20 +41,17 @@ For each query type, we have a corresponding parquet file.
 
 We use parquet as the file format because:
 
-1. we can stream to it when writing with BigQuery
+1. we can stream to it when writing BigQuery queries results
 
 2. regardless of the file size, we can always process and filter it in
 chunks since parquet divides rows into independent groups
 
-Additionally, we can process parquet with Pandas data frames, which
-are a standard tool into a data scientist's toolkit.
-
 We store the raw results of queries for further processing, since the
 query itself is the expensive operation while further elaborations
-are comparatively cheaper.
+are comparatively cheaper, and can be done locally with PyArrow/Pandas.
 
-Reading from the cache (to be implemented in future work) will use PyArrow's
-predicate pushdown for efficient filtering:
+Specifically, reading from the cache (when implemented in cache.py) will
+use PyArrow's predicate pushdown for efficient filtering:
 
 1. Use PyArrow's filters parameter to skip row groups at I/O level:
    pq.read_table(path, filters=[('country', '=', 'US')], columns=['...'])
@@ -64,7 +62,7 @@ This approach ensures we can select a country (and other properties when
 needed, e.g., the ASN or city) and skip row groups that do not match, while
 immediately projecting out columns we don't need. If processing the parquet-
 dumped raw query outputs is fast enough, we can directly access the data
-without intermediate formats.
+without producing intermediate formats.
 """
 
 from dataclasses import dataclass

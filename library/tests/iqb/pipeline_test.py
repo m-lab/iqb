@@ -7,11 +7,15 @@ from unittest.mock import MagicMock, Mock, patch
 import pytest
 
 from iqb.pipeline import (
+    CacheEntry,
     IQBPipeline,
     ParquetFileInfo,
+    ParsedTemplateName,
     QueryResult,
     _load_query_template,
+    _parse_both_dates,
     _parse_date,
+    _parse_template_name,
 )
 
 
@@ -35,9 +39,12 @@ class TestHelperFunctions:
 
     def test_load_query_template_substitution(self):
         """Test that query template placeholders are substituted."""
-        query, template_hash = _load_query_template(
-            "downloads_by_country", "2024-10-01", "2024-11-01"
-        )
+        # Parse inputs first (as the public interface does)
+        tname = ParsedTemplateName(value="downloads_by_country")
+        start_time = datetime(2024, 10, 1)
+        end_time = datetime(2024, 11, 1)
+
+        query, template_hash = _load_query_template(tname, start_time, end_time)
 
         # Verify placeholders replaced
         assert "{START_DATE}" not in query
@@ -49,6 +56,94 @@ class TestHelperFunctions:
         assert template_hash is not None
         assert len(template_hash) == 64
         assert all(c in "0123456789abcdef" for c in template_hash)
+
+
+class TestParseTemplateName:
+    """Test _parse_template_name() validation."""
+
+    def test_parse_valid_downloads_by_country(self):
+        """Test parsing valid downloads_by_country template."""
+        result = _parse_template_name("downloads_by_country")
+        assert isinstance(result, ParsedTemplateName)
+        assert result.value == "downloads_by_country"
+
+    def test_parse_valid_uploads_by_country(self):
+        """Test parsing valid uploads_by_country template."""
+        result = _parse_template_name("uploads_by_country")
+        assert result.value == "uploads_by_country"
+
+    def test_parse_valid_downloads_by_country_city_asn(self):
+        """Test parsing valid downloads_by_country_city_asn template."""
+        result = _parse_template_name("downloads_by_country_city_asn")
+        assert result.value == "downloads_by_country_city_asn"
+
+    def test_parse_valid_uploads_by_country_city_asn(self):
+        """Test parsing valid uploads_by_country_city_asn template."""
+        result = _parse_template_name("uploads_by_country_city_asn")
+        assert result.value == "uploads_by_country_city_asn"
+
+    def test_parse_invalid_template_name(self):
+        """Test error on unknown template name."""
+        with pytest.raises(ValueError, match="Unknown template 'invalid_query'"):
+            _parse_template_name("invalid_query")
+
+    def test_parse_invalid_template_lists_valid_options(self):
+        """Test error message includes valid template names."""
+        with pytest.raises(ValueError, match="valid templates:"):
+            _parse_template_name("bad_template")
+
+    def test_parse_empty_string(self):
+        """Test error on empty template name."""
+        with pytest.raises(ValueError, match="Unknown template ''"):
+            _parse_template_name("")
+
+
+class TestParseBothDates:
+    """Test _parse_both_dates() validation."""
+
+    def test_parse_valid_date_range(self):
+        """Test parsing valid date range."""
+        start, end = _parse_both_dates("2024-10-01", "2024-11-01")
+        assert start == datetime(2024, 10, 1)
+        assert end == datetime(2024, 11, 1)
+
+    def test_parse_equal_dates(self):
+        """Test parsing when start equals end (valid for zero-duration queries)."""
+        start, end = _parse_both_dates("2024-10-01", "2024-10-01")
+        assert start == datetime(2024, 10, 1)
+        assert end == datetime(2024, 10, 1)
+
+    def test_parse_reversed_dates_error(self):
+        """Test error when start_date > end_date."""
+        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+            _parse_both_dates("2024-11-01", "2024-10-01")
+
+    def test_parse_invalid_start_date(self):
+        """Test error on invalid start_date format."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            _parse_both_dates("2024/10/01", "2024-11-01")
+
+    def test_parse_invalid_end_date(self):
+        """Test error on invalid end_date format."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            _parse_both_dates("2024-10-01", "2024/11/01")
+
+    def test_parse_leap_year(self):
+        """Test parsing leap year date."""
+        start, end = _parse_both_dates("2024-02-29", "2024-03-01")
+        assert start == datetime(2024, 2, 29)
+        assert end == datetime(2024, 3, 1)
+
+    def test_parse_invalid_leap_year(self):
+        """Test error on invalid leap year date."""
+        with pytest.raises(ValueError, match="Invalid date format"):
+            _parse_both_dates("2023-02-29", "2023-03-01")
+
+    def test_parse_year_boundary(self):
+        """Test parsing dates across year boundary."""
+        start, end = _parse_both_dates("2024-12-15", "2025-01-15")
+        assert start == datetime(2024, 12, 15)
+        assert end == datetime(2025, 1, 15)
 
 
 class TestIQBPipelineInit:
@@ -234,7 +329,7 @@ class TestQueryResultSaveParquet:
             job=Mock(),
             rows=mock_rows,
             cache_dir=cache_dir,
-            query_start_time="2024-11-27T10:00:00+00:00",
+            query_start_time="2024-11-27T10:00:00.000000Z",
             template_hash="abc123",
         )
 
@@ -409,6 +504,179 @@ class TestQueryResultSaveStats:
 
         assert cache_dir.exists()
         assert stats_path.exists()
+
+
+class TestIQBPipelineGetCacheEntry:
+    """Test get_cache_entry method."""
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_when_exists(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry returns existing cache."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Create cache directory and files
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "data.parquet").write_text("fake parquet data")
+        (cache_dir / "stats.json").write_text("{}")
+
+        # Get cache entry (should not execute query)
+        entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
+
+        assert isinstance(entry, CacheEntry)
+        assert entry.data_path == cache_dir / "data.parquet"
+        assert entry.stats_path == cache_dir / "stats.json"
+        assert entry.data_path.exists()
+        assert entry.stats_path.exists()
+
+        # Query should NOT have been called
+        mock_client.return_value.query.assert_not_called()
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_missing_without_fetch(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry raises FileNotFoundError when cache missing and fetch_if_missing=False."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Don't create cache
+        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
+            pipeline.get_cache_entry(
+                "downloads_by_country",
+                "2024-10-01",
+                "2024-11-01",
+                fetch_if_missing=False,
+            )
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_fetch_if_missing(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry executes query when cache missing and fetch_if_missing=True."""
+        data_dir = tmp_path / "iqb"
+
+        # Setup mocks for query execution
+        mock_job = Mock()
+        mock_job.started = None
+        mock_job.ended = None
+        mock_job.total_bytes_processed = 0
+        mock_job.total_bytes_billed = 0
+
+        mock_batch = MagicMock()
+        mock_batch.schema = MagicMock()
+
+        mock_rows = Mock()
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch])
+
+        mock_client_instance = Mock()
+        mock_client_instance.query.return_value = mock_job
+        mock_job.result.return_value = mock_rows
+        mock_client.return_value = mock_client_instance
+
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Mock ParquetWriter
+        with patch("iqb.pipeline.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            # Get cache entry with fetch_if_missing=True
+            entry = pipeline.get_cache_entry(
+                "downloads_by_country",
+                "2024-10-01",
+                "2024-11-01",
+                fetch_if_missing=True,
+            )
+
+            # Query should have been called
+            mock_client_instance.query.assert_called_once()
+
+            # Entry should be returned with correct paths
+            assert isinstance(entry, CacheEntry)
+            expected_cache_dir = (
+                data_dir
+                / "cache"
+                / "v1"
+                / "20241001T000000Z"
+                / "20241101T000000Z"
+                / "downloads_by_country"
+            )
+            assert entry.data_path == expected_cache_dir / "data.parquet"
+            assert entry.stats_path == expected_cache_dir / "stats.json"
+            # Note: stats.json exists (written by save_stats), but data.parquet doesn't
+            # because ParquetWriter is mocked
+            assert entry.stats_path.exists()
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_partial_cache_data_only(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry when only data.parquet exists (missing stats.json)."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Create only data.parquet, not stats.json
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "data.parquet").write_text("fake parquet data")
+        # Intentionally NOT creating stats.json
+
+        # Should raise FileNotFoundError (cache incomplete)
+        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
+            pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_partial_cache_stats_only(self, mock_storage, mock_client, tmp_path):
+        """Test get_cache_entry when only stats.json exists (missing data.parquet)."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Create only stats.json, not data.parquet
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "stats.json").write_text("{}")
+        # Intentionally NOT creating data.parquet
+
+        # Should raise FileNotFoundError (cache incomplete)
+        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
+            pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
+
+    @patch("iqb.pipeline.bigquery.Client")
+    @patch("iqb.pipeline.bigquery_storage_v1.BigQueryReadClient")
+    def test_get_cache_entry_validation_before_fs_check(self, mock_storage, mock_client, tmp_path):
+        """Test that input validation happens before filesystem check."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project_id="test-project", data_dir=data_dir)
+
+        # Invalid template should fail immediately, without touching filesystem
+        with pytest.raises(ValueError, match="Unknown template"):
+            pipeline.get_cache_entry("invalid_template", "2024-10-01", "2024-11-01")
+
+        # Invalid date range should fail immediately
+        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+            pipeline.get_cache_entry("downloads_by_country", "2024-11-01", "2024-10-01")
 
 
 class TestParquetFileInfo:

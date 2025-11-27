@@ -16,6 +16,7 @@ dependencies = [
     "pyarrow>=14.0.0",
     "pandas>=2.0.0",
     "db-dtypes>=1.0.0",
+    "python-dateutil>=2.9.0.post0",
 ]
 
 [project.urls]

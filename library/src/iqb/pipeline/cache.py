@@ -125,9 +125,7 @@ def _parse_both_dates(start_date: str, end_date: str) -> tuple[datetime, datetim
     start_time = _parse_date(start_date)
     end_time = _parse_date(end_date)
     if start_time > end_time:
-        raise ValueError(
-            f"start_date must be <= end_date, got: {start_date} > {end_date}"
-        )
+        raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
     return start_time, end_time
 
 

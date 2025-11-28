@@ -90,7 +90,6 @@ from google.cloud.bigquery import job, table
 # TODO(bassosimone): we should streamline the interaction
 # with the cache module and avoid importing constants such
 # as PIPELINE_CACHE_DATA_FILENAME here
-
 from .. import queries
 from .cache import (
     PIPELINE_CACHE_DATA_FILENAME,
@@ -287,9 +286,7 @@ class IQBPipeline:
 
     def _execute_query_template(self, entry: PipelineCacheEntry) -> QueryResult:
         # 1. load the actual query
-        query, template_hash = _load_query_template(
-            entry.tname, entry.start_time, entry.end_time
-        )
+        query, template_hash = _load_query_template(entry.tname, entry.start_time, entry.end_time)
 
         # 2. record query start time (RFC3339 format with Z suffix)
         query_start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")

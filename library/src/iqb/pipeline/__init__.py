@@ -242,7 +242,7 @@ class IQBPipeline:
         entry = self.manager.get_cache_entry(template, start_date, end_date)
 
         # 2. make sure the entry exists
-        if entry.data_path() is not None and entry.stats_path() is not None:
+        if entry.data_parquet_file_path().exists() and entry.stats_json_file_path().exists():
             return entry
 
         # 3. handle missing cache without auto-fetching
@@ -259,8 +259,8 @@ class IQBPipeline:
         result.save_stats()
 
         # 5. return information about the cache entry
-        assert entry.data_path() is not None
-        assert entry.stats_path() is not None
+        assert entry.data_parquet_file_path().exists()
+        assert entry.stats_json_file_path().exists()
         return entry
 
     def execute_query_template(

@@ -48,23 +48,13 @@ class PipelineCacheEntry:
         end_dir = self.end_time.strftime(fs_date_format)
         return self.data_dir / "cache" / "v1" / start_dir / end_dir / self.tname.value
 
-    # TODO(bassosimone): returning None here is wrong and a better
-    # approach would be to return the path and let the caller
-    # decide whether the path is actually valid!
+    def data_parquet_file_path(self) -> Path:
+        """Returns the path to the `data.parquet` file."""
+        return self.dir_path() / PIPELINE_CACHE_DATA_FILENAME
 
-    def data_path(self) -> Path | None:
-        """Returns the path to the parquet data file, if it exists, or None."""
-        value = self.dir_path() / PIPELINE_CACHE_DATA_FILENAME
-        if not value.exists():
-            return None
-        return value
-
-    def stats_path(self) -> Path | None:
-        """Returns the path to the JSON stats file, if it exists, or None."""
-        value = self.dir_path() / PIPELINE_CACHE_STATS_FILENAME
-        if not value.exists():
-            return None
-        return value
+    def stats_json_file_path(self) -> Path:
+        """Returns the path to the `stats.json` file."""
+        return self.dir_path() / PIPELINE_CACHE_STATS_FILENAME
 
 
 class PipelineCacheManager:

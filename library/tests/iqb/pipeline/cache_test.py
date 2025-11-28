@@ -224,7 +224,8 @@ class TestPipelineCacheEntry:
         data_file = cache_dir / "data.parquet"
         data_file.write_text("fake data")
 
-        assert entry.data_path() == data_file
+        assert entry.data_parquet_file_path() == data_file
+        assert entry.data_parquet_file_path().exists()
 
     def test_data_path_when_file_missing(self, tmp_path):
         """Test data_path returns None when file doesn't exist."""
@@ -235,7 +236,9 @@ class TestPipelineCacheEntry:
             end_time=datetime(2024, 11, 1),
         )
 
-        assert entry.data_path() is None
+        data_file = entry.dir_path() / "data.parquet"
+        assert entry.data_parquet_file_path() == data_file
+        assert not entry.data_parquet_file_path().exists()
 
     def test_stats_path_when_file_exists(self, tmp_path):
         """Test stats_path returns path when file exists."""
@@ -252,7 +255,8 @@ class TestPipelineCacheEntry:
         stats_file = cache_dir / "stats.json"
         stats_file.write_text("{}")
 
-        assert entry.stats_path() == stats_file
+        assert entry.stats_json_file_path() == stats_file
+        assert entry.stats_json_file_path().exists()
 
     def test_stats_path_when_file_missing(self, tmp_path):
         """Test stats_path returns None when file doesn't exist."""
@@ -263,4 +267,6 @@ class TestPipelineCacheEntry:
             end_time=datetime(2024, 11, 1),
         )
 
-        assert entry.stats_path() is None
+        stats_file = entry.dir_path() / "stats.json"
+        assert entry.stats_json_file_path() == stats_file
+        assert not entry.stats_json_file_path().exists()

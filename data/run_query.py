@@ -101,10 +101,10 @@ def run_bq_query(
         end_date=end_date,
         fetch_if_missing=True,
     )
-    data_path = entry.data_path()
-    assert data_path is not None
-    stats_path = entry.stats_path()
-    assert stats_path is not None
+    data_path = entry.data_parquet_file_path()
+    assert data_path.exists()
+    stats_path = entry.stats_json_file_path()
+    assert stats_path.exists()
     print(f"✓ Cache entry: {data_path.parent.name}", file=sys.stderr)
     print(f"  Data: {data_path}", file=sys.stderr)
     print(f"  Stats: {stats_path}", file=sys.stderr)

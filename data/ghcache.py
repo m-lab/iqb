@@ -304,7 +304,9 @@ def cmd_scan(args) -> int:
 
         # Prepare manifest entry (URL will need to be filled in manually or via script)
         # For now, use placeholder URL
-        url_placeholder = f"https://github.com/m-lab/iqb/releases/download/v0.1.0/{mangled_name}"
+        url_placeholder = (
+            f"https://github.com/m-lab/iqb/releases/download/v0.1.0/{mangled_name}"
+        )
 
         files_dict[rel_path] = {"sha256": sha256, "url": url_placeholder}
         files_to_upload.append(mangled_name)
@@ -330,7 +332,10 @@ def main() -> int:
     if platform.system() == "Windows":
         print("ERROR: This script does not support Windows.", file=sys.stderr)
         print("Reason: Assumes Unix file path conventions.", file=sys.stderr)
-        print("Note: This is an interim solution that will be replaced by GCS.", file=sys.stderr)
+        print(
+            "Note: This is an interim solution that will be replaced by GCS.",
+            file=sys.stderr,
+        )
         return 1
 
     # Change to script's directory (./data) so all paths are relative to it

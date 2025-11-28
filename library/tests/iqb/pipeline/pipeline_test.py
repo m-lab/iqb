@@ -456,13 +456,11 @@ class TestIQBPipelineGetCacheEntry:
         entry = pipeline.get_cache_entry("downloads_by_country", "2024-10-01", "2024-11-01")
 
         assert isinstance(entry, PipelineCacheEntry)
-        data_path = entry.data_path()
-        assert data_path is not None
+        data_path = entry.data_parquet_file_path()
         assert data_path == cache_dir / "data.parquet"
         assert data_path.exists()
 
-        stats_path = entry.stats_path()
-        assert stats_path is not None
+        stats_path = entry.stats_json_file_path()
         assert stats_path == cache_dir / "stats.json"
         assert stats_path.exists()
 
@@ -547,12 +545,11 @@ class TestIQBPipelineGetCacheEntry:
 
             # Entry should be returned with correct paths
             assert isinstance(entry, PipelineCacheEntry)
-            data_path = entry.data_path()
-            assert data_path is not None
-            stats_path = entry.stats_path()
-            assert stats_path is not None
+            data_path = entry.data_parquet_file_path()
+            stats_path = entry.stats_json_file_path()
             assert data_path == expected_cache_dir / "data.parquet"
             assert stats_path == expected_cache_dir / "stats.json"
+
             # Both files should exist
             assert data_path.exists()
             assert stats_path.exists()

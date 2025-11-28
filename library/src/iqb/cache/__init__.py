@@ -359,9 +359,9 @@ class IQBCache:
             start_date,
             end_date,
         )
-        download_data = download_entry.data_path()
-        download_stats = download_entry.stats_path()
-        if download_data is None or download_stats is None:
+        download_data = download_entry.data_parquet_file_path()
+        download_stats = download_entry.stats_json_file_path()
+        if not download_data.exists() or not download_stats.exists():
             raise FileNotFoundError(
                 f"Cache entry not found for downloads_by_{granularity} ({start_date} to {end_date})"
             )
@@ -372,9 +372,9 @@ class IQBCache:
             start_date,
             end_date,
         )
-        upload_data = upload_entry.data_path()
-        upload_stats = upload_entry.stats_path()
-        if upload_data is None or upload_stats is None:
+        upload_data = upload_entry.data_parquet_file_path()
+        upload_stats = upload_entry.stats_json_file_path()
+        if not upload_data.exists() or not upload_stats.exists():
             raise FileNotFoundError(
                 f"Cache entry not found for uploads_by_{granularity} ({start_date} to {end_date})"
             )

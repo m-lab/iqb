@@ -98,6 +98,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("fake data")
+
+            mock_writer_instance.write_batch.side_effect = create_parquet_file
+
             # Create result and save
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
@@ -129,6 +136,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
         with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("")
+
+            mock_writer.return_value.__exit__.side_effect = create_parquet_file
 
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
@@ -176,6 +190,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("fake data")
+
+            mock_writer_instance.write_batch.side_effect = create_parquet_file
+
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
                 job=Mock(),
@@ -206,6 +227,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
         with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("fake data")
+
+            mock_writer_instance.write_batch.side_effect = create_parquet_file
 
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),

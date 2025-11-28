@@ -1,4 +1,4 @@
-"""Module for fetching IQB measurement data from cache.
+"""Package for fetching IQB measurement data from cache.
 
 The IQBCache component manages local caching of IQB measurement data, following
 a Git-like convention for storing local state.

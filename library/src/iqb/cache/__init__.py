@@ -29,7 +29,7 @@ import pandas as pd
 import pyarrow.parquet as pq
 from dateutil.relativedelta import relativedelta
 
-from .pipeline import PipelineCacheManager
+from ..pipeline import PipelineCacheManager
 
 
 @dataclass(frozen=True)

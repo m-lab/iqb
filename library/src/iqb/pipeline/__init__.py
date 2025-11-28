@@ -88,7 +88,7 @@ import pyarrow.parquet as pq
 from google.cloud import bigquery, bigquery_storage_v1
 from google.cloud.bigquery import job, table
 
-from . import queries
+from .. import queries
 
 VALID_TEMPLATE_NAMES: Final[set[str]] = {
     "downloads_by_country",

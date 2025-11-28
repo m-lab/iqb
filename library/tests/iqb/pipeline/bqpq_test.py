@@ -98,6 +98,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("fake data")
+
+            mock_writer_instance.write_batch.side_effect = create_parquet_file
+
             # Create result and save
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
@@ -113,6 +120,8 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
             assert cache_dir.exists()
+            assert file_path.exists()
+
             mock_writer_instance.write_batch.assert_called_once_with(mock_batch)
 
     def test_save_data_parquet_with_empty_results(self, tmp_path):
@@ -128,6 +137,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("")
+
+            mock_writer.return_value.__exit__.side_effect = create_parquet_file
+
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
                 job=Mock(),
@@ -142,6 +158,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
             assert cache_dir.exists()
+            assert file_path.exists()
 
             # Verify ParquetWriter was called with empty schema
             mock_writer.assert_called_once()
@@ -173,6 +190,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("fake data")
+
+            mock_writer_instance.write_batch.side_effect = create_parquet_file
+
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
                 job=Mock(),
@@ -187,6 +211,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             assert mock_writer_instance.write_batch.call_count == 3
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
+            assert file_path.exists()
 
     def test_save_data_parquet_creates_nested_directories(self, tmp_path):
         """Test that save_parquet creates nested cache directory."""
@@ -203,6 +228,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
+            # Create a side effect to actually create the data.parquet file
+            def create_parquet_file(*args, **kwargs):
+                cache_dir.mkdir(parents=True, exist_ok=True)
+                (cache_dir / "data.parquet").write_text("fake data")
+
+            mock_writer_instance.write_batch.side_effect = create_parquet_file
+
             result = PipelineBQPQQueryResult(
                 bq_read_client=Mock(),
                 job=Mock(),
@@ -217,6 +249,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             assert cache_dir.exists()
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
+            assert file_path.exists()
 
 
 class TestPipelineBQPQQueryResultSaveStatsJSON:
@@ -248,8 +281,8 @@ class TestPipelineBQPQQueryResultSaveStatsJSON:
         assert stats_path.exists()
 
         # Verify content
-        with stats_path.open() as f:
-            stats = json.load(f)
+        with stats_path.open() as filep:
+            stats = json.load(filep)
 
         assert stats["query_start_time"] == "2024-11-27T10:00:00.000000Z"
         assert stats["query_duration_seconds"] == 330.0  # 5 min 30 sec

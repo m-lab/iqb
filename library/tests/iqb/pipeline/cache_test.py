@@ -6,9 +6,9 @@ from pathlib import Path
 import pytest
 
 from iqb.pipeline.cache import (
-    ParsedTemplateName,
     PipelineCacheEntry,
     PipelineCacheManager,
+    PipelineCacheTemplateName,
     _parse_both_dates,
     _parse_date,
     _parse_template_name,
@@ -63,7 +63,7 @@ class TestParseTemplateName:
     def test_parse_valid_downloads_by_country(self):
         """Test parsing valid downloads_by_country template."""
         result = _parse_template_name("downloads_by_country")
-        assert isinstance(result, ParsedTemplateName)
+        assert isinstance(result, PipelineCacheTemplateName)
         assert result.value == "downloads_by_country"
 
     def test_parse_valid_uploads_by_country(self):
@@ -194,7 +194,7 @@ class TestPipelineCacheEntry:
         """Test that dir_path constructs correct cache directory path."""
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=ParsedTemplateName(value="downloads_by_country"),
+            tname=PipelineCacheTemplateName(value="downloads_by_country"),
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -213,7 +213,7 @@ class TestPipelineCacheEntry:
         """Test data_path returns path when file exists."""
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=ParsedTemplateName(value="downloads_by_country"),
+            tname=PipelineCacheTemplateName(value="downloads_by_country"),
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -231,7 +231,7 @@ class TestPipelineCacheEntry:
         """Test data_path returns None when file doesn't exist."""
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=ParsedTemplateName(value="downloads_by_country"),
+            tname=PipelineCacheTemplateName(value="downloads_by_country"),
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -244,7 +244,7 @@ class TestPipelineCacheEntry:
         """Test stats_path returns path when file exists."""
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=ParsedTemplateName(value="downloads_by_country"),
+            tname=PipelineCacheTemplateName(value="downloads_by_country"),
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -262,7 +262,7 @@ class TestPipelineCacheEntry:
         """Test stats_path returns None when file doesn't exist."""
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=ParsedTemplateName(value="downloads_by_country"),
+            tname=PipelineCacheTemplateName(value="downloads_by_country"),
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )

@@ -76,132 +76,26 @@ without producing intermediate formats.
 """
 
 import hashlib
-import json
-from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
 
-import pyarrow as pa
-import pyarrow.parquet as pq
-from google.cloud import bigquery, bigquery_storage_v1
-from google.cloud.bigquery import job, table
-
-# TODO(bassosimone): we should streamline the interaction
-# with the cache module and avoid importing constants such
-# as PIPELINE_CACHE_DATA_FILENAME here
 from .. import queries
+from .bqpq import (
+    PipelineBQPQClient,
+    PipelineBQPQQueryResult,
+)
 from .cache import (
-    PIPELINE_CACHE_DATA_FILENAME,
-    PIPELINE_CACHE_STATS_FILENAME,
-    ParsedTemplateName,
     PipelineCacheEntry,
     PipelineCacheManager,
+    PipelineCacheTemplateName,
 )
-
-# TODO(bassosimone): the ParquetFileInfo dataclass
-# seems unnecessary and we can just return a path
-
-
-@dataclass(frozen=True)
-class ParquetFileInfo:
-    """
-    Result of serializing a query result into the cache using parquet.
-
-    An empty parquet file is written if the query returns no rows.
-
-    Attributes:
-        file_path: full path to the written file.
-    """
-
-    file_path: Path
-
-
-@dataclass(frozen=True)
-class QueryResult:
-    """
-    Result of the query with reference to job and row iterator.
-
-    Attributes:
-        bq_read_client: the client to stream results.
-        job: the corresponding BigQuery job.
-        rows: the iterable rows.
-        cache_dir: directory where to save data.parquet and stats.json
-        query_start_time: RFC3339 UTC timestamp when query was started (with Z suffix)
-        template_hash: SHA256 hash of the original query template
-    """
-
-    bq_read_client: bigquery_storage_v1.BigQueryReadClient
-    job: job.QueryJob
-    rows: table.RowIterator
-    cache_dir: Path
-    query_start_time: str
-    template_hash: str
-
-    def save_parquet(self) -> ParquetFileInfo:
-        """Streams and saves the query results to data.parquet in cache_dir.
-
-        If the query returns no rows, an empty parquet file is written.
-        """
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        parquet_path = self.cache_dir / PIPELINE_CACHE_DATA_FILENAME
-
-        # Note: using .as_posix to avoid paths with backslashes
-        # that can cause issues with PyArrow on Windows
-        posix_path = parquet_path.as_posix()
-
-        # Access the first batch to obtain the schema
-        batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
-        first_batch = next(batches, None)
-        schema = first_batch.schema if first_batch is not None else pa.schema([])
-
-        # Write the possibly-empty parquet file
-        with pq.ParquetWriter(posix_path, schema) as writer:
-            if first_batch is not None:
-                writer.write_batch(first_batch)
-            for batch in batches:
-                writer.write_batch(batch)
-
-        return ParquetFileInfo(file_path=parquet_path)
-
-    def save_stats(self) -> Path:
-        """Writes query statistics to stats.json in cache_dir.
-
-        Returns:
-            Path to the written stats.json file.
-        """
-        self.cache_dir.mkdir(parents=True, exist_ok=True)
-        stats_path = self.cache_dir / PIPELINE_CACHE_STATS_FILENAME
-
-        # Calculate query duration from BigQuery job
-        query_duration_seconds = None
-        if self.job.ended and self.job.started:
-            duration = self.job.ended - self.job.started
-            query_duration_seconds = duration.total_seconds()
-
-        # Extract bytes processed/billed from job statistics
-        total_bytes_processed = self.job.total_bytes_processed
-        total_bytes_billed = self.job.total_bytes_billed
-
-        stats = {
-            "query_start_time": self.query_start_time,
-            "query_duration_seconds": query_duration_seconds,
-            "template_hash": self.template_hash,
-            "total_bytes_processed": total_bytes_processed,
-            "total_bytes_billed": total_bytes_billed,
-        }
-
-        with stats_path.open("w") as f:
-            json.dump(stats, f, indent=2)
-            f.write("\n")  # Add newline at EOF for git-friendly diffs
-
-        return stats_path
 
 
 class IQBPipeline:
     """Component for populating the IQB-measurement-data cache."""
 
-    def __init__(self, project_id: str, data_dir: str | Path | None = None):
+    def __init__(self, project: str, data_dir: str | Path | None = None):
         """
         Initialize cache with data directory path.
 
@@ -210,20 +104,19 @@ class IQBPipeline:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
-        self.client = bigquery.Client(project=project_id)
-        self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
-        self.manager = PipelineCacheManager(data_dir)
+        self.client = PipelineBQPQClient(project=project)
+        self.manager = PipelineCacheManager(data_dir=data_dir)
 
     def get_cache_entry(
         self,
+        *,
         template: str,
         start_date: str,
         end_date: str,
-        *,
         fetch_if_missing: bool = False,
     ) -> PipelineCacheEntry:
         """
-        Get or create a cache entry for the given query.
+        Get or create a cache entry for the given query template.
 
         Args:
             template: name for the query template (e.g., "downloads_by_country")
@@ -241,7 +134,7 @@ class IQBPipeline:
         # 1. get the cache entry
         entry = self.manager.get_cache_entry(template, start_date, end_date)
 
-        # 2. make sure the entry exists
+        # 2. if the entry exists, there's nothing to do
         if entry.data_parquet_file_path().exists() and entry.stats_json_file_path().exists():
             return entry
 
@@ -255,20 +148,19 @@ class IQBPipeline:
 
         # 4. execute query and update the cache
         result = self._execute_query_template(entry)
-        result.save_parquet()
-        result.save_stats()
+        result.save_data_parquet()
+        result.save_stats_json()
 
         # 5. return information about the cache entry
-        assert entry.data_parquet_file_path().exists()
-        assert entry.stats_json_file_path().exists()
         return entry
 
     def execute_query_template(
         self,
+        *,
         template: str,
         start_date: str,
         end_date: str,
-    ) -> QueryResult:
+    ) -> PipelineBQPQQueryResult:
         """
         Execute the given BigQuery query template.
 
@@ -284,33 +176,23 @@ class IQBPipeline:
             self.manager.get_cache_entry(template, start_date, end_date)
         )
 
-    def _execute_query_template(self, entry: PipelineCacheEntry) -> QueryResult:
-        # 1. load the actual query
+    def _execute_query_template(
+        self,
+        entry: PipelineCacheEntry,
+    ) -> PipelineBQPQQueryResult:
+        # 1. load the query
         query, template_hash = _load_query_template(entry.tname, entry.start_time, entry.end_time)
 
-        # 2. record query start time (RFC3339 format with Z suffix)
-        query_start_time = datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-
-        # 3. execute the query and get job and iterable rows
-        job = self.client.query(query)
-        rows = job.result()
-
-        # 4. compute the directory where we would save the results
-        cache_dir = entry.dir_path()
-
-        # 5. return the result object
-        return QueryResult(
-            bq_read_client=self.bq_read_clnt,
-            job=job,
-            rows=rows,
-            cache_dir=cache_dir,
-            query_start_time=query_start_time,
+        # 2. execute the query
+        return self.client.execute_query(
             template_hash=template_hash,
+            query=query,
+            paths_provider=entry,
         )
 
 
 def _load_query_template(
-    tname: ParsedTemplateName,
+    tname: PipelineCacheTemplateName,
     start_date: datetime,
     end_date: datetime,
 ) -> tuple[str, str]:
@@ -323,7 +205,7 @@ def _load_query_template(
     query_file = files(queries).joinpath(f"{tname.value}.sql")
     template_text = query_file.read_text()
 
-    # Compute hash of the original template (before substitution)
+    # Compute hash of the query template
     template_hash = hashlib.sha256(template_text.encode("utf-8")).hexdigest()
 
     # Instantiate the template

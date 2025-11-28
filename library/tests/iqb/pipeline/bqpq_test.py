@@ -1,0 +1,310 @@
+"""Tests for the iqb.pipeline.bqpq module."""
+
+import json
+from datetime import UTC, datetime
+from pathlib import Path
+from unittest.mock import MagicMock, Mock, patch
+
+import pyarrow as pa
+
+from iqb.pipeline.bqpq import (
+    PipelineBQPQClient,
+    PipelineBQPQQueryResult,
+)
+
+
+class FakePathsProvider:
+    """Implement PipelineBQPQPathsProvider for testing."""
+
+    def __init__(self, basedir) -> None:
+        self.basedir = Path(basedir)
+
+    def data_parquet_file_path(self) -> Path:
+        return self.basedir / "data.parquet"
+
+    def stats_json_file_path(self) -> Path:
+        return self.basedir / "stats.json"
+
+
+class TestPipelineBQPQClient:
+    """Test for PipelineBQPQClient class."""
+
+    @patch("iqb.pipeline.bqpq.bigquery.Client")
+    @patch("iqb.pipeline.bqpq.bigquery_storage_v1.BigQueryReadClient")
+    def test_init_calls_bigquery_initializers(self, mock_storage, mock_client):
+        """Test that initialization calls the required BigQuery initializers."""
+        client = PipelineBQPQClient(project="test-project")
+        mock_client.assert_called_once_with(project="test-project")
+        mock_storage.assert_called_once()
+        assert client.bq_read_clnt is not None
+        assert client.client is not None
+
+    @patch("iqb.pipeline.bqpq.bigquery.Client")
+    @patch("iqb.pipeline.bqpq.bigquery_storage_v1.BigQueryReadClient")
+    def test_execute_query(self, mock_storage, mock_client, tmp_path):
+        """Test that execute_query_template constructs correct cache directory."""
+        # Setup mocks
+        mock_job = Mock()
+        mock_rows = Mock()
+        mock_client_instance = Mock()
+        mock_client_instance.query.return_value = mock_job
+        mock_job.result.return_value = mock_rows
+        mock_client.return_value = mock_client_instance
+        mock_storage_client = Mock()
+        mock_storage.return_value = mock_storage_client
+
+        # Create the client
+        client = PipelineBQPQClient(project="test-project")
+
+        # Execute query
+        data_dir = tmp_path / "iqb"
+        paths_provider = FakePathsProvider(data_dir)
+        result = client.execute_query(
+            paths_provider=paths_provider,
+            template_hash="hash123",
+            query="SELECT * FROM TABLE COUNT 1;",
+        )
+
+        # Verify client.query was called
+        mock_client_instance.query.assert_called_once()
+
+        # Verify job.result was called
+        mock_job.result.assert_called_once()
+
+        # Verify the result structure
+        assert result.bq_read_client == mock_storage_client
+        assert result.job == mock_job
+        assert result.rows == mock_rows
+        assert result.paths_provider == paths_provider
+        assert result.template_hash == "hash123"
+
+
+class TestPipelineBQPQQueryResultSaveDataParquet:
+    """Test for PipelineBQPQQueryResult.save_data_parquet method."""
+
+    def test_save_data_parquet_with_data(self, tmp_path):
+        """Test saving parquet file with mock data."""
+        cache_dir = tmp_path / "cache"
+
+        # Mock Arrow batches
+        mock_batch = MagicMock()
+        mock_batch.schema = MagicMock()
+
+        mock_rows = Mock()
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch])
+
+        # Mock ParquetWriter
+        with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            # Create result and save
+            result = PipelineBQPQQueryResult(
+                bq_read_client=Mock(),
+                job=Mock(),
+                rows=mock_rows,
+                paths_provider=FakePathsProvider(cache_dir),
+                template_hash="abc123",
+            )
+
+            file_path = result.save_data_parquet()
+
+            # Verify file path and directory creation
+            expected_path = cache_dir / "data.parquet"
+            assert file_path == expected_path
+            assert cache_dir.exists()
+            mock_writer_instance.write_batch.assert_called_once_with(mock_batch)
+
+    def test_save_data_parquet_with_empty_results(self, tmp_path):
+        """Test handling of empty query results - writes empty parquet file."""
+        cache_dir = tmp_path / "cache"
+
+        # Mock empty iterator
+        mock_rows = Mock()
+        mock_rows.to_arrow_iterable.return_value = iter([])
+
+        # Mock ParquetWriter to verify it's called with empty schema
+        with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            result = PipelineBQPQQueryResult(
+                bq_read_client=Mock(),
+                job=Mock(),
+                rows=mock_rows,
+                paths_provider=FakePathsProvider(cache_dir),
+                template_hash="abc123",
+            )
+
+            file_path = result.save_data_parquet()
+
+            # Verify empty parquet file would be created
+            expected_path = cache_dir / "data.parquet"
+            assert file_path == expected_path
+            assert cache_dir.exists()
+
+            # Verify ParquetWriter was called with empty schema
+            mock_writer.assert_called_once()
+            call_args = mock_writer.call_args
+            assert call_args[0][0] == expected_path.as_posix()
+
+            # Verify schema is empty (no fields)
+            schema_arg = call_args[0][1]
+            assert isinstance(schema_arg, pa.Schema)
+            assert len(schema_arg) == 0
+
+            # Verify no batches were written (first_batch is None, for loop has nothing)
+            mock_writer_instance.write_batch.assert_not_called()
+
+    def test_save_data_parquet_with_multiple_batches(self, tmp_path):
+        """Test saving multiple Arrow batches."""
+        cache_dir = tmp_path / "cache"
+
+        # Mock multiple batches
+        mock_batch1 = MagicMock()
+        mock_batch1.schema = MagicMock()
+        mock_batch2 = MagicMock()
+        mock_batch3 = MagicMock()
+
+        mock_rows = Mock()
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch1, mock_batch2, mock_batch3])
+
+        with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            result = PipelineBQPQQueryResult(
+                bq_read_client=Mock(),
+                job=Mock(),
+                rows=mock_rows,
+                paths_provider=FakePathsProvider(cache_dir),
+                template_hash="abc123",
+            )
+
+            file_path = result.save_data_parquet()
+
+            # Verify all batches written
+            assert mock_writer_instance.write_batch.call_count == 3
+            expected_path = cache_dir / "data.parquet"
+            assert file_path == expected_path
+
+    def test_save_data_parquet_creates_nested_directories(self, tmp_path):
+        """Test that save_parquet creates nested cache directory."""
+        # Deep nested path
+        cache_dir = tmp_path / "a" / "b" / "c"
+
+        mock_batch = MagicMock()
+        mock_batch.schema = MagicMock()
+
+        mock_rows = Mock()
+        mock_rows.to_arrow_iterable.return_value = iter([mock_batch])
+
+        with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
+            mock_writer_instance = MagicMock()
+            mock_writer.return_value.__enter__.return_value = mock_writer_instance
+
+            result = PipelineBQPQQueryResult(
+                bq_read_client=Mock(),
+                job=Mock(),
+                rows=mock_rows,
+                paths_provider=FakePathsProvider(cache_dir),
+                template_hash="abc123",
+            )
+
+            file_path = result.save_data_parquet()
+
+            # Verify cache directory created
+            assert cache_dir.exists()
+            expected_path = cache_dir / "data.parquet"
+            assert file_path == expected_path
+
+
+class TestPipelineBQPQQueryResultSaveStatsJSON:
+    """Test for PipelineBQPQQueryResult.save_stats_json method."""
+
+    def test_save_stats_json_with_complete_job_info(self, tmp_path):
+        """Test saving stats.json with complete BigQuery job information."""
+        cache_dir = tmp_path / "cache"
+
+        # Mock BigQuery job with complete info
+        mock_job = Mock()
+        mock_job.started = datetime(2024, 11, 27, 10, 0, 0, tzinfo=UTC)
+        mock_job.ended = datetime(2024, 11, 27, 10, 5, 30, tzinfo=UTC)
+        mock_job.total_bytes_processed = 1000000000  # 1 GB
+        mock_job.total_bytes_billed = 1073741824  # 1 GiB
+
+        result = PipelineBQPQQueryResult(
+            bq_read_client=Mock(),
+            job=mock_job,
+            rows=Mock(),
+            paths_provider=FakePathsProvider(cache_dir),
+            template_hash="abc123def456",
+        )
+
+        stats_path = result.save_stats_json()
+
+        # Verify file created
+        assert stats_path == cache_dir / "stats.json"
+        assert stats_path.exists()
+
+        # Verify content
+        with stats_path.open() as f:
+            stats = json.load(f)
+
+        assert stats["query_start_time"] == "2024-11-27T10:00:00.000000Z"
+        assert stats["query_duration_seconds"] == 330.0  # 5 min 30 sec
+        assert stats["template_hash"] == "abc123def456"
+        assert stats["total_bytes_processed"] == 1000000000
+        assert stats["total_bytes_billed"] == 1073741824
+
+    def test_save_stats_json_with_incomplete_job_info(self, tmp_path):
+        """Test saving stats when job timing info is incomplete."""
+        # Mock job without timing info
+        mock_job = Mock()
+        mock_job.started = None
+        mock_job.ended = None
+        mock_job.total_bytes_processed = 500000
+        mock_job.total_bytes_billed = 524288
+
+        result = PipelineBQPQQueryResult(
+            bq_read_client=Mock(),
+            job=mock_job,
+            rows=Mock(),
+            paths_provider=FakePathsProvider(tmp_path),
+            template_hash="xyz789",
+        )
+
+        stats_path = result.save_stats_json()
+
+        # Verify content
+        with stats_path.open() as filep:
+            stats = json.load(filep)
+
+        assert stats["query_start_time"] is None
+        assert stats["query_duration_seconds"] is None
+        assert stats["template_hash"] == "xyz789"
+        assert stats["total_bytes_processed"] == 500000
+        assert stats["total_bytes_billed"] == 524288
+
+    def test_save_stats_json_creates_directory(self, tmp_path):
+        """Test that save_stats creates cache directory if needed."""
+        cache_dir = tmp_path / "a" / "b" / "c"
+
+        mock_job = Mock()
+        mock_job.started = None
+        mock_job.ended = None
+        mock_job.total_bytes_processed = 0
+        mock_job.total_bytes_billed = 0
+
+        result = PipelineBQPQQueryResult(
+            bq_read_client=Mock(),
+            job=mock_job,
+            rows=Mock(),
+            paths_provider=FakePathsProvider(cache_dir),
+            template_hash="test123",
+        )
+
+        stats_path = result.save_stats_json()
+
+        assert cache_dir.exists()
+        assert stats_path.exists()

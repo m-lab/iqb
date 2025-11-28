@@ -94,7 +94,7 @@ def run_bq_query(
     #   - data.parquet: query results (empty file if no results)
     #   - stats.json: query metadata
     # fetch_if_missing=True makes this idempotent: skips query if cache exists
-    pipeline = IQBPipeline(project_id=project_id, data_dir=data_dir)
+    pipeline = IQBPipeline(project=project_id, data_dir=data_dir)
     entry = pipeline.get_cache_entry(
         template=query_name,
         start_date=start_date,

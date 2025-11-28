@@ -226,7 +226,7 @@ def cmd_sync(args) -> int:
             print(f"SHA256 mismatch: {local_path}")
             print(f"  Expected: {expected_sha256}")
             print(f"  Actual:   {actual_sha256}")
-            print(f"  Re-downloading...")
+            print("  Re-downloading...")
             download_file(url, file_path)
         else:
             print(f"OK: {local_path}")

@@ -18,7 +18,7 @@ PIPELINE_CACHE_STATS_FILENAME: Final[str] = "stats.json"
 
 
 @dataclass(frozen=True)
-class ParsedTemplateName:
+class PipelineCacheTemplateName:
     """Container for a parsed template name."""
 
     value: str
@@ -31,13 +31,13 @@ class PipelineCacheEntry:
 
     Attributes:
         data_dir: the Path that points to the data dir
-        tname: the ParsedTemplateName to use
+        tname: the PipelineCacheTemplateName to use
         start_time: the datetime containing the start time
         end_time: the datetime containing the end time
     """
 
     data_dir: Path
-    tname: ParsedTemplateName
+    tname: PipelineCacheTemplateName
     start_time: datetime
     end_time: datetime
 
@@ -119,12 +119,12 @@ def _parse_both_dates(start_date: str, end_date: str) -> tuple[datetime, datetim
     return start_time, end_time
 
 
-def _parse_template_name(value: str) -> ParsedTemplateName:
+def _parse_template_name(value: str) -> PipelineCacheTemplateName:
     """Ensure that the template name is a valid template name."""
     if value not in VALID_TEMPLATE_NAMES:
         valid = ", ".join(sorted(VALID_TEMPLATE_NAMES))
         raise ValueError(f"Unknown template {value!r}; valid templates: {valid}")
-    return ParsedTemplateName(value=value)
+    return PipelineCacheTemplateName(value=value)
 
 
 def _parse_date(value: str) -> datetime:

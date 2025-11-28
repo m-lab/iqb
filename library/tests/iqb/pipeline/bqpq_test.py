@@ -113,6 +113,8 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
             assert cache_dir.exists()
+            assert file_path.exists()
+
             mock_writer_instance.write_batch.assert_called_once_with(mock_batch)
 
     def test_save_data_parquet_with_empty_results(self, tmp_path):
@@ -142,6 +144,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
             assert cache_dir.exists()
+            assert file_path.exists()
 
             # Verify ParquetWriter was called with empty schema
             mock_writer.assert_called_once()
@@ -187,6 +190,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             assert mock_writer_instance.write_batch.call_count == 3
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
+            assert file_path.exists()
 
     def test_save_data_parquet_creates_nested_directories(self, tmp_path):
         """Test that save_parquet creates nested cache directory."""
@@ -217,6 +221,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             assert cache_dir.exists()
             expected_path = cache_dir / "data.parquet"
             assert file_path == expected_path
+            assert file_path.exists()
 
 
 class TestPipelineBQPQQueryResultSaveStatsJSON:
@@ -248,8 +253,8 @@ class TestPipelineBQPQQueryResultSaveStatsJSON:
         assert stats_path.exists()
 
         # Verify content
-        with stats_path.open() as f:
-            stats = json.load(f)
+        with stats_path.open() as filep:
+            stats = json.load(filep)
 
         assert stats["query_start_time"] == "2024-11-27T10:00:00.000000Z"
         assert stats["query_duration_seconds"] == 330.0  # 5 min 30 sec

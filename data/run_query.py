@@ -11,7 +11,14 @@ import pyarrow.parquet as pq
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
-from iqb.pipeline import IQBPipeline
+from iqb.pipeline.dataset import (
+    PipelineDatasetMLabExperiment,
+)
+from iqb.pipeline import (
+    IQBPipeline,
+    IQBDatasetGranularity,
+    iqb_dataset_name_for_mlab,
+)
 
 
 def validate_date(date_str: str) -> str:
@@ -34,6 +41,55 @@ def validate_date(date_str: str) -> str:
         raise ValueError(
             f"Invalid date format: {date_str} (expected YYYY-MM-DD)"
         ) from e
+
+
+def parse_query_name(
+    query_name: str,
+) -> tuple[PipelineDatasetMLabExperiment, IQBDatasetGranularity]:
+    """
+    Parse legacy query name into experiment and granularity enums.
+
+    Args:
+        query_name: Legacy query name (e.g., "downloads_by_country")
+
+    Returns:
+        Tuple of (experiment, granularity)
+
+    Raises:
+        ValueError: If query_name format is invalid
+
+    Examples:
+        >>> parse_query_name("downloads_by_country")
+        (PipelineDatasetMLabExperiment.DOWNLOAD, IQBDatasetGranularity.BY_COUNTRY)
+        >>> parse_query_name("uploads_by_country_city_asn")
+        (PipelineDatasetMLabExperiment.UPLOAD, IQBDatasetGranularity.BY_COUNTRY_CITY_ASN)
+    """
+    # Map legacy names to enums
+    if query_name.startswith("downloads_"):
+        experiment = PipelineDatasetMLabExperiment.DOWNLOAD
+        granularity_str = query_name[len("downloads_") :]
+    elif query_name.startswith("uploads_"):
+        experiment = PipelineDatasetMLabExperiment.UPLOAD
+        granularity_str = query_name[len("uploads_") :]
+    else:
+        raise ValueError(
+            f"Invalid query name '{query_name}'. "
+            f"Must start with 'downloads_' or 'uploads_'"
+        )
+
+    # Map granularity string to enum
+    granularity_map = {
+        "by_country": IQBDatasetGranularity.BY_COUNTRY,
+        "by_country_city_asn": IQBDatasetGranularity.BY_COUNTRY_CITY_ASN,
+    }
+
+    if granularity_str not in granularity_map:
+        raise ValueError(
+            f"Invalid granularity '{granularity_str}' in query name '{query_name}'. "
+            f"Valid options: {list(granularity_map.keys())}"
+        )
+
+    return experiment, granularity_map[granularity_str]
 
 
 def run_bq_query(
@@ -86,17 +142,24 @@ def run_bq_query(
     print(f"Running query: {query_name}", file=sys.stderr)
     print(f"  Date range: {start_date} to {end_date}", file=sys.stderr)
 
+    # Parse query name into experiment and granularity
+    experiment, granularity = parse_query_name(query_name)
+    dataset_name = iqb_dataset_name_for_mlab(
+        experiment=experiment,
+        granularity=granularity,
+    )
+
     # Data directory is ./iqb/data (where this script lives)
     data_dir = Path(__file__).parent
 
     # Step 1: Get or create cache entry
-    # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
+    # This creates: ./iqb/data/cache/v1/{start}/{end}/{dataset_name}/
     #   - data.parquet: query results (empty file if no results)
     #   - stats.json: query metadata
     # fetch_if_missing=True makes this idempotent: skips query if cache exists
     pipeline = IQBPipeline(project=project_id, data_dir=data_dir)
     entry = pipeline.get_cache_entry(
-        template=query_name,
+        dataset_name=dataset_name,
         start_date=start_date,
         end_date=end_date,
         fetch_if_missing=True,

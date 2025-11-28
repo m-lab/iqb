@@ -8,11 +8,15 @@ import pytest
 from iqb.pipeline.cache import (
     PipelineCacheEntry,
     PipelineCacheManager,
-    PipelineCacheTemplateName,
     _parse_both_dates,
     _parse_date,
-    _parse_template_name,
     data_dir_or_default,
+)
+from iqb.pipeline.dataset import (
+    IQBDatasetGranularity,
+    PipelineDatasetMLabExperiment,
+    PipelineDatasetName,
+    iqb_dataset_name_for_mlab,
 )
 
 
@@ -55,36 +59,6 @@ class TestParseDate:
         """Test error on invalid date values."""
         with pytest.raises(ValueError, match="Invalid date format"):
             _parse_date("2024-13-01")
-
-
-class TestParseTemplateName:
-    """Test for _parse_template_name function."""
-
-    def test_parse_valid_downloads_by_country(self):
-        """Test parsing valid downloads_by_country template."""
-        result = _parse_template_name("downloads_by_country")
-        assert isinstance(result, PipelineCacheTemplateName)
-        assert result.value == "downloads_by_country"
-
-    def test_parse_valid_uploads_by_country(self):
-        """Test parsing valid uploads_by_country template."""
-        result = _parse_template_name("uploads_by_country")
-        assert result.value == "uploads_by_country"
-
-    def test_parse_invalid_template_name(self):
-        """Test error on unknown template name."""
-        with pytest.raises(ValueError, match="Unknown template 'invalid_query'"):
-            _parse_template_name("invalid_query")
-
-    def test_parse_invalid_template_lists_valid_options(self):
-        """Test error message includes valid template names."""
-        with pytest.raises(ValueError, match="valid templates:"):
-            _parse_template_name("bad_template")
-
-    def test_parse_empty_string(self):
-        """Test error on empty template name."""
-        with pytest.raises(ValueError, match="Unknown template ''"):
-            _parse_template_name("")
 
 
 class TestParseBothDates:
@@ -152,25 +126,30 @@ class TestPipelineCacheManager:
     def test_get_cache_entry_returns_entry(self, tmp_path):
         """Test that get_cache_entry returns PipelineCacheEntry."""
         manager = PipelineCacheManager(data_dir=tmp_path)
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         entry = manager.get_cache_entry(
-            template="downloads_by_country",
+            dataset_name=dataset_name,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
 
         assert isinstance(entry, PipelineCacheEntry)
         assert entry.data_dir == tmp_path
-        assert entry.tname.value == "downloads_by_country"
+        assert entry.dataset_name.value == "downloads_by_country"
         assert entry.start_time == datetime(2024, 10, 1)
         assert entry.end_time == datetime(2024, 11, 1)
 
-    def test_get_cache_entry_validates_template(self, tmp_path):
-        """Test that get_cache_entry validates template name."""
+    def test_get_cache_entry_validates_dataset_name(self, tmp_path):
+        """Test that get_cache_entry validates dataset name."""
         manager = PipelineCacheManager(data_dir=tmp_path)
+        invalid_dataset = PipelineDatasetName(value="Invalid-Name")
 
-        with pytest.raises(ValueError, match="Unknown template"):
+        with pytest.raises(ValueError, match="Invalid dataset name"):
             manager.get_cache_entry(
-                template="invalid_template",
+                dataset_name=invalid_dataset,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -178,10 +157,14 @@ class TestPipelineCacheManager:
     def test_get_cache_entry_validates_dates(self, tmp_path):
         """Test that get_cache_entry validates date range."""
         manager = PipelineCacheManager(data_dir=tmp_path)
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
 
         with pytest.raises(ValueError, match="start_date must be <= end_date"):
             manager.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name=dataset_name,
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )
@@ -192,9 +175,13 @@ class TestPipelineCacheEntry:
 
     def test_dir_path_construction(self, tmp_path):
         """Test that dir_path constructs correct cache directory path."""
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=PipelineCacheTemplateName(value="downloads_by_country"),
+            dataset_name=dataset_name,
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -211,9 +198,13 @@ class TestPipelineCacheEntry:
 
     def test_data_path_when_file_exists(self, tmp_path):
         """Test data_path returns path when file exists."""
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=PipelineCacheTemplateName(value="downloads_by_country"),
+            dataset_name=dataset_name,
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -228,10 +219,14 @@ class TestPipelineCacheEntry:
         assert entry.data_parquet_file_path().exists()
 
     def test_data_path_when_file_missing(self, tmp_path):
-        """Test data_path returns None when file doesn't exist."""
+        """Test data_path returns path when file doesn't exist."""
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=PipelineCacheTemplateName(value="downloads_by_country"),
+            dataset_name=dataset_name,
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -242,9 +237,13 @@ class TestPipelineCacheEntry:
 
     def test_stats_path_when_file_exists(self, tmp_path):
         """Test stats_path returns path when file exists."""
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=PipelineCacheTemplateName(value="downloads_by_country"),
+            dataset_name=dataset_name,
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )
@@ -259,10 +258,14 @@ class TestPipelineCacheEntry:
         assert entry.stats_json_file_path().exists()
 
     def test_stats_path_when_file_missing(self, tmp_path):
-        """Test stats_path returns None when file doesn't exist."""
+        """Test stats_path returns path when file doesn't exist."""
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
-            tname=PipelineCacheTemplateName(value="downloads_by_country"),
+            dataset_name=dataset_name,
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
         )

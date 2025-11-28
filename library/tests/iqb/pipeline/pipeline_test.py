@@ -6,10 +6,15 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from iqb.pipeline.bqpq import PipelineBQPQQueryResult
+from iqb.pipeline.dataset import (
+    IQBDatasetGranularity,
+    PipelineDatasetMLabExperiment,
+    PipelineDatasetName,
+    iqb_dataset_name_for_mlab,
+)
 from iqb.pipeline.pipeline import (
     IQBPipeline,
     PipelineCacheEntry,
-    PipelineCacheTemplateName,
     _load_query_template,
 )
 
@@ -19,12 +24,15 @@ class TestLoadQueryTemplate:
 
     def test_load_query_template_substitution(self):
         """Test that query template placeholders are substituted."""
-        # Parse inputs first (as the public interface does)
-        tname = PipelineCacheTemplateName(value="downloads_by_country")
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         start_time = datetime(2024, 10, 1)
         end_time = datetime(2024, 11, 1)
 
-        query, template_hash = _load_query_template(tname, start_time, end_time)
+        query, template_hash = _load_query_template(dataset_name, start_time, end_time)
 
         # Verify placeholders replaced
         assert "{START_DATE}" not in query
@@ -88,9 +96,15 @@ class TestIQBPipelineExecuteQuery:
         mock_query_result = MagicMock(spec=PipelineBQPQQueryResult)
         mock_client.return_value.execute_query.return_value = mock_query_result
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Execute query
         result = pipeline.execute_query_template(
-            template="downloads_by_country",
+            dataset_name=dataset_name,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -125,27 +139,36 @@ class TestIQBPipelineExecuteQuery:
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Ensure we get the expected exception
         with pytest.raises(ValueError, match="start_date must be <= end_date"):
             pipeline.execute_query_template(
-                template="downloads_by_country",
+                dataset_name=dataset_name,
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_execute_query_invalid_template(self, mock_client, tmp_path):
-        """Test error on unknown template name."""
+    def test_execute_query_invalid_dataset_name(self, mock_client, tmp_path):
+        """Test error on invalid dataset name."""
         # Create the pipeline
         pipeline = IQBPipeline(project="test-project", data_dir=tmp_path)
 
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
 
+        # Create invalid dataset name (contains uppercase)
+        invalid_dataset = PipelineDatasetName(value="Invalid-Name")
+
         # Ensure we get the expected exception
-        with pytest.raises(ValueError, match="Unknown template"):
+        with pytest.raises(ValueError, match="Invalid dataset name"):
             pipeline.execute_query_template(
-                template="invalid_template",
+                dataset_name=invalid_dataset,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -174,9 +197,15 @@ class TestIQBPipelineGetCacheEntry:
         (cache_dir / "data.parquet").write_text("fake parquet data")
         (cache_dir / "stats.json").write_text("{}")
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Get cache entry (should not execute query)
         entry = pipeline.get_cache_entry(
-            template="downloads_by_country",
+            dataset_name=dataset_name,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -204,10 +233,16 @@ class TestIQBPipelineGetCacheEntry:
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Don't create cache
         with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name=dataset_name,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
                 fetch_if_missing=False,
@@ -249,9 +284,15 @@ class TestIQBPipelineGetCacheEntry:
         # Tell execute_query to return our mock result
         mock_client.return_value.execute_query.return_value = mock_result
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Get cache entry with fetch_if_missing=True
         entry = pipeline.get_cache_entry(
-            template="downloads_by_country",
+            dataset_name=dataset_name,
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
@@ -291,10 +332,16 @@ class TestIQBPipelineGetCacheEntry:
         cache_dir.mkdir(parents=True, exist_ok=True)
         (cache_dir / "data.parquet").write_text("fake parquet data")
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Should raise FileNotFoundError (cache incomplete)
         with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name=dataset_name,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -321,10 +368,16 @@ class TestIQBPipelineGetCacheEntry:
         cache_dir.mkdir(parents=True, exist_ok=True)
         (cache_dir / "stats.json").write_text("{}")
 
+        # Create dataset name
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
+
         # Should raise FileNotFoundError (cache incomplete)
         with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name=dataset_name,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -339,18 +392,23 @@ class TestIQBPipelineGetCacheEntry:
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
 
-        # Invalid template should fail immediately
-        with pytest.raises(ValueError, match="Unknown template"):
+        # Invalid dataset name should fail immediately
+        invalid_dataset = PipelineDatasetName(value="Invalid-Name")
+        with pytest.raises(ValueError, match="Invalid dataset name"):
             pipeline.get_cache_entry(
-                template="invalid_template",
+                dataset_name=invalid_dataset,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
 
         # Invalid date range should fail immediately
+        dataset_name = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
+        )
         with pytest.raises(ValueError, match="start_date must be <= end_date"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name=dataset_name,
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )

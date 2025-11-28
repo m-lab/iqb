@@ -1,6 +1,23 @@
 """Package for populating the IQB-measurement-data cache.
 
-The IQBPipeline class runs BigQuery queries and populates the cache.
+The `IQBPipeline` class runs BigQuery queries and populates the cache.
+
+The `PipelineCacheManager` class, which is only meant to be used
+within the `iqb` library`, allows to read/write query entries.
+
+The `iqb_dataset_name_for_{project}` family of functions allow to
+derive the correct dataset name for a given project.
+
+The `iqb_parquet_read` function allows to efficiently read and
+filter data inside an arbitrary parquet file.
+
+Cache Spec Ownership
+--------------------
+
+Because this package *writes* the cache, it also owns and specifies
+the on-disk cache data structure. The cache package, which reads the
+cache, conforms to the expected data structure by using code in
+this package that hides the specific implementation details.
 
 Data Directory Convention
 -------------------------
@@ -8,24 +25,25 @@ Data Directory Convention
 If a data directory is specified, we use it. Otherwise, we use `.iqb` in
 the current directory. This is similar to git, that uses `.git`.
 
-Design
-------
+On-Disk Format
+--------------
 
 We store files named after the following pattern:
 
-    $datadir/cache/v1/$since/$until/$query_type/data.parquet
-    $datadir/cache/v1/$since/$until/$query_type/stats.json
+    $datadir/cache/v1/{since}/{until}/{dataset}/data.parquet
+    $datadir/cache/v1/{since}/{until}/{dataset}/stats.json
 
 Each query result is stored in a directory containing the data file (data.parquet)
 and the query metadata (stats.json). The stats file records query execution details
 such as start time (RFC3339 format with Z suffix), duration, and bytes processed
 for transparency and debugging
 
-The `$since` and `$until` variables are timestamps using the RFC3339 format
-with UTC timezone, formatted to be file-system friendly (i.e., without
-including the ":" character). For example: `20251126T100000Z`.
+The `{since}` and `{until}` are placeholders for timestamps using
+the RFC3339 format with UTC timezone, formatted so to be file-system
+friendly (i.e., without including the ":" character). For example,
+`20251126T100000Z` is a valid value for `{since}` or `{until}`.
 
-The `$since` timestamp is included and the `$until` one is excluded. This
+The `{since}` timestamp is included and the `{until}` one is excluded. This
 simplifies specifying time ranges significantly (e.g., October 2025 is
 represented using `since=20251001T000000Z` and `until=20251101T000000Z`).
 
@@ -38,24 +56,19 @@ addressable approach means the time range IS the path identifier, eliminating
 the need for metadata files, cache invalidation logic, or naming conventions
 to prevent conflicts. Overlapping queries coexist naturally without coordination.
 
-The $query_type is one of the following query granularity types:
+The `{dataset}` identifies the specific dataset we are using. In general, the
+structure of the placeholder depens upon how the data is actually organized and
+there is no fixed pattern. However, there are functions exported by this
+package using the `iqb_dataset_name_for_` prefix that allow generating a valid
+dataset value for a valid project value. For example, see, the
+`iqb_dataset_name_for_mlab` function.
 
-1. country_$kind
-2. country_asn_$kind
-3. country_province_$kind
-4. country_province_asn_$kind
-5. country_city_$kind
-6. country_city_asn_$kind
-
-Where $kind is either "download" or "upload". The final implementation
-of this design will have all the required queries implemented.
-
-For each query type, we have a corresponding directory containing the data
-and metadata files.
+On disk, each `{dataset}` is a valid directory name containing the `data.parquet`
+file and the `stats.json` file (and possibly other files).
 
 We use parquet as the file format because:
 
-1. we can stream to it when writing BigQuery queries results
+1. we can stream the result of BigQuery queries into parquet files
 
 2. regardless of the file size, we can always process and filter it in
 chunks since parquet divides rows into independent groups
@@ -64,22 +77,25 @@ We store the raw results of queries for further processing, since the
 query itself is the expensive operation while further elaborations
 are comparatively cheaper, and can be done locally with PyArrow/Pandas.
 
-Specifically, reading from the cache (when implemented in cache.py) will
-use PyArrow's predicate pushdown for efficient filtering:
+This package also implements efficiently filtering a parquet file
+from disk using PyArrow predicate pushdown for efficient filtering
+and column selection. See `iqb_parquet_read`.
 
-1. Use PyArrow's filters parameter to skip row groups at I/O level:
-   pq.read_table(path, filters=[('country', '=', 'US')], columns=['...'])
-
-2. Convert to Pandas DataFrame only after filtering for analysis
-
-This approach ensures we can select a country (and other properties when
-needed, e.g., the ASN or city) and skip row groups that do not match, while
-immediately projecting out columns we don't need. If processing the parquet-
-dumped raw query outputs is fast enough, we can directly access the data
-without producing intermediate formats.
+Using `iqb_parquet_read` ensures we can select a country (and other properties
+when needed, e.g., the ASN or city) and skip row groups that do not match, while
+immediately projecting out columns we don't need.
 """
 
+from .dataset import (
+    IQBDatasetGranularity,
+    iqb_dataset_name_for_mlab,
+)
 from .pipeline import IQBPipeline
 from .pqread import iqb_parquet_read
 
-__all__ = ["IQBPipeline", "iqb_parquet_read"]
+__all__ = [
+    "IQBPipeline",
+    "IQBDatasetGranularity",
+    "iqb_dataset_name_for_mlab",
+    "iqb_parquet_read",
+]

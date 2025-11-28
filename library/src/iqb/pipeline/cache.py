@@ -1,27 +1,16 @@
-"""Module to read and write the on-disk IQB measurements cache."""
+"""Module to manage the on-disk IQB measurements cache layout."""
 
+import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Final
 
-VALID_TEMPLATE_NAMES: Final[set[str]] = {
-    "downloads_by_country",
-    "uploads_by_country",
-    "downloads_by_country_city_asn",
-    "uploads_by_country_city_asn",
-}
+from .dataset import PipelineDatasetName
 
 # Cache file names
 PIPELINE_CACHE_DATA_FILENAME: Final[str] = "data.parquet"
 PIPELINE_CACHE_STATS_FILENAME: Final[str] = "stats.json"
-
-
-@dataclass(frozen=True)
-class PipelineCacheTemplateName:
-    """Container for a parsed template name."""
-
-    value: str
 
 
 @dataclass(frozen=True)
@@ -31,13 +20,13 @@ class PipelineCacheEntry:
 
     Attributes:
         data_dir: the Path that points to the data dir
-        tname: the PipelineCacheTemplateName to use
+        dataset_name: the PipelineDatasetName to use
         start_time: the datetime containing the start time
         end_time: the datetime containing the end time
     """
 
     data_dir: Path
-    tname: PipelineCacheTemplateName
+    dataset_name: PipelineDatasetName
     start_time: datetime
     end_time: datetime
 
@@ -46,7 +35,7 @@ class PipelineCacheEntry:
         fs_date_format = "%Y%m%dT000000Z"
         start_dir = self.start_time.strftime(fs_date_format)
         end_dir = self.end_time.strftime(fs_date_format)
-        return self.data_dir / "cache" / "v1" / start_dir / end_dir / self.tname.value
+        return self.data_dir / "cache" / "v1" / start_dir / end_dir / self.dataset_name.value
 
     def data_parquet_file_path(self) -> Path:
         """Returns the path to the `data.parquet` file."""
@@ -72,7 +61,7 @@ class PipelineCacheManager:
 
     def get_cache_entry(
         self,
-        template: str,
+        dataset_name: PipelineDatasetName,
         start_date: str,
         end_date: str,
     ) -> PipelineCacheEntry:
@@ -80,7 +69,7 @@ class PipelineCacheManager:
         Get cache entry for the given query template.
 
         Args:
-            template: name for the query template (e.g., "downloads_by_country")
+            dataset_name: the PipelineDatasetName to use.
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
 
@@ -91,12 +80,13 @@ class PipelineCacheManager:
         start_time, end_time = _parse_both_dates(start_date, end_date)
 
         # 2. ensure the template name is correct
-        tname = _parse_template_name(template)
+        if not re.match(r"^[a-z_]+$", dataset_name.value):
+            raise ValueError(f"Invalid dataset name: {dataset_name.value}")
 
         # 3. return the corresponding entry
         return PipelineCacheEntry(
             data_dir=self.data_dir,
-            tname=tname,
+            dataset_name=dataset_name,
             start_time=start_time,
             end_time=end_time,
         )
@@ -117,14 +107,6 @@ def _parse_both_dates(start_date: str, end_date: str) -> tuple[datetime, datetim
     if start_time > end_time:
         raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
     return start_time, end_time
-
-
-def _parse_template_name(value: str) -> PipelineCacheTemplateName:
-    """Ensure that the template name is a valid template name."""
-    if value not in VALID_TEMPLATE_NAMES:
-        valid = ", ".join(sorted(VALID_TEMPLATE_NAMES))
-        raise ValueError(f"Unknown template {value!r}; valid templates: {valid}")
-    return PipelineCacheTemplateName(value=value)
 
 
 def _parse_date(value: str) -> datetime:

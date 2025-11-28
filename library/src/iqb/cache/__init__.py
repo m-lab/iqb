@@ -1,7 +1,16 @@
-"""Package for fetching IQB measurement data from cache.
+"""Package for reading IQB measurement data from cache.
 
-The IQBCache component manages local caching of IQB measurement data, following
-a Git-like convention for storing local state.
+The IQBCache component provides read access to cached IQB measurement data.
+The cache is written by the `iqb.pipeline` package, which owns the on-disk
+data format specification.
+
+Cache Data Format Ownership
+----------------------------
+The `iqb.pipeline` package owns and specifies the on-disk cache structure.
+This package (iqb.cache) reads that structure using primitives provided by
+`iqb.pipeline` to ensure consistency.
+
+See `iqb.pipeline` documentation for the complete cache format specification.
 
 Cache Directory Convention
 ---------------------------
@@ -28,8 +37,17 @@ from pathlib import Path
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-from ..pipeline import iqb_parquet_read
-from ..pipeline.pipeline import PipelineCacheManager
+from ..pipeline import (
+    IQBDatasetGranularity,
+    iqb_dataset_name_for_mlab,
+    iqb_parquet_read,
+)
+from ..pipeline.cache import (
+    PipelineCacheManager,
+)
+from ..pipeline.dataset import (
+    PipelineDatasetMLabExperiment,
+)
 
 
 @dataclass(frozen=True)
@@ -153,8 +171,9 @@ class CacheEntry:
         city: str | None,
         columns: list[str] | None,
     ) -> pd.DataFrame:
+        """Read parquet data using pipeline's efficient reader."""
         return iqb_parquet_read(
-            filepath=filepath,
+            filepath,
             country_code=country_code,
             asn=asn,
             city=city,
@@ -311,17 +330,10 @@ class IQBCache:
         *,
         start_date: str,
         end_date: str,
-        granularity: str,
+        granularity: IQBDatasetGranularity,
     ) -> CacheEntry:
         """
         Get cache entry associated with given dates and granularity.
-
-        The available granularities are:
-
-        1. "country"
-        2. "country_asn"
-        3. "country_city"
-        4. "country_city_asn"
 
         Note that this function is a low level building block allowing you to
         access and filter data very efficiently. Consider using higher-level
@@ -332,21 +344,30 @@ class IQBCache:
         Arguments:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
             end_date: end measurement date expressed as YYYY-MM-DD (excluded)
-            granularity: the granularity to use
+            granularity: the granularity to use (from IQBDatasetGranularity enum)
 
         Return:
             A CacheEntry instance.
 
         Example:
+            >>> from iqb.pipeline import IQBDatasetGranularity
             >>> # Returns data for October 2025
-            >>> entry = cache.get_cache_entry("2025-10-01", "2025-11-01", "country")
+            >>> entry = cache.get_cache_entry(
+            ...     start_date="2025-10-01",
+            ...     end_date="2025-11-01",
+            ...     granularity=IQBDatasetGranularity.BY_COUNTRY,
+            ... )
         """
         # 1. create a temporary cache manager instance
         manager = PipelineCacheManager(self.data_dir)
 
         # 2. check whether the download entry exists
+        download_dataset = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
+            granularity=granularity,
+        )
         download_entry = manager.get_cache_entry(
-            f"downloads_by_{granularity}",
+            download_dataset,
             start_date,
             end_date,
         )
@@ -354,12 +375,16 @@ class IQBCache:
         download_stats = download_entry.stats_json_file_path()
         if not download_data.exists() or not download_stats.exists():
             raise FileNotFoundError(
-                f"Cache entry not found for downloads_by_{granularity} ({start_date} to {end_date})"
+                f"Cache entry not found for {download_dataset.value} ({start_date} to {end_date})"
             )
 
         # 3. check whether the upload entry exists
+        upload_dataset = iqb_dataset_name_for_mlab(
+            experiment=PipelineDatasetMLabExperiment.UPLOAD,
+            granularity=granularity,
+        )
         upload_entry = manager.get_cache_entry(
-            f"uploads_by_{granularity}",
+            upload_dataset,
             start_date,
             end_date,
         )
@@ -367,12 +392,12 @@ class IQBCache:
         upload_stats = upload_entry.stats_json_file_path()
         if not upload_data.exists() or not upload_stats.exists():
             raise FileNotFoundError(
-                f"Cache entry not found for uploads_by_{granularity} ({start_date} to {end_date})"
+                f"Cache entry not found for {upload_dataset.value} ({start_date} to {end_date})"
             )
 
-        # 4. return the actual cache entry
+        # 4. return the actual cache entry (store granularity.value as string)
         return CacheEntry(
-            granularity=granularity,
+            granularity=granularity.value,
             start_date=start_date,
             end_date=end_date,
             download_data=download_data,
@@ -500,7 +525,7 @@ class IQBCache:
         entry = self.get_cache_entry(
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d"),
-            granularity="country",
+            granularity=IQBDatasetGranularity.BY_COUNTRY,
         )
 
         # 3. Obtain the corresponding download and upload data frames

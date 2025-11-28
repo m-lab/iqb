@@ -1,17 +1,17 @@
-"""Tests for the iqb.pipeline module."""
+"""Tests for the iqb.pipeline.pipeline module."""
 
 from datetime import datetime
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from iqb.pipeline import (
+from iqb.pipeline.bqpq import PipelineBQPQQueryResult
+from iqb.pipeline.pipeline import (
     IQBPipeline,
     PipelineCacheEntry,
     PipelineCacheTemplateName,
     _load_query_template,
 )
-from iqb.pipeline.bqpq import PipelineBQPQQueryResult
 
 
 class TestLoadQueryTemplate:
@@ -41,8 +41,8 @@ class TestLoadQueryTemplate:
 class TestIQBPipelineInit:
     """Test for IQBPipeline.__init__ method."""
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
-    @patch("iqb.pipeline.PipelineCacheManager")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineCacheManager")
     def test_init_default_data_dir(self, mock_manager, mock_client):
         """Test initialization with default data directory."""
         pipeline = IQBPipeline(project="test-project")
@@ -57,8 +57,8 @@ class TestIQBPipelineInit:
         # Verify that the manager is initialized
         assert pipeline.manager is not None
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
-    @patch("iqb.pipeline.PipelineCacheManager")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineCacheManager")
     def test_init_custom_data_dir(self, mock_manager, mock_client, tmp_path):
         """Test initialization with custom data directory."""
         custom_dir = tmp_path / "iqb"
@@ -78,7 +78,7 @@ class TestIQBPipelineInit:
 class TestIQBPipelineExecuteQuery:
     """Test for IQBPipeline.execute_query method."""
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_execute_query_template_path_construction(self, mock_client, tmp_path):
         """Test that execute_query_template constructs correct cache directory."""
         # Create the pipeline
@@ -116,7 +116,7 @@ class TestIQBPipelineExecuteQuery:
         assert paths_provider.data_parquet_file_path() == expected_dir / "data.parquet"
         assert paths_provider.stats_json_file_path() == expected_dir / "stats.json"
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_execute_query_invalid_dates(self, mock_client, tmp_path):
         """Test error when start_date > end_date."""
         # Create the pipeline
@@ -133,7 +133,7 @@ class TestIQBPipelineExecuteQuery:
                 end_date="2024-10-01",
             )
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_execute_query_invalid_template(self, mock_client, tmp_path):
         """Test error on unknown template name."""
         # Create the pipeline
@@ -154,7 +154,7 @@ class TestIQBPipelineExecuteQuery:
 class TestIQBPipelineGetCacheEntry:
     """Test IQBPipeline.get_cache_entry method."""
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_when_exists(self, mock_client, tmp_path):
         """Test get_cache_entry returns existing cache."""
         # Create the pipeline
@@ -194,7 +194,7 @@ class TestIQBPipelineGetCacheEntry:
         # Query should NOT have been called
         mock_client.return_value.query.assert_not_called()
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_missing_without_fetch(self, mock_client, tmp_path):
         """Test get_cache_entry raises FileNotFoundError when cache missing and fetch_if_missing=False."""
         # Create the pipeline
@@ -213,7 +213,7 @@ class TestIQBPipelineGetCacheEntry:
                 fetch_if_missing=False,
             )
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_fetch_if_missing(self, mock_client, tmp_path):
         """Test get_cache_entry executes query when cache missing and fetch_if_missing=True."""
         # Create the pipeline
@@ -269,7 +269,7 @@ class TestIQBPipelineGetCacheEntry:
         assert entry.data_parquet_file_path().exists()
         assert entry.stats_json_file_path().exists()
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_partial_cache_data_only(self, mock_client, tmp_path):
         """Test get_cache_entry when only data.parquet exists (missing stats.json)."""
         # Create the pipeline
@@ -299,7 +299,7 @@ class TestIQBPipelineGetCacheEntry:
                 end_date="2024-11-01",
             )
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_partial_cache_stats_only(self, mock_client, tmp_path):
         """Test get_cache_entry when only stats.json exists (missing data.parquet)."""
         # Create the pipeline
@@ -329,7 +329,7 @@ class TestIQBPipelineGetCacheEntry:
                 end_date="2024-11-01",
             )
 
-    @patch("iqb.pipeline.PipelineBQPQClient")
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_validation_checks(self, mock_client, tmp_path):
         """Test that there are exceptions if input is wrong."""
         # Create the pipeline

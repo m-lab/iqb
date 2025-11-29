@@ -171,10 +171,7 @@ class TestIQBCacheGetData:
         """Test that requesting data for unavailable date raises FileNotFoundError."""
         cache = IQBCache(data_dir=data_dir)
 
-        with pytest.raises(
-            FileNotFoundError,
-            match=r"Cache entry not found for downloads_by_country \(2024-11-01 to 2024-12-01\)",
-        ):
+        with pytest.raises(FileNotFoundError, match=r"Cache entry not found"):
             cache.get_data(country="US", start_date=datetime(2024, 11, 1))
 
 

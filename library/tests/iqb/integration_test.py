@@ -33,7 +33,7 @@ class TestIntegration:
         cache = IQBCache(data_dir=data_dir)
 
         # Get cache entry for October 2024 country-level data
-        entry = cache.get_cache_entry(
+        entry = cache.get_mlab_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
             granularity=IQBDatasetGranularity.COUNTRY,
@@ -96,25 +96,25 @@ class TestIntegration:
         cache = IQBCache(data_dir=data_dir)
 
         # Get cache entry for October 2024 country-level data
-        entry = cache.get_cache_entry(
+        entry = cache.get_mlab_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
             granularity=IQBDatasetGranularity.COUNTRY,
         )
 
         # Use the high-level API to get a DataFramePair (no percentile binding)
-        pair = entry.get_data_frame_pair(country_code="US")
+        pair = entry.read_data_frame_pair(country_code="US")
 
         # Verify the pair has the expected structure
         assert pair is not None
-        assert len(pair.download_df) == 1
-        assert len(pair.upload_df) == 1
+        assert len(pair.download) == 1
+        assert len(pair.upload) == 1
 
         # Verify all percentile columns are present (for inspection)
-        assert "download_p95" in pair.download_df.columns
-        assert "download_p50" in pair.download_df.columns
-        assert "upload_p95" in pair.upload_df.columns
-        assert "upload_p50" in pair.upload_df.columns
+        assert "download_p95" in pair.download.columns
+        assert "download_p50" in pair.download.columns
+        assert "upload_p95" in pair.upload.columns
+        assert "upload_p50" in pair.upload.columns
 
         # Convert to dict format for IQBCalculator (percentile specified here)
         data_p95 = pair.to_dict(percentile=95)
@@ -158,7 +158,7 @@ class TestIntegration:
         # Test granularity validation: should reject city filter with country granularity
         error_raised = False
         try:
-            entry.get_data_frame_pair(country_code="US", city="Boston")
+            entry.read_data_frame_pair(country_code="US", city="Boston")
         except ValueError as e:
             error_raised = True
             assert "city" in str(e).lower()

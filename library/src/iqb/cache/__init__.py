@@ -37,9 +37,9 @@ from ..pipeline.pipeline import PipelineCacheManager
 
 
 @dataclass(frozen=True)
-class DataFramePair:
+class MLabDataFramePair:
     """
-    Pair of download and upload DataFrames containing measurement data.
+    Pair of DataFrames containing M-Lab measurement data.
 
     This class represents pre-filtered measurement data ready for conversion to
     various output formats. The DataFrames contain all percentile columns, allowing
@@ -50,8 +50,8 @@ class DataFramePair:
         upload_df: pandas DataFrame with upload data
     """
 
-    download_df: pd.DataFrame
-    upload_df: pd.DataFrame
+    download: pd.DataFrame
+    upload: pd.DataFrame
 
     def to_dict(self, *, percentile: int = 95) -> dict[str, float]:
         """
@@ -74,15 +74,14 @@ class DataFramePair:
                 the required percentile columns don't exist.
         """
         # 1. Ensure we have exactly one row in each DataFrame
-        if len(self.download_df) != 1:
+        if len(self.download) != 1:
             raise ValueError(
-                f"Expected exactly 1 row in download DataFrame, "
-                f"but got {len(self.download_df)} rows"
+                f"Expected exactly 1 row in download DataFrame, but got {len(self.download)} rows"
             )
 
-        if len(self.upload_df) != 1:
+        if len(self.upload) != 1:
             raise ValueError(
-                f"Expected exactly 1 row in upload DataFrame, but got {len(self.upload_df)} rows"
+                f"Expected exactly 1 row in upload DataFrame, but got {len(self.upload)} rows"
             )
 
         # 2. Construct the percentile column names
@@ -93,21 +92,21 @@ class DataFramePair:
 
         # 3. Check that the percentile columns actually exist
         for col in [download_col, latency_col, loss_col]:
-            if col not in self.download_df.columns:
+            if col not in self.download.columns:
                 raise ValueError(
                     f"Percentile column '{col}' not found in download data. "
-                    f"Available columns: {list(self.download_df.columns)}"
+                    f"Available columns: {list(self.download.columns)}"
                 )
 
-        if upload_col not in self.upload_df.columns:
+        if upload_col not in self.upload.columns:
             raise ValueError(
                 f"Percentile column '{upload_col}' not found in upload data. "
-                f"Available columns: {list(self.upload_df.columns)}"
+                f"Available columns: {list(self.upload.columns)}"
             )
 
         # 4. Extract the single row we need
-        download_row = self.download_df.iloc[0]
-        upload_row = self.upload_df.iloc[0]
+        download_row = self.download.iloc[0]
+        upload_row = self.upload.iloc[0]
 
         # 5. Return the dict with explicit float conversion
         return {
@@ -119,16 +118,9 @@ class DataFramePair:
 
 
 @dataclass(frozen=True)
-class CacheEntry:
+class MLabCacheEntry:
     """
-    Entry inside the data cache.
-
-    The available granularities are:
-
-        1. "country"
-        2. "country_asn"
-        3. "country_city"
-        4. "country_city_asn"
+    M-Lab entry inside the data cache.
 
     Attributes:
         granularity: granularity used by this dataset
@@ -142,28 +134,11 @@ class CacheEntry:
 
     start_date: str
     end_date: str
-    granularity: str
+    granularity: IQBDatasetGranularity
     download_data: Path
     upload_data: Path
     download_stats: Path
     upload_stats: Path
-
-    @staticmethod
-    def _read_data_frame(
-        filepath: Path,
-        *,
-        country_code: str | None,
-        asn: int | None,
-        city: str | None,
-        columns: list[str] | None,
-    ) -> pd.DataFrame:
-        return iqb_parquet_read(
-            filepath=filepath,
-            country_code=country_code,
-            asn=asn,
-            city=city,
-            columns=columns,
-        )
 
     def read_download_data_frame(
         self,
@@ -187,7 +162,7 @@ class CacheEntry:
         Return:
           A pandas DataFrame.
         """
-        return self._read_data_frame(
+        return iqb_parquet_read(
             self.download_data,
             country_code=country_code,
             asn=asn,
@@ -217,7 +192,7 @@ class CacheEntry:
         Return:
           A pandas DataFrame.
         """
-        return self._read_data_frame(
+        return iqb_parquet_read(
             self.upload_data,
             country_code=country_code,
             asn=asn,
@@ -225,13 +200,13 @@ class CacheEntry:
             columns=columns,
         )
 
-    def get_data_frame_pair(
+    def read_data_frame_pair(
         self,
         *,
         country_code: str,
         city: str | None = None,
         asn: int | None = None,
-    ) -> DataFramePair:
+    ) -> MLabDataFramePair:
         """
         High-level API: Get filtered download/upload data for specific parameters.
 
@@ -286,9 +261,9 @@ class CacheEntry:
         )
 
         # 4. Make and return the pair
-        return DataFramePair(
-            download_df=download_df,
-            upload_df=upload_df,
+        return MLabDataFramePair(
+            download=download_df,
+            upload=upload_df,
         )
 
 
@@ -310,13 +285,13 @@ class IQBCache:
         """Return the data directory used by the cache."""
         return self.manager.data_dir
 
-    def get_cache_entry(
+    def get_mlab_cache_entry(
         self,
         *,
         start_date: str,
         end_date: str,
         granularity: IQBDatasetGranularity,
-    ) -> CacheEntry:
+    ) -> MLabCacheEntry:
         """
         Get cache entry associated with given dates and granularity.
 
@@ -332,17 +307,18 @@ class IQBCache:
 
         Example:
             >>> # Returns data for October 2025
-            >>> entry = cache.get_cache_entry("2025-10-01", "2025-11-01", "country")
+            >>> entry = cache.get_mlab_cache_entry(
+            ...     start_date="2025-10-01",
+            ...     end_date="2025-11-01",
+            ...     granularity=IQBDatasetGranularity.COUNTRY,
+            ... )
         """
-        # 1. create a temporary cache manager instance
-        manager = PipelineCacheManager(self.data_dir)
-
-        # 2. check whether the download entry exists
+        # 1. check whether the download entry exists
         download_dataset_name = iqb_dataset_name_for_mlab(
             granularity=granularity,
             table=PipelineDatasetMLabTable.DOWNLOAD,
         )
-        download_entry = manager.get_cache_entry(
+        download_entry = self.manager.get_cache_entry(
             dataset_name=download_dataset_name,
             start_date=start_date,
             end_date=end_date,
@@ -354,12 +330,12 @@ class IQBCache:
                 f"Cache entry not found for {download_dataset_name} ({start_date} to {end_date})"
             )
 
-        # 3. check whether the upload entry exists
+        # 2. check whether the upload entry exists
         upload_dataset_name = iqb_dataset_name_for_mlab(
             granularity=granularity,
             table=PipelineDatasetMLabTable.UPLOAD,
         )
-        upload_entry = manager.get_cache_entry(
+        upload_entry = self.manager.get_cache_entry(
             dataset_name=upload_dataset_name,
             start_date=start_date,
             end_date=end_date,
@@ -372,7 +348,7 @@ class IQBCache:
             )
 
         # 4. return the actual cache entry
-        return CacheEntry(
+        return MLabCacheEntry(
             granularity=granularity,
             start_date=start_date,
             end_date=end_date,
@@ -498,14 +474,14 @@ class IQBCache:
         # different granularities here
 
         # 2. Read the on-disk cache
-        entry = self.get_cache_entry(
+        entry = self.get_mlab_cache_entry(
             start_date=start_date.strftime("%Y-%m-%d"),
             end_date=end_date.strftime("%Y-%m-%d"),
             granularity=IQBDatasetGranularity.COUNTRY,
         )
 
         # 3. Obtain the corresponding download and upload data frames
-        df_pair = entry.get_data_frame_pair(
+        df_pair = entry.read_data_frame_pair(
             country_code=country_upper,
         )
 

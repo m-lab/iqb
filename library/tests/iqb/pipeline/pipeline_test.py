@@ -9,7 +9,6 @@ from iqb.pipeline.bqpq import PipelineBQPQQueryResult
 from iqb.pipeline.pipeline import (
     IQBPipeline,
     PipelineCacheEntry,
-    PipelineCacheTemplateName,
     _load_query_template,
 )
 
@@ -20,11 +19,11 @@ class TestLoadQueryTemplate:
     def test_load_query_template_substitution(self):
         """Test that query template placeholders are substituted."""
         # Parse inputs first (as the public interface does)
-        tname = PipelineCacheTemplateName(value="downloads_by_country")
+        dataset_name = "downloads_by_country"
         start_time = datetime(2024, 10, 1)
         end_time = datetime(2024, 11, 1)
 
-        query, template_hash = _load_query_template(tname, start_time, end_time)
+        query, template_hash = _load_query_template(dataset_name, start_time, end_time)
 
         # Verify placeholders replaced
         assert "{START_DATE}" not in query
@@ -90,7 +89,7 @@ class TestIQBPipelineExecuteQuery:
 
         # Execute query
         result = pipeline.execute_query_template(
-            template="downloads_by_country",
+            dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -128,13 +127,13 @@ class TestIQBPipelineExecuteQuery:
         # Ensure we get the expected exception
         with pytest.raises(ValueError, match="start_date must be <= end_date"):
             pipeline.execute_query_template(
-                template="downloads_by_country",
+                dataset_name="downloads_by_country",
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_execute_query_invalid_template(self, mock_client, tmp_path):
+    def test_execute_query_invalid_dataset_name(self, mock_client, tmp_path):
         """Test error on unknown template name."""
         # Create the pipeline
         pipeline = IQBPipeline(project="test-project", data_dir=tmp_path)
@@ -143,9 +142,9 @@ class TestIQBPipelineExecuteQuery:
         mock_client.assert_called_once_with(project="test-project")
 
         # Ensure we get the expected exception
-        with pytest.raises(ValueError, match="Unknown template"):
+        with pytest.raises(ValueError, match="Invalid dataset name"):
             pipeline.execute_query_template(
-                template="invalid_template",
+                dataset_name="invalid_dataset-name",
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -176,7 +175,7 @@ class TestIQBPipelineGetCacheEntry:
 
         # Get cache entry (should not execute query)
         entry = pipeline.get_cache_entry(
-            template="downloads_by_country",
+            dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -207,7 +206,7 @@ class TestIQBPipelineGetCacheEntry:
         # Don't create cache
         with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name="downloads_by_country",
                 start_date="2024-10-01",
                 end_date="2024-11-01",
                 fetch_if_missing=False,
@@ -251,7 +250,7 @@ class TestIQBPipelineGetCacheEntry:
 
         # Get cache entry with fetch_if_missing=True
         entry = pipeline.get_cache_entry(
-            template="downloads_by_country",
+            dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
@@ -294,7 +293,7 @@ class TestIQBPipelineGetCacheEntry:
         # Should raise FileNotFoundError (cache incomplete)
         with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name="downloads_by_country",
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -324,7 +323,7 @@ class TestIQBPipelineGetCacheEntry:
         # Should raise FileNotFoundError (cache incomplete)
         with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name="downloads_by_country",
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -339,10 +338,10 @@ class TestIQBPipelineGetCacheEntry:
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
 
-        # Invalid template should fail immediately
-        with pytest.raises(ValueError, match="Unknown template"):
+        # Invalid dataset name should fail immediately
+        with pytest.raises(ValueError, match="Invalid dataset name"):
             pipeline.get_cache_entry(
-                template="invalid_template",
+                dataset_name="invalid_dataset-name",
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -350,7 +349,7 @@ class TestIQBPipelineGetCacheEntry:
         # Invalid date range should fail immediately
         with pytest.raises(ValueError, match="start_date must be <= end_date"):
             pipeline.get_cache_entry(
-                template="downloads_by_country",
+                dataset_name="downloads_by_country",
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )

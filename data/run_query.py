@@ -96,7 +96,7 @@ def run_bq_query(
     # fetch_if_missing=True makes this idempotent: skips query if cache exists
     pipeline = IQBPipeline(project=project_id, data_dir=data_dir)
     entry = pipeline.get_cache_entry(
-        template=query_name,
+        dataset_name=query_name,
         start_date=start_date,
         end_date=end_date,
         fetch_if_missing=True,

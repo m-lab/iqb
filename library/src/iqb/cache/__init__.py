@@ -28,7 +28,10 @@ from pathlib import Path
 import pandas as pd
 from dateutil.relativedelta import relativedelta
 
-from ..pipeline import iqb_parquet_read
+from ..pipeline import (
+    iqb_parquet_read,
+    iqb_dataset_name_for_mlab,
+)
 from ..pipeline.pipeline import PipelineCacheManager
 
 
@@ -345,10 +348,11 @@ class IQBCache:
         manager = PipelineCacheManager(self.data_dir)
 
         # 2. check whether the download entry exists
+        # TODO(bassosimone): we should pass a proper granularity as argument
         download_entry = manager.get_cache_entry(
-            f"downloads_by_{granularity}",
-            start_date,
-            end_date,
+            dataset_name=f"downloads_by_{granularity}",
+            start_date=start_date,
+            end_date=end_date,
         )
         download_data = download_entry.data_parquet_file_path()
         download_stats = download_entry.stats_json_file_path()
@@ -358,10 +362,11 @@ class IQBCache:
             )
 
         # 3. check whether the upload entry exists
+        # TODO(bassosimone): we should pass a proper granularity as argument
         upload_entry = manager.get_cache_entry(
-            f"uploads_by_{granularity}",
-            start_date,
-            end_date,
+            dataset_name=f"uploads_by_{granularity}",
+            start_date=start_date,
+            end_date=end_date,
         )
         upload_data = upload_entry.data_parquet_file_path()
         upload_stats = upload_entry.stats_json_file_path()

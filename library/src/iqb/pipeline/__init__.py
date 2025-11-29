@@ -79,7 +79,16 @@ dumped raw query outputs is fast enough, we can directly access the data
 without producing intermediate formats.
 """
 
+from .dataset import (
+    IQBDatasetGranularity,
+    iqb_dataset_name_for_mlab,
+)
 from .pipeline import IQBPipeline
 from .pqread import iqb_parquet_read
 
-__all__ = ["IQBPipeline", "iqb_parquet_read"]
+__all__ = [
+    "IQBDatasetGranularity",
+    "IQBPipeline",
+    "iqb_dataset_name_for_mlab",
+    "iqb_parquet_read",
+]

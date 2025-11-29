@@ -69,14 +69,20 @@ jobs:
       - name: Sync workspace dependencies
         run: uv sync --dev
 
-      - name: Run pytest (all workspace members)
+      - name: Run pytest on all workspace members
         run: |
-          uv run pytest || {
+          uv run pytest --cov=. --cov-report=xml --cov-report=term-missing || {
             echo "❌ Tests failed!"
             echo "To run tests locally: uv run pytest"
             echo "To run specific component: uv run pytest library/tests"
             exit 1
           }
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: m-lab/iqb
 
   test-prototype-integration:
     name: Test Streamlit Prototype Integration

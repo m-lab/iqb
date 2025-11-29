@@ -23,3 +23,8 @@ addopts = [
     "-v",
     "--import-mode=importlib",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.0.0",
+]

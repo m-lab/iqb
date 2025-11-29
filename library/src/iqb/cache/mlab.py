@@ -345,9 +345,12 @@ class MLabCacheReader:
         Fetch M-Lab measurement data for IQB calculation.
 
         Args:
+            granularity: The granularity to use.
             country_code: ISO 2-letter country code (e.g., "US").
             start_date: Start of date range (inclusive) using YYYY-MM-DD format.
             end_date: End of date range (exclusive) using YYYY-MM-DD format.
+            asn: Optional ASN to filter for (e.g., 137).
+            city: Optional city to filter for (e.g., "Boston").
             percentile: Which percentile to extract (1-99).
 
         Returns:

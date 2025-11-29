@@ -132,7 +132,7 @@ class TestMLabCacheReaderIntegration:
 
         pair = entry.read_data_frame_pair(country_code="US")
 
-        data_p95 = pair.to_dict(percentile=95)
+        data_p95 = pair.to_iqb_data(percentile=95).to_dict()
 
         assert "download_throughput_mbps" in data_p95
         assert "upload_throughput_mbps" in data_p95
@@ -156,9 +156,9 @@ class TestMLabCacheReaderIntegration:
 
         pair = entry.read_data_frame_pair(country_code="US")
 
-        data_p95 = pair.to_dict(percentile=95)
+        data_p95 = pair.to_iqb_data(percentile=95).to_dict()
 
-        data_default = pair.to_dict()
+        data_default = pair.to_iqb_data().to_dict()
         assert data_default == data_p95
 
     def test_convert_to_dict_multiple_percentiles(self, data_dir):
@@ -167,9 +167,9 @@ class TestMLabCacheReaderIntegration:
 
         pair = entry.read_data_frame_pair(country_code="US")
 
-        data_p95 = pair.to_dict(percentile=95)
+        data_p95 = pair.to_iqb_data(percentile=95).to_dict()
 
-        data_p50 = pair.to_dict(percentile=50)
+        data_p50 = pair.to_iqb_data(percentile=50).to_dict()
 
         # Median values should generally be different from p95
         assert (
@@ -222,7 +222,7 @@ class TestMLabDataFramePairExceptions:
         pair = MLabDataFramePair(download=df_download, upload=df_upload)
 
         with pytest.raises(ValueError, match="Expected exactly 1 row in download DataFrame"):
-            pair.to_dict()
+            pair.to_iqb_data().to_dict()
 
     def test_upload_multiple_rows_raises(self):
         df_download = pd.DataFrame({"download_p95": [100]})
@@ -230,7 +230,7 @@ class TestMLabDataFramePairExceptions:
         pair = MLabDataFramePair(download=df_download, upload=df_upload)
 
         with pytest.raises(ValueError, match="Expected exactly 1 row in upload DataFrame"):
-            pair.to_dict()
+            pair.to_iqb_data().to_dict()
 
     @pytest.mark.parametrize(
         "missing_column",
@@ -249,7 +249,7 @@ class TestMLabDataFramePairExceptions:
         pair = MLabDataFramePair(download=df_download, upload=df_upload)
 
         with pytest.raises(ValueError, match=f"Percentile column '{missing_column}'"):
-            pair.to_dict()
+            pair.to_iqb_data().to_dict()
 
     def test_missing_upload_column_raises(self):
         df_download = pd.DataFrame(
@@ -264,7 +264,7 @@ class TestMLabDataFramePairExceptions:
         pair = MLabDataFramePair(download=df_download, upload=df_upload)
 
         with pytest.raises(ValueError, match="Percentile column 'upload_p95'"):
-            pair.to_dict()
+            pair.to_iqb_data().to_dict()
 
     def test_custom_percentile_missing_columns_raises(self):
         df_download = pd.DataFrame({"download_p50": [100], "latency_p50": [10], "loss_p50": [0.1]})
@@ -274,4 +274,4 @@ class TestMLabDataFramePairExceptions:
 
         # percentile=95 will be missing
         with pytest.raises(ValueError, match="Percentile column 'download_p95'"):
-            pair.to_dict(percentile=95)
+            pair.to_iqb_data(percentile=95).to_dict()

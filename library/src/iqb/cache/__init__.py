@@ -36,6 +36,18 @@ that can be compared uniformly against thresholds.
 NOTE: This creates semantics where p95 represents "typical best
 performance" - empirical validation will determine if appropriate.
 
+Design Note
+-----------
+
+We are going with separate pipelines producing data for separate
+data sources, since this scales well incrementally.
+
+Additionally, note how the data is relatively small regardless
+of the time window that we're choosing (it's always four metrics
+each of which contains between 25 and 100 percentiles). So,
+computationally, gluing together N datasets in here will never
+become an expensive operation.
+
 Example usage
 -------------
 
@@ -46,6 +58,7 @@ Example usage
     cache = IQBCache(data_dir="/shared/iqb-cache")
 """
 
+import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -54,7 +67,7 @@ from dateutil.relativedelta import relativedelta
 
 from ..pipeline.dataset import IQBDatasetGranularity
 from ..pipeline.pipeline import PipelineCacheManager
-from .mlab import MLabCacheEntry, MLabCacheReader
+from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheReader
 
 
 @dataclass(frozen=True)
@@ -69,6 +82,18 @@ class CacheEntry:
     """
 
     mlab: MLabCacheEntry
+
+
+@dataclass(frozen=True)
+class IQBData:
+    """
+    Data for computing the IQB score.
+
+    Attributes:
+      mlab: M-Lab data.
+    """
+
+    mlab: IQBDataMLab
 
 
 class IQBCache:
@@ -135,6 +160,58 @@ class IQBCache:
         # 4. Fill the result
         return CacheEntry(mlab=mlab_entry)
 
+    def get_iqb_data(
+        self,
+        *,
+        granularity: IQBDatasetGranularity,
+        country_code: str,
+        start_date: str,
+        end_date: str,
+        asn: int | None = None,
+        city: str | None = None,
+        percentile: int = 95,
+    ) -> IQBData:
+        """
+        Fetch measurement data for IQB calculation.
+
+        Args:
+            granularity: The granularity to use.
+            country_code: ISO 2-letter country code (e.g., "US").
+            start_date: Start of date range (inclusive) using YYYY-MM-DD format.
+            end_date: End of date range (exclusive) using YYYY-MM-DD format.
+            asn: Optional ASN to filter for (e.g., 137).
+            city: Optional city to filter for (e.g., "Boston").
+            percentile: Which percentile to extract (1-99).
+
+        Returns:
+            IQBData instance.
+
+        Raises:
+            FileNotFoundError: If requested data is not available in cache.
+            ValueError: If requested percentile is not available in cached data.
+        """
+
+        # 1. Obtain M-Lab IQB data
+        mlab_data = self.mlab.get_iqb_data(
+            start_date=start_date,
+            end_date=end_date,
+            granularity=granularity,
+            country_code=country_code,
+            asn=asn,
+            city=city,
+            percentile=percentile,
+        )
+
+        # 2. Try obtaining cloudflare IQB data
+        # TODO(bassosimone): implement
+
+        # 3. Try obtaining ookla IQB data
+        # TODO(bassosimone): implement
+
+        # 4. Fill the result
+        return IQBData(mlab=mlab_data)
+
+    @warnings.deprecated("use get_iqb_data instead")
     def get_data(
         self,
         country: str,
@@ -167,18 +244,6 @@ class IQBCache:
             FileNotFoundError: If requested data is not available in cache.
             ValueError: If requested percentile is not available in cached data.
         """
-
-        # Design Note
-        # -----------
-        #
-        # We are going with separate pipelines producing data for separate
-        # data sources, since this scales well incrementally.
-        #
-        # Additionally, note how the data is relatively small regardless
-        # of the time window that we're choosing (it's always four metrics
-        # each of which contains between 25 and 100 percentiles). So,
-        # computationally, gluing together N datasets in here will never
-        # become an expensive operation.
 
         # 1. Normalize country to be uppercase
         country_upper = country.upper()

@@ -23,288 +23,62 @@ directory, similar to how Git uses `.git/` for repository state. This provides:
 
 Example usage:
 
-    # Uses ./.iqb/ in current directory
+    # Uses .iqb/ in current directory
     cache = IQBCache()
 
     # Or specify custom location
     cache = IQBCache(data_dir="/shared/iqb-cache")
+
+⚠️  PERCENTILE INTERPRETATION (CRITICAL!)
+----------------------------------------
+
+For "higher is better" metrics (throughput):
+  - Raw p95 = "95% of users have ≤ 625 Mbit/s speed"
+  - Directly usable: download_p95 ≥ threshold?
+  - No inversion needed (standard statistical definition)
+
+For "lower is better" metrics (latency, packet loss):
+  - Raw p95 = "95% of users have ≤ 80ms latency" (worst-case typical)
+  - We want p95 to represent best-case typical (to match throughput)
+  - Solution: Use p5 raw labeled as p95
+  - Mathematical inversion: p(X)_labeled = p(100-X)_raw
+  - Example: OFFSET(5) raw → labeled as "latency_p95" in JSON
+
+This inversion happens in BigQuery (see data/query_*.sql),
+so this cache code treats all percentiles uniformly.
+
+When you request percentile=95, you get the 95th percentile value
+that can be compared uniformly against thresholds.
+
+NOTE: This creates semantics where p95 represents "typical best
+performance" - empirical validation will determine if appropriate.
 """
 
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
-import pandas as pd
-from dateutil.relativedelta import relativedelta
-
 from ..pipeline import (
     IQBDatasetGranularity,
-    iqb_dataset_name_for_mlab,
-    iqb_parquet_read,
 )
 from ..pipeline.cache import (
     PipelineCacheManager,
 )
-from ..pipeline.dataset import (
-    PipelineDatasetMLabExperiment,
+from .mlab import (
+    MLabCacheEntry,
+    MLabCacheManager,
+    iqb_mlab_dataframes_to_summary,
 )
-
-
-@dataclass(frozen=True)
-class DataFramePair:
-    """
-    Pair of download and upload DataFrames containing measurement data.
-
-    This class represents pre-filtered measurement data ready for conversion to
-    various output formats. The DataFrames contain all percentile columns, allowing
-    flexible extraction of any percentile.
-
-    Attributes:
-        download_df: pandas DataFrame with download/latency/loss data
-        upload_df: pandas DataFrame with upload data
-    """
-
-    download_df: pd.DataFrame
-    upload_df: pd.DataFrame
-
-    def to_dict(self, *, percentile: int = 95) -> dict[str, float]:
-        """
-        Converts the DataFramePair to a dictionary suitable for IQBCalculator.
-
-        Args:
-            percentile: The percentile to extract (1-99), default 95
-
-        Returns:
-            dict with keys for IQBCalculator:
-            {
-                "download_throughput_mbps": float,
-                "upload_throughput_mbps": float,
-                "latency_ms": float,
-                "packet_loss": float,
-            }
-
-        Raises:
-            ValueError: If the DataFrames don't have exactly one row, or if
-                the required percentile columns don't exist.
-        """
-        # 1. Ensure we have exactly one row in each DataFrame
-        if len(self.download_df) != 1:
-            raise ValueError(
-                f"Expected exactly 1 row in download DataFrame, "
-                f"but got {len(self.download_df)} rows"
-            )
-
-        if len(self.upload_df) != 1:
-            raise ValueError(
-                f"Expected exactly 1 row in upload DataFrame, but got {len(self.upload_df)} rows"
-            )
-
-        # 2. Construct the percentile column names
-        download_col = f"download_p{percentile}"
-        upload_col = f"upload_p{percentile}"
-        latency_col = f"latency_p{percentile}"
-        loss_col = f"loss_p{percentile}"
-
-        # 3. Check that the percentile columns actually exist
-        for col in [download_col, latency_col, loss_col]:
-            if col not in self.download_df.columns:
-                raise ValueError(
-                    f"Percentile column '{col}' not found in download data. "
-                    f"Available columns: {list(self.download_df.columns)}"
-                )
-
-        if upload_col not in self.upload_df.columns:
-            raise ValueError(
-                f"Percentile column '{upload_col}' not found in upload data. "
-                f"Available columns: {list(self.upload_df.columns)}"
-            )
-
-        # 4. Extract the single row we need
-        download_row = self.download_df.iloc[0]
-        upload_row = self.upload_df.iloc[0]
-
-        # 5. Return the dict with explicit float conversion
-        return {
-            "download_throughput_mbps": float(download_row[download_col]),
-            "upload_throughput_mbps": float(upload_row[upload_col]),
-            "latency_ms": float(download_row[latency_col]),
-            "packet_loss": float(download_row[loss_col]),
-        }
 
 
 @dataclass(frozen=True)
 class CacheEntry:
     """
-    Entry inside the data cache.
-
-    The available granularities are:
-
-        1. "country"
-        2. "country_asn"
-        3. "country_city"
-        4. "country_city_asn"
-
-    Attributes:
-        granularity: granularity used by this dataset
-        start_date: the start date used by this dataset (YYYY-MM-DD; included)
-        end_date: the end date used by this dataset (YYYY-MM-DD; excluded)
-        download_data: full path to data.parquet for download
-        upload_data: full path to data.parquet for upload
-        download_stats: full path to stats.json for download
-        upload_stats: full path to stats.json for upload
+    Entry inside the data cache allowing to read the underlying
+    data using pandas DataFrames.
     """
 
-    start_date: str
-    end_date: str
-    granularity: str
-    download_data: Path
-    upload_data: Path
-    download_stats: Path
-    upload_stats: Path
-
-    @staticmethod
-    def _read_data_frame(
-        filepath: Path,
-        *,
-        country_code: str | None,
-        asn: int | None,
-        city: str | None,
-        columns: list[str] | None,
-    ) -> pd.DataFrame:
-        """Read parquet data using pipeline's efficient reader."""
-        return iqb_parquet_read(
-            filepath,
-            country_code=country_code,
-            asn=asn,
-            city=city,
-            columns=columns,
-        )
-
-    def read_download_data_frame(
-        self,
-        *,
-        country_code: str | None = None,
-        asn: int | None = None,
-        city: str | None = None,
-        columns: list[str] | None = None,
-    ) -> pd.DataFrame:
-        """
-        Load the download dataset as a dataframe.
-
-        The arguments allow to select a subset of the entire dataset.
-
-        Arguments:
-          country_code: either None or the desired country code (e.g., "IT")
-          asn: either None or the desired ASN (e.g., 137)
-          city: either None or the desired city (e.g., "Boston")
-          columns: either None (all columns) or list of column names to read
-
-        Return:
-          A pandas DataFrame.
-        """
-        return self._read_data_frame(
-            self.download_data,
-            country_code=country_code,
-            asn=asn,
-            city=city,
-            columns=columns,
-        )
-
-    def read_upload_data_frame(
-        self,
-        *,
-        country_code: str | None = None,
-        asn: int | None = None,
-        city: str | None = None,
-        columns: list[str] | None = None,
-    ) -> pd.DataFrame:
-        """
-        Load the upload dataset as a dataframe.
-
-        The arguments allow to select a subset of the entire dataset.
-
-        Arguments:
-          country_code: either None or the desired country code (e.g., "IT")
-          asn: either None or the desired ASN (e.g., 137)
-          city: either None or the desired city (e.g., "Boston")
-          columns: either None (all columns) or list of column names to read
-
-        Return:
-          A pandas DataFrame.
-        """
-        return self._read_data_frame(
-            self.upload_data,
-            country_code=country_code,
-            asn=asn,
-            city=city,
-            columns=columns,
-        )
-
-    def get_data_frame_pair(
-        self,
-        *,
-        country_code: str,
-        city: str | None = None,
-        asn: int | None = None,
-    ) -> DataFramePair:
-        """
-        High-level API: Get filtered download/upload data for specific parameters.
-
-        This method provides a convenient way to get measurement data ready for
-        conversion to IQBCalculator format or other analysis. All the columns are
-        loaded, allowing for flexible extraction later.
-
-        Arguments:
-            country_code: ISO 2-letter country code (e.g., "US", "DE")
-            city: Optional city name (required for "country_city" and "country_city_asn" granularity)
-            asn: Optional ASN number (required for "country_city_asn" granularity)
-
-        Returns:
-            DataFramePair containing filtered download and upload DataFrames
-            with all the original percentile columns
-
-        Raises:
-            ValueError: If the requested granularity is incompatible with the
-                cache granularity (e.g., requesting city with country-level data)
-
-        Example:
-            >>> entry = cache.get_cache_entry("2024-10-01", "2024-11-01", "country")
-            >>> pair = entry.get_data_frame_pair(country_code="US")
-            >>> data_p95 = pair.to_dict(percentile=95)
-            >>> data_p50 = pair.to_dict(percentile=50)
-        """
-        # 1. Validate granularity compatibility
-        if city is not None and "city" not in self.granularity:
-            raise ValueError(
-                f"Cannot filter by city with granularity '{self.granularity}'. "
-                f"Use granularity containing 'city' (e.g., 'country_city')."
-            )
-
-        if asn is not None and "asn" not in self.granularity:
-            raise ValueError(
-                f"Cannot filter by ASN with granularity '{self.granularity}'. "
-                f"Use granularity containing 'asn' (e.g., 'country_asn')."
-            )
-
-        # 2. Read download data with filtering (all columns for flexibility)
-        download_df = self.read_download_data_frame(
-            country_code=country_code,
-            city=city,
-            asn=asn,
-        )
-
-        # 3. Read upload data with filtering (all columns for flexibility)
-        upload_df = self.read_upload_data_frame(
-            country_code=country_code,
-            city=city,
-            asn=asn,
-        )
-
-        # 4. Make and return the pair
-        return DataFramePair(
-            download_df=download_df,
-            upload_df=upload_df,
-        )
+    mlab: MLabCacheEntry
 
 
 class IQBCache:
@@ -319,6 +93,7 @@ class IQBCache:
                 If None, defaults to .iqb/ in current working directory.
         """
         self.manager = PipelineCacheManager(data_dir)
+        self.mlab = MLabCacheManager(self.manager)
 
     @property
     def data_dir(self) -> Path:
@@ -335,12 +110,6 @@ class IQBCache:
         """
         Get cache entry associated with given dates and granularity.
 
-        Note that this function is a low level building block allowing you to
-        access and filter data very efficiently. Consider using higher-level
-        user-friendlty APIs when they are actually available.
-
-        The returned CacheEntry allows you to read raw data as DataFrame.
-
         Arguments:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
             end_date: end measurement date expressed as YYYY-MM-DD (excluded)
@@ -348,6 +117,10 @@ class IQBCache:
 
         Return:
             A CacheEntry instance.
+
+        Raises:
+            FileNotFoundError if there's no cache entry for m-lab. Other
+                dataset are optional and don't trigger errors.
 
         Example:
             >>> from iqb.pipeline import IQBDatasetGranularity
@@ -358,180 +131,132 @@ class IQBCache:
             ...     granularity=IQBDatasetGranularity.BY_COUNTRY,
             ... )
         """
-        # 1. create a temporary cache manager instance
-        manager = PipelineCacheManager(self.data_dir)
-
-        # 2. check whether the download entry exists
-        download_dataset = iqb_dataset_name_for_mlab(
-            experiment=PipelineDatasetMLabExperiment.DOWNLOAD,
-            granularity=granularity,
-        )
-        download_entry = manager.get_cache_entry(
-            download_dataset,
-            start_date,
-            end_date,
-        )
-        download_data = download_entry.data_parquet_file_path()
-        download_stats = download_entry.stats_json_file_path()
-        if not download_data.exists() or not download_stats.exists():
-            raise FileNotFoundError(
-                f"Cache entry not found for {download_dataset.value} ({start_date} to {end_date})"
-            )
-
-        # 3. check whether the upload entry exists
-        upload_dataset = iqb_dataset_name_for_mlab(
-            experiment=PipelineDatasetMLabExperiment.UPLOAD,
-            granularity=granularity,
-        )
-        upload_entry = manager.get_cache_entry(
-            upload_dataset,
-            start_date,
-            end_date,
-        )
-        upload_data = upload_entry.data_parquet_file_path()
-        upload_stats = upload_entry.stats_json_file_path()
-        if not upload_data.exists() or not upload_stats.exists():
-            raise FileNotFoundError(
-                f"Cache entry not found for {upload_dataset.value} ({start_date} to {end_date})"
-            )
-
-        # 4. return the actual cache entry (store granularity.value as string)
-        return CacheEntry(
-            granularity=granularity.value,
+        # 1. read the mlab cache entry
+        mlab = self.mlab.get_cache_entry(
             start_date=start_date,
+            granularity=granularity,
             end_date=end_date,
-            download_data=download_data,
-            upload_data=upload_data,
-            download_stats=download_stats,
-            upload_stats=upload_stats,
         )
+        if mlab is None:
+            raise FileNotFoundError(
+                f"no cache entry for m-lab data "
+                f"(granularity={granularity!r}, start_date={start_date}, end_date={end_date})"
+            )
+
+        # 2. read the cloudflare cache entry
+        # TODO(bassosimone): implement
+
+        # 3. read the ookla cache entry
+        # TODO(bassosimone): implement
+
+        # 4. assemble and return the result
+        return CacheEntry(mlab=mlab)
 
     def get_data(
         self,
-        country: str,
-        start_date: datetime,
-        end_date: datetime | None = None,
+        *,
+        country_code: str,
+        asn: int | None = None,
+        city: str | None = None,
+        start_date: datetime | str,
+        end_date: datetime | str,
+        granularity: IQBDatasetGranularity,
         percentile: int = 95,
-    ) -> dict:
+    ) -> dict[str, dict[str, float]]:
         """
         Fetch measurement data for IQB calculation.
 
         Args:
-            country: ISO 2-letter country code (e.g., "US", "DE", "BR", "FR", etc.).
-            start_date: Start of date range (inclusive).
-            end_date: End of date range (exclusive). If None, defaults to start_date + 1 month.
+            country_code: ISO 2-letter country code (e.g., "US", "DE", "BR", "FR", etc.).
+            asn: optional ASN (e.g., 137).
+            city: optional city name (e.g., "Boston").
+            start_date: Start of date range (inclusive) in YYYY-MM-DD format or
+                datetime which we will format using %Y-%m-%d.
+            end_date: End of date range (exclusive) in YYYY-MM-DD format or
+                datetime which we will format using %Y-%m-%d.
             percentile: Which percentile to extract (1-99).
 
         Returns:
             dict with keys for IQBCalculator:
             {
-                "download_throughput_mbps": float,
-                "upload_throughput_mbps": float,
-                "latency_ms": float,
-                "packet_loss": float,
+                "m-lab": {
+                    "download_throughput_mbps": float,
+                    "upload_throughput_mbps": float,
+                    "latency_ms": float,
+                    "packet_loss": float,
+                }
             }
 
         Raises:
             FileNotFoundError: If requested data is not available in cache.
-            ValueError: If requested percentile is not available in cached data.
+            ValueError: If requested percentile is not available in cached data
+                or the granularity is not compatible with the filters causing
+                the code to select zero or multiple rows.
 
-        ⚠️  PERCENTILE INTERPRETATION (CRITICAL!)
-        =========================================
-
-        For "higher is better" metrics (throughput):
-          - Raw p95 = "95% of users have ≤ 625 Mbit/s speed"
-          - Directly usable: download_p95 ≥ threshold?
-          - No inversion needed (standard statistical definition)
-
-        For "lower is better" metrics (latency, packet loss):
-          - Raw p95 = "95% of users have ≤ 80ms latency" (worst-case typical)
-          - We want p95 to represent best-case typical (to match throughput)
-          - Solution: Use p5 raw labeled as p95
-          - Mathematical inversion: p(X)_labeled = p(100-X)_raw
-          - Example: OFFSET(5) raw → labeled as "latency_p95" in JSON
-
-        This inversion happens in BigQuery (see data/query_*.sql),
-        so this cache code treats all percentiles uniformly.
-
-        When you request percentile=95, you get the 95th percentile value
-        that can be compared uniformly against thresholds.
-
-        NOTE: This creates semantics where p95 represents "typical best
-        performance" - empirical validation will determine if appropriate.
         """
-        # TODO(bassosimone): we should convert this method to become
-        # a wrapper of `get_cache_entry` in the future.
-
         # Design Note
         # -----------
         #
-        # For now, we are going with separate pipelines producing data for
-        # separate data sources, since this scales well incrementally.
+        # We use separate pipelines producing data for separate data
+        # sources, since this scales well incrementally.
         #
-        # Additionally, note how the data is relatively small regardless
-        # of the time window that we're choosing (it's always four metrics
-        # each of which contains between 25 and 100 percentiles). So,
-        # computationally, gluing together N datasets in here will never
-        # become an expensive operation.
-        #
-        # We may revisit this choice when we approach production readiness.
+        # The data is relatively small regardless of the time window that
+        # we're choosing (it's always four metrics each of which
+        # contains between 25 and 100 percentiles). So, computationally,
+        # gluing together N datasets in here will never become
+        # an expensive operation.
 
-        # 1. Normalize country to be uppercase
-        country_upper = country.upper()
+        # 0. ensure that the granularity is compatible with the given filters
+        if city is not None and "city" not in granularity.value:
+            raise ValueError(f"granularity {granularity!r} does not include city")
 
-        # 2. Create the dictionary with the results
+        if asn is not None and "asn" not in granularity.value:
+            raise ValueError(f"granularity {granularity!r} does not include ASN")
+
+        # 1. ensure that the country_code is uppercase
+        country_code = country_code.upper()
+
+        # 2. convert start_date to string since cache code wants a string
+        if isinstance(start_date, datetime):
+            start_date = start_date.strftime("%Y-%m-%d")
+
+        # 3. same as above but for end_date
+        if isinstance(end_date, datetime):
+            end_date = end_date.strftime("%Y-%m-%d")
+
+        # 4. get the overall cache entry
+        entry = self.get_cache_entry(
+            start_date=start_date,
+            granularity=granularity,
+            end_date=end_date,
+        )
+
+        # 5. Create the dictionary with the results
         results = {}
 
-        # TODO(bassosimone): a design choice here is whether we want to
-        # allow for partial data (e.g., we have m-lab data but we do not
-        # have cloudflare data), which happens right now with a static
-        # cache and may also happen when fetching from remote. It is not
-        # an issue right now, since there's just the m-lab data source.
-
-        # 3. Attempt to fill the results with m-lab data
-        results["m-lab"] = self._get_mlab_data(
-            country_upper=country_upper,
-            start_date=start_date,
-            end_date=end_date,
+        # 6. Fill the results with m-lab data
+        mlab_download_df = entry.mlab.read_download_data_frame(
+            country_code=country_code,
+            asn=asn,
+            city=city,
+        )
+        mlab_upload_df = entry.mlab.read_upload_data_frame(
+            country_code=country_code,
+            asn=asn,
+            city=city,
+        )
+        mlab_summary = iqb_mlab_dataframes_to_summary(
             percentile=percentile,
+            download=mlab_download_df,
+            upload=mlab_upload_df,
         )
+        results["m-lab"] = mlab_summary.to_dict()
 
-        # 4. Attempt to fill the results with cloudflare data
+        # 7. Attempt to fill the results with cloudflare data
         # TODO(bassosimone): implement
 
-        # 5. Attempt to fill the results with ookla data
+        # 8. Attempt to fill the results with ookla data
         # TODO(bassosimone): implement
 
-        # 6. Return assembled result
+        # 9. Return assembled result
         return results
-
-    def _get_mlab_data(
-        self,
-        country_upper: str,
-        start_date: datetime,
-        end_date: datetime | None = None,
-        percentile: int = 95,
-    ) -> dict:
-        """Return m-lab data with the given country code, dates, etc."""
-
-        # 1. Assign a value to end_date if not set
-        if end_date is None:
-            end_date = start_date + relativedelta(months=1)
-
-        # TODO(bassosimone): make it possible to query using
-        # different granularities here
-
-        # 2. Read the on-disk cache
-        entry = self.get_cache_entry(
-            start_date=start_date.strftime("%Y-%m-%d"),
-            end_date=end_date.strftime("%Y-%m-%d"),
-            granularity=IQBDatasetGranularity.BY_COUNTRY,
-        )
-
-        # 3. Obtain the corresponding download and upload data frames
-        df_pair = entry.get_data_frame_pair(
-            country_code=country_upper,
-        )
-
-        # 4. Convert to dictionary and return
-        return df_pair.to_dict(percentile=percentile)

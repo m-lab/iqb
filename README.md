@@ -1,5 +1,7 @@
 # Internet Quality Barometer (IQB)
 
+[![Build Status](https://github.com/m-lab/iqb/actions/workflows/ci.yml/badge.svg)](https://github.com/m-lab/iqb/actions) [![codecov](https://codecov.io/gh/m-lab/iqb/branch/main/graph/badge.svg)](https://codecov.io/gh/m-lab/iqb)
+
 This repository contains the source for code the Internet Quality Barometer (IQB)
 library, and related applications and notebooks.
 

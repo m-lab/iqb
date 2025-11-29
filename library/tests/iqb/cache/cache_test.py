@@ -4,7 +4,7 @@ from datetime import datetime
 
 import pytest
 
-from iqb import IQBCache
+from iqb import IQBCache, IQBDatasetGranularity
 
 
 class TestIQBCacheInitialization:
@@ -175,6 +175,62 @@ class TestIQBCacheGetData:
             cache.get_data(country="US", start_date=datetime(2024, 11, 1))
 
 
+class TestIQBCacheGetCacheEntry:
+    """Tests for IQBCache.get_cache_entry method."""
+
+    def test_get_data_us_october_2024(self, data_dir):
+        """Test fetching US data for October 2024."""
+        # Create the cache
+        cache = IQBCache(data_dir=data_dir)
+
+        # Get the cache entry
+        entry = cache.get_cache_entry(
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            granularity=IQBDatasetGranularity.COUNTRY,
+        )
+
+        # Read the data frame pair filtering for US
+        pair = entry.mlab.read_data_frame_pair(
+            country_code="US",
+        )
+
+        # Obtain the p50
+        p50 = pair.to_iqb_data(percentile=50)
+
+        # Assert some properties
+        assert p50.download == 96.35647029849147
+        assert p50.upload == 20.958955220895582
+        assert p50.latency == 16.13
+        assert p50.loss == 0.0005169056182326177
+
+    def test_get_data_de_october_2024(self, data_dir):
+        """Test fetching Germany data for October 2024."""
+        # Create the cache
+        cache = IQBCache(data_dir=data_dir)
+
+        # Get the cache entry
+        entry = cache.get_cache_entry(
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            granularity=IQBDatasetGranularity.COUNTRY,
+        )
+
+        # Read the data frame pair filtering for DE
+        pair = entry.mlab.read_data_frame_pair(
+            country_code="DE",
+        )
+
+        # Obtain the p50
+        p50 = pair.to_iqb_data(percentile=50)
+
+        # Assert some properties
+        assert p50.download == 45.26447184187283
+        assert p50.upload == 17.168405411624306
+        assert p50.latency == 17.716
+        assert p50.loss == 0.00034476733492527604
+
+
 class TestIQBCacheAllFiles:
     """Test that all expected cache files are accessible."""
 
@@ -184,25 +240,13 @@ class TestIQBCacheAllFiles:
         countries = ["US", "DE", "BR"]
 
         for country in countries:
-            data = cache.get_data(
-                country=country,
-                start_date=datetime(2024, 10, 1),
+            data = cache.get_iqb_data(
+                granularity=IQBDatasetGranularity.COUNTRY,
+                country_code=country,
+                start_date="2024-10-01",
+                end_date="2024-11-01",
             )
-
-            # Verify structure
-            assert "m-lab" in data
-            mlab_data = data["m-lab"]
-
-            assert "download_throughput_mbps" in mlab_data
-            assert "upload_throughput_mbps" in mlab_data
-            assert "latency_ms" in mlab_data
-            assert "packet_loss" in mlab_data
-
-            # Verify all values are numeric
-            assert isinstance(mlab_data["download_throughput_mbps"], (int, float))
-            assert isinstance(mlab_data["upload_throughput_mbps"], (int, float))
-            assert isinstance(mlab_data["latency_ms"], (int, float))
-            assert isinstance(mlab_data["packet_loss"], (int, float))
+            assert data.mlab is not None
 
     def test_all_countries_october_2025(self, data_dir):
         """Test that all countries can be accessed for October 2025."""
@@ -210,47 +254,13 @@ class TestIQBCacheAllFiles:
         countries = ["US", "DE", "BR"]
 
         for country in countries:
-            data = cache.get_data(
-                country=country,
-                start_date=datetime(2025, 10, 1),
+            data = cache.get_iqb_data(
+                granularity=IQBDatasetGranularity.COUNTRY,
+                country_code=country,
+                start_date="2025-10-01",
+                end_date="2025-11-01",
             )
-
-            # Verify structure
-            assert "m-lab" in data
-            mlab_data = data["m-lab"]
-
-            assert "download_throughput_mbps" in mlab_data
-            assert "upload_throughput_mbps" in mlab_data
-            assert "latency_ms" in mlab_data
-            assert "packet_loss" in mlab_data
-
-            # Verify all values are numeric
-            assert isinstance(mlab_data["download_throughput_mbps"], (int, float))
-            assert isinstance(mlab_data["upload_throughput_mbps"], (int, float))
-            assert isinstance(mlab_data["latency_ms"], (int, float))
-            assert isinstance(mlab_data["packet_loss"], (int, float))
-
-    def test_all_supported_combinations(self, data_dir):
-        """Test all combinations of countries and periods that should be available."""
-        cache = IQBCache(data_dir=data_dir)
-
-        # All combinations we expect to have cached
-        combinations = [
-            ("US", datetime(2024, 10, 1)),
-            ("DE", datetime(2024, 10, 1)),
-            ("BR", datetime(2024, 10, 1)),
-            ("US", datetime(2025, 10, 1)),
-            ("DE", datetime(2025, 10, 1)),
-            ("BR", datetime(2025, 10, 1)),
-        ]
-
-        for country, start_date in combinations:
-            # Should not raise any errors
-            data = cache.get_data(country=country, start_date=start_date)
-
-            # Basic sanity check
-            assert "m-lab" in data
-            assert "download_throughput_mbps" in data["m-lab"]
+            assert data.mlab is not None
 
     def test_all_percentiles_available(self, data_dir):
         """Test that all expected percentiles are available in cached data."""
@@ -261,12 +271,11 @@ class TestIQBCacheAllFiles:
 
         # Test on one sample file (US, October 2024)
         for p in percentiles:
-            data = cache.get_data(
-                country="US",
-                start_date=datetime(2024, 10, 1),
+            data = cache.get_iqb_data(
+                granularity=IQBDatasetGranularity.COUNTRY,
+                country_code="US",
+                start_date="2024-10-01",
+                end_date="2024-11-01",
                 percentile=p,
             )
-
-            # Should not raise any errors
-            assert "m-lab" in data
-            assert "download_throughput_mbps" in data["m-lab"]
+            assert data.mlab is not None

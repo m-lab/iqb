@@ -119,7 +119,7 @@ class TestIntegration:
         assert "upload_p50" in pair.upload.columns
 
         # Convert to dict format for IQBCalculator (percentile specified here)
-        data_p95 = pair.to_dict(percentile=95)
+        data_p95 = pair.to_iqb_data(percentile=95).to_dict()
 
         # Verify the dict has the expected structure
         assert "download_throughput_mbps" in data_p95
@@ -142,7 +142,7 @@ class TestIntegration:
         assert data_p95["packet_loss"] >= 0
 
         # Test extracting different percentile from SAME pair (no re-read!)
-        data_p50 = pair.to_dict(percentile=50)
+        data_p50 = pair.to_iqb_data(percentile=50).to_dict()
 
         # Median values should generally be different from p95
         # (though not guaranteed, it's extremely unlikely they're identical)
@@ -154,7 +154,7 @@ class TestIntegration:
         )
 
         # Test default percentile (should be 95)
-        data_default = pair.to_dict()
+        data_default = pair.to_iqb_data().to_dict()
         assert data_default == data_p95
 
         # Granularity validation: should reject city filter with country granularity

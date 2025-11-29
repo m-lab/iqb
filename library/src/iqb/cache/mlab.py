@@ -14,6 +14,33 @@ from ..pipeline.pipeline import PipelineCacheManager
 
 
 @dataclass(frozen=True)
+class IQBDataMLab:
+    """
+    Contains M-Lab data for computing the IQB score.
+
+    Attributes:
+        download: Download speed in Mbit/s.
+        upload: Upload speed in Mbit/s.
+        latency: Minimum RTT in ms.
+        loss: Packet loss rate.
+    """
+
+    download: float
+    upload: float
+    latency: float
+    loss: float
+
+    def to_dict(self) -> dict[str, float]:
+        """Convert to standard dict used to compute IQB score."""
+        return {
+            "download_throughput_mbps": float(self.download),
+            "upload_throughput_mbps": float(self.upload),
+            "latency_ms": float(self.latency),
+            "packet_loss": float(self.loss),
+        }
+
+
+@dataclass(frozen=True)
 class MLabDataFramePair:
     """
     Pair of DataFrames containing M-Lab measurement data.
@@ -30,7 +57,7 @@ class MLabDataFramePair:
     download: pd.DataFrame
     upload: pd.DataFrame
 
-    def to_dict(self, *, percentile: int = 95) -> dict[str, float]:
+    def to_iqb_data(self, *, percentile: int = 95) -> IQBDataMLab:
         """
         Converts the DataFramePair to a dictionary suitable for IQBCalculator.
 
@@ -38,13 +65,7 @@ class MLabDataFramePair:
             percentile: The percentile to extract (1-99), default 95
 
         Returns:
-            dict with keys for IQBCalculator:
-            {
-                "download_throughput_mbps": float,
-                "upload_throughput_mbps": float,
-                "latency_ms": float,
-                "packet_loss": float,
-            }
+            An IQBDataMLab instance.
 
         Raises:
             ValueError: If the DataFrames don't have exactly one row, or if
@@ -86,12 +107,12 @@ class MLabDataFramePair:
         upload_row = self.upload.iloc[0]
 
         # 5. Return the dict with explicit float conversion
-        return {
-            "download_throughput_mbps": float(download_row[download_col]),
-            "upload_throughput_mbps": float(upload_row[upload_col]),
-            "latency_ms": float(download_row[latency_col]),
-            "packet_loss": float(download_row[loss_col]),
-        }
+        return IQBDataMLab(
+            download=float(download_row[download_col]),
+            upload=float(upload_row[upload_col]),
+            latency=float(download_row[latency_col]),
+            loss=float(download_row[loss_col]),
+        )
 
 
 @dataclass(frozen=True)
@@ -330,6 +351,51 @@ class MLabCacheReader:
             upload_stats=upload_stats,
         )
 
+    def get_iqb_data(
+        self,
+        *,
+        granularity: IQBDatasetGranularity,
+        country_code: str,
+        start_date: str,
+        end_date: str,
+        asn: int | None = None,
+        city: str | None = None,
+        percentile: int = 95,
+    ) -> IQBDataMLab:
+        """
+        Fetch M-Lab measurement data for IQB calculation.
+
+        Args:
+            granularity: The granularity to use.
+            country_code: ISO 2-letter country code (e.g., "US").
+            start_date: Start of date range (inclusive) using YYYY-MM-DD format.
+            end_date: End of date range (exclusive) using YYYY-MM-DD format.
+            asn: Optional ASN to filter for (e.g., 137).
+            city: Optional city to filter for (e.g., "Boston").
+            percentile: Which percentile to extract (1-99).
+
+        Returns:
+            IQBDataMLab instance.
+
+        Raises:
+            FileNotFoundError: If requested data is not available in cache.
+            ValueError: If requested percentile is not available in cached data.
+        """
+
+        entry = self.get_cache_entry(
+            start_date=start_date,
+            end_date=end_date,
+            granularity=granularity,
+        )
+
+        pair = entry.read_data_frame_pair(
+            country_code=country_code,
+            asn=asn,
+            city=city,
+        )
+
+        return pair.to_iqb_data(percentile=percentile)
+
     def get_data(
         self,
         *,
@@ -368,16 +434,14 @@ class MLabCacheReader:
             ValueError: If requested percentile is not available in cached data.
         """
 
-        entry = self.get_cache_entry(
+        iqb_data = self.get_iqb_data(
+            granularity=granularity,
+            country_code=country_code,
             start_date=start_date,
             end_date=end_date,
-            granularity=granularity,
-        )
-
-        pair = entry.read_data_frame_pair(
-            country_code=country_code,
             asn=asn,
             city=city,
+            percentile=percentile,
         )
 
-        return pair.to_dict(percentile=percentile)
+        return iqb_data.to_dict()

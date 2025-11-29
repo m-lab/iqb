@@ -57,7 +57,7 @@ the need for metadata files, cache invalidation logic, or naming conventions
 to prevent conflicts. Overlapping queries coexist naturally without coordination.
 
 The `{dataset}` identifies the specific dataset we are using. In general, the
-structure of the placeholder depens upon how the data is actually organized and
+structure of the placeholder depends upon how the data is actually organized and
 there is no fixed pattern. However, there are functions exported by this
 package using the `iqb_dataset_name_for_` prefix that allow generating a valid
 dataset value for a valid project value. For example, see, the

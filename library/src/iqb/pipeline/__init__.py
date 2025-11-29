@@ -80,5 +80,6 @@ without producing intermediate formats.
 """
 
 from .pipeline import IQBPipeline
+from .pqread import iqb_parquet_read
 
-__all__ = ["IQBPipeline"]
+__all__ = ["IQBPipeline", "iqb_parquet_read"]

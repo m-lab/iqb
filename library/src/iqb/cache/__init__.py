@@ -26,9 +26,9 @@ from datetime import datetime
 from pathlib import Path
 
 import pandas as pd
-import pyarrow.parquet as pq
 from dateutil.relativedelta import relativedelta
 
+from ..pipeline import iqb_parquet_read
 from ..pipeline.pipeline import PipelineCacheManager
 
 
@@ -153,22 +153,13 @@ class CacheEntry:
         city: str | None,
         columns: list[str] | None,
     ) -> pd.DataFrame:
-        # 1. setup the reading filters to efficiently skip groups of rows
-        # PyArrow filters: list of tuples (column, operator, value)
-        filters = []
-        if asn is not None:
-            filters.append(("asn", "=", asn))
-        if city is not None:
-            filters.append(("city", "=", city))
-        if country_code is not None:
-            filters.append(("country_code", "=", country_code))
-
-        # 2. load in memory using the filters and potentially cutting the columns
-        # Note: PyArrow requires filters=None (not []) when there are no filters
-        table = pq.read_table(filepath, filters=filters if filters else None, columns=columns)
-
-        # 3. finally convert to data frame
-        return table.to_pandas()
+        return iqb_parquet_read(
+            filepath=filepath,
+            country_code=country_code,
+            asn=asn,
+            city=city,
+            columns=columns,
+        )
 
     def read_download_data_frame(
         self,

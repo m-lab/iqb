@@ -329,3 +329,52 @@ class MLabCacheReader:
             download_stats=download_stats,
             upload_stats=upload_stats,
         )
+
+    def get_data(
+        self,
+        *,
+        granularity: IQBDatasetGranularity,
+        country_code: str,
+        start_date: str,
+        end_date: str,
+        asn: int | None = None,
+        city: str | None = None,
+        percentile: int = 95,
+    ) -> dict[str, float]:
+        """
+        Fetch M-Lab measurement data for IQB calculation.
+
+        Args:
+            country_code: ISO 2-letter country code (e.g., "US").
+            start_date: Start of date range (inclusive) using YYYY-MM-DD format.
+            end_date: End of date range (exclusive) using YYYY-MM-DD format.
+            percentile: Which percentile to extract (1-99).
+
+        Returns:
+            dict with keys for IQBCalculator:
+
+            {
+                "download_throughput_mbps": float,
+                "upload_throughput_mbps": float,
+                "latency_ms": float,
+                "packet_loss": float,
+            }
+
+        Raises:
+            FileNotFoundError: If requested data is not available in cache.
+            ValueError: If requested percentile is not available in cached data.
+        """
+
+        entry = self.get_cache_entry(
+            start_date=start_date,
+            end_date=end_date,
+            granularity=granularity,
+        )
+
+        pair = entry.read_data_frame_pair(
+            country_code=country_code,
+            asn=asn,
+            city=city,
+        )
+
+        return pair.to_dict(percentile=percentile)

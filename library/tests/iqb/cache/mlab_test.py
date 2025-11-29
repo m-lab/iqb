@@ -198,6 +198,22 @@ class TestMLabCacheReaderIntegration:
         with pytest.raises(FileNotFoundError):
             _ = _get_country_cache_entry_2024_10(reader)
 
+    def test_get_data_successful(self, data_dir):
+        reader = _create_reader(data_dir)
+        data = reader.get_data(
+            granularity=IQBDatasetGranularity.COUNTRY,
+            country_code="US",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            percentile=95,
+        )
+
+        assert data["download_throughput_mbps"] == 625.6932041848493
+        assert data["upload_throughput_mbps"] == 370.487725107692
+
+        assert data["latency_ms"] == 0.806
+        assert data["packet_loss"] == 0.0
+
 
 class TestMLabDataFramePairExceptions:
     def test_download_multiple_rows_raises(self):

@@ -2,6 +2,7 @@ SELECT
     client.Geo.CountryCode as country_code,
     client.Geo.city as city,
     client.Network.ASNumber as asn,
+    client.Network.ASName as as_name,
     COUNT(*) as sample_count,
 
     -- ============================================================================
@@ -74,8 +75,9 @@ WHERE
     AND client.Geo.CountryCode IS NOT NULL
     AND client.Geo.city IS NOT NULL
     AND client.Network.ASNumber IS NOT NULL
+    AND client.Network.ASName IS NOT NULL
     AND a.MeanThroughputMbps IS NOT NULL
     AND a.MinRTT IS NOT NULL
     AND a.LossRate IS NOT NULL
-GROUP BY country_code, city, asn
-ORDER BY country_code, city, asn
+GROUP BY country_code, city, asn, as_name
+ORDER BY country_code, city, asn, as_name

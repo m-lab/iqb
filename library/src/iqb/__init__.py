@@ -7,10 +7,17 @@ network measurement data, weight matrices, and quality thresholds.
 from .cache import IQBCache
 from .calculator import IQBCalculator
 from .config import IQB_CONFIG
-from .pipeline import IQBPipeline
+from .pipeline import IQBDatasetGranularity, IQBPipeline
 
 # Backward compatibility alias
 IQB = IQBCalculator
 
-__all__ = ["IQB", "IQBCalculator", "IQBCache", "IQB_CONFIG", "IQBPipeline"]
+__all__ = [
+    "IQB",
+    "IQBCalculator",
+    "IQBCache",
+    "IQB_CONFIG",
+    "IQBPipeline",
+    "IQBDatasetGranularity",
+]
 __version__ = "0.1.0"

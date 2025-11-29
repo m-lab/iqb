@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from iqb import IQBCache, IQBCalculator
+from iqb import IQBCache, IQBCalculator, IQBDatasetGranularity
 
 
 class TestIntegration:
@@ -36,7 +36,7 @@ class TestIntegration:
         entry = cache.get_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
-            granularity="country",
+            granularity=IQBDatasetGranularity.COUNTRY,
         )
 
         # Read download DataFrame for all countries
@@ -99,7 +99,7 @@ class TestIntegration:
         entry = cache.get_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
-            granularity="country",
+            granularity=IQBDatasetGranularity.COUNTRY,
         )
 
         # Use the high-level API to get a DataFramePair (no percentile binding)

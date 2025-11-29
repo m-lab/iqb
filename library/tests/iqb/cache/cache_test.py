@@ -190,7 +190,7 @@ class TestIQBCacheGetCacheEntry:
             granularity=IQBDatasetGranularity.COUNTRY,
         )
 
-        # Read the data frame pair filtering for the US
+        # Read the data frame pair filtering for US
         pair = entry.mlab.read_data_frame_pair(
             country_code="US",
         )
@@ -216,7 +216,7 @@ class TestIQBCacheGetCacheEntry:
             granularity=IQBDatasetGranularity.COUNTRY,
         )
 
-        # Read the data frame pair filtering for the US
+        # Read the data frame pair filtering for DE
         pair = entry.mlab.read_data_frame_pair(
             country_code="DE",
         )
@@ -257,8 +257,8 @@ class TestIQBCacheAllFiles:
             data = cache.get_iqb_data(
                 granularity=IQBDatasetGranularity.COUNTRY,
                 country_code=country,
-                start_date="2024-10-01",
-                end_date="2024-11-01",
+                start_date="2025-10-01",
+                end_date="2025-11-01",
             )
             assert data.mlab is not None
 

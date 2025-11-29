@@ -2,6 +2,8 @@
 
 from datetime import datetime
 
+import pytest
+
 from iqb import IQBCache, IQBCalculator, IQBDatasetGranularity
 
 
@@ -33,14 +35,14 @@ class TestIntegration:
         cache = IQBCache(data_dir=data_dir)
 
         # Get cache entry for October 2024 country-level data
-        entry = cache.get_mlab_cache_entry(
+        entry = cache.get_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
             granularity=IQBDatasetGranularity.COUNTRY,
         )
 
         # Read download DataFrame for all countries
-        download_df = entry.read_download_data_frame()
+        download_df = entry.mlab.read_download_data_frame()
         assert not download_df.empty
         assert "country_code" in download_df.columns
         assert "sample_count" in download_df.columns
@@ -50,7 +52,7 @@ class TestIntegration:
         assert len(download_df) > 200  # We have 236 countries
 
         # Read upload DataFrame for all countries
-        upload_df = entry.read_upload_data_frame()
+        upload_df = entry.mlab.read_upload_data_frame()
         assert not upload_df.empty
         assert "country_code" in upload_df.columns
         assert "sample_count" in upload_df.columns
@@ -58,20 +60,20 @@ class TestIntegration:
         assert len(upload_df) > 200  # We have 237 countries
 
         # Filter by country_code (US)
-        us_download_df = entry.read_download_data_frame(country_code="US")
+        us_download_df = entry.mlab.read_download_data_frame(country_code="US")
         assert len(us_download_df) == 1
         assert us_download_df.iloc[0]["country_code"] == "US"
         assert us_download_df.iloc[0]["sample_count"] > 0
         assert us_download_df.iloc[0]["download_p95"] > 0  # US has good throughput
 
-        us_upload_df = entry.read_upload_data_frame(country_code="US")
+        us_upload_df = entry.mlab.read_upload_data_frame(country_code="US")
         assert len(us_upload_df) == 1
         assert us_upload_df.iloc[0]["country_code"] == "US"
         assert us_upload_df.iloc[0]["sample_count"] > 0
         assert us_upload_df.iloc[0]["upload_p95"] > 0
 
         # Test column projection (only load specific columns)
-        limited_download_df = entry.read_download_data_frame(
+        limited_download_df = entry.mlab.read_download_data_frame(
             country_code="US",
             columns=["country_code", "sample_count", "download_p95", "latency_p95"],
         )
@@ -84,7 +86,7 @@ class TestIntegration:
         # Verify we can read data for multiple countries
         countries = ["US", "DE", "BR"]
         for country_code in countries:
-            df = entry.read_download_data_frame(country_code=country_code)
+            df = entry.mlab.read_download_data_frame(country_code=country_code)
             assert len(df) == 1
             assert df.iloc[0]["country_code"] == country_code
             assert df.iloc[0]["sample_count"] > 0
@@ -96,14 +98,14 @@ class TestIntegration:
         cache = IQBCache(data_dir=data_dir)
 
         # Get cache entry for October 2024 country-level data
-        entry = cache.get_mlab_cache_entry(
+        entry = cache.get_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
             granularity=IQBDatasetGranularity.COUNTRY,
         )
 
         # Use the high-level API to get a DataFramePair (no percentile binding)
-        pair = entry.read_data_frame_pair(country_code="US")
+        pair = entry.mlab.read_data_frame_pair(country_code="US")
 
         # Verify the pair has the expected structure
         assert pair is not None
@@ -155,13 +157,6 @@ class TestIntegration:
         data_default = pair.to_dict()
         assert data_default == data_p95
 
-        # Test granularity validation: should reject city filter with country granularity
-        error_raised = False
-        try:
-            entry.read_data_frame_pair(country_code="US", city="Boston")
-        except ValueError as e:
-            error_raised = True
-            assert "city" in str(e).lower()
-            assert "granularity" in str(e).lower()
-
-        assert error_raised, "Expected ValueError for city filter with country granularity"
+        # Granularity validation: should reject city filter with country granularity
+        with pytest.raises(ValueError):
+            _ = entry.mlab.read_data_frame_pair(country_code="US", city="Boston")

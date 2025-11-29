@@ -46,6 +46,7 @@ Example usage
     cache = IQBCache(data_dir="/shared/iqb-cache")
 """
 
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
@@ -54,6 +55,20 @@ from dateutil.relativedelta import relativedelta
 from ..pipeline.dataset import IQBDatasetGranularity
 from ..pipeline.pipeline import PipelineCacheManager
 from .mlab import MLabCacheEntry, MLabCacheReader
+
+
+@dataclass(frozen=True)
+class CacheEntry:
+    """
+    Cached data for computing IQB scores.
+
+    Use the entries methods for obtaining pandas DataFrames.
+
+    Attributes:
+      mlab: Cached M-Lab data.
+    """
+
+    mlab: MLabCacheEntry
 
 
 class IQBCache:
@@ -75,13 +90,13 @@ class IQBCache:
         """Return the data directory used by the cache."""
         return self.manager.data_dir
 
-    def get_mlab_cache_entry(
+    def get_cache_entry(
         self,
         *,
         start_date: str,
         end_date: str,
         granularity: IQBDatasetGranularity,
-    ) -> MLabCacheEntry:
+    ) -> CacheEntry:
         """
         Get cache entry associated with given dates and granularity.
 
@@ -96,18 +111,29 @@ class IQBCache:
             A CacheEntry instance.
 
         Example:
-            >>> # Returns data for October 2025
-            >>> entry = cache.get_mlab_cache_entry(
+            >>> # Returns the cached data for October 2025
+            >>> entry = cache.get_cache_entry(
             ...     start_date="2025-10-01",
             ...     end_date="2025-11-01",
             ...     granularity=IQBDatasetGranularity.COUNTRY,
             ... )
         """
-        return self.mlab.get_cache_entry(
+
+        # 1. Obtain cached M-Lab data
+        mlab_entry = self.mlab.get_cache_entry(
             start_date=start_date,
             end_date=end_date,
             granularity=granularity,
         )
+
+        # 2. Try obtaining cached cloudflare data
+        # TODO(bassosimone): implement
+
+        # 3. Try obtaining cached ookla data
+        # TODO(bassosimone): implement
+
+        # 4. Fill the result
+        return CacheEntry(mlab=mlab_entry)
 
     def get_data(
         self,

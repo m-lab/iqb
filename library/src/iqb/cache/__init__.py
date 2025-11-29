@@ -30,7 +30,6 @@ from dateutil.relativedelta import relativedelta
 
 from ..pipeline import (
     iqb_parquet_read,
-    iqb_dataset_name_for_mlab,
 )
 from ..pipeline.pipeline import PipelineCacheManager
 

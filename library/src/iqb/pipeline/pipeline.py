@@ -24,7 +24,9 @@ class IQBPipeline:
         Initialize cache with data directory path.
 
         Parameters:
-            project_id: BigQuery project ID.
+            project: BigQuery billing project name. That is the project to use
+                for *executing* the queries. The project on which the data
+                lives is instead determinaed by the table name *in* the query.
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """

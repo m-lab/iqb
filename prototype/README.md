@@ -10,10 +10,24 @@ The dashboard is automatically published using Cloud Run:
 | Trigger | Environment | URL |
 |---------|-------------|-----|
 | Push to `sandbox-*` branch | Sandbox | https://iqb.mlab-sandbox.measurementlab.net/ |
-| Merge pull request | Staging | https://iqb-prototype-240028626237.us-east1.run.app/ |
+| Merge pull request | Staging | http://iqb.mlab-staging.measurementlab.net/ |
 
 Use sandbox deployments to see experimental changes or share them
 with a colleague for feedback.
+
+**To see recent builds:**
+
+```bash
+gcloud builds list --project=mlab-sandbox --limit=10
+```
+
+**To see a build logs:**
+
+```bash
+gcloud builds log {BUILD_ID} --project=mlab-sandbox
+```
+
+Change the project to `mlab-staging` for the staging environment.
 
 ## Prerequisites
 

@@ -5,7 +5,7 @@
 
 substitutions:
   # Default values, can be overridden when submitting the build
-  _REGION: us-central1
+  _REGION: us-east1
   _REPOSITORY: m-lab
   _SERVICE_NAME: iqb-prototype
   _MEMORY: 1Gi

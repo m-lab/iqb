@@ -1,6 +1,19 @@
 # IQB Streamlit Prototype
 
-Streamlit-based dashboard for the Internet Quality Barometer (IQB) project.
+Streamlit-based dashboard prototype for the Internet
+Quality Barometer (IQB) project.
+
+## Automatic Deployments
+
+The dashboard is automatically published using Cloud Run:
+
+| Trigger | Environment | URL |
+|---------|-------------|-----|
+| Push to `sandbox-*` branch | Sandbox | https://iqb.mlab-sandbox.measurementlab.net/ |
+| Merge pull request | Staging | https://iqb-prototype-240028626237.us-east1.run.app/ |
+
+Use sandbox deployments to see experimental changes or share them
+with a colleague for feedback.
 
 ## Prerequisites
 
@@ -65,9 +78,9 @@ docker stop iqb-test
 docker rm iqb-test
 ```
 
-## Deploying to Cloud Run (Manual)
+## Manual Deployment
 
-Deploy to Google Cloud Run using Cloud Build:
+For manual deployment to Cloud Run using Cloud Build:
 
 ```bash
 # From the directory containing cloudbuild.yaml
@@ -75,19 +88,26 @@ gcloud builds submit --config=cloudbuild.yaml --project=mlab-sandbox
 ```
 
 This will:
-1. Build the Docker image from `prototype/Dockerfile`
-2. Push to Artifact Registry (`us-central1-docker.pkg.dev/mlab-sandbox/cloud-run-source-deploy`)
-3. Deploy to Cloud Run in `us-central1` region
 
-**Configuration:** See `cloudbuild.yaml` for deployment settings (memory, CPU, region).
+1. Build the Docker image from `prototype/Dockerfile`
+
+2. Push to Artifact Registry
+
+3. Deploy to Cloud Run in `us-east1` region
+
+**Configuration:** See `cloudbuild.yaml` for deployment
+settings (memory, CPU, region).
 
 **Permissions required:**
+
 - `roles/editor` - Deploy and update services
-- `roles/run.admin` - Make new services public (only needed once per service)
+
+- `roles/run.admin` - Make new services public (see below)
 
 **Making the service public:**
 
-If deploying a new service or if you get 403 errors, an admin needs to run:
+If deploying a new service or if you get 403 errors, an
+admin needs to run this command:
 
 ```bash
 gcloud run services add-iam-policy-binding iqb-prototype \
@@ -97,9 +117,8 @@ gcloud run services add-iam-policy-binding iqb-prototype \
   --project=mlab-sandbox
 ```
 
-This IAM policy persists across deployments, so it's only needed once.
-
-**Current deployment:** https://iqb-prototype-581276032543.us-central1.run.app/
+This IAM policy persists across deployments,
+so it's only needed once.
 
 ## Dependencies
 
@@ -111,6 +130,8 @@ The prototype depends on:
 
 - **numpy** - Numerical operations
 
-- **mlab-iqb** - IQB library (from [../library](../library), managed via uv workspace)
+- **mlab-iqb** - IQB library (from [../library](../library),
+managed via uv workspace)
 
-Dependencies are locked in the workspace `uv.lock` at the repository root.
+Dependencies are locked in the workspace `uv.lock`
+at the repository root.

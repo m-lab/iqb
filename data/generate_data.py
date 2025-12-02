@@ -79,39 +79,7 @@ def generate_for_period(
         f"Stage 1b: Querying upload metrics for {period_str}",
     )
 
-    # Stage 1c: Query downloads by country/subdivision1 (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "downloads_by_country_subdivision1",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "downloads_by_country_subdivision1.json"),
-        ],
-        f"Stage 1c: Querying download metrics by country/subdivision1 for {period_str}",
-    )
-
-    # Stage 1d: Query uploads by country/subdivision1 (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "uploads_by_country_subdivision1",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "uploads_by_country_subdivision1.json"),
-        ],
-        f"Stage 1d: Querying upload metrics by country/subdivision1 for {period_str}",
-    )
-
-    # Stage 1e: Query downloads by country/city/ASN (parquet cache only, no JSON output yet)
+    # Stage 1c: Query downloads by country/city/ASN (parquet cache only, no JSON output yet)
     run_command(
         [
             "python3",
@@ -124,10 +92,10 @@ def generate_for_period(
             "-o",
             str(cache_dir / "downloads_by_country_city_asn.json"),
         ],
-        f"Stage 1e: Querying download metrics by country/city/ASN for {period_str}",
+        f"Stage 1c: Querying download metrics by country/city/ASN for {period_str}",
     )
 
-    # Stage 1f: Query uploads by country/city/ASN (parquet cache only, no JSON output yet)
+    # Stage 1d: Query uploads by country/city/ASN (parquet cache only, no JSON output yet)
     run_command(
         [
             "python3",
@@ -140,71 +108,7 @@ def generate_for_period(
             "-o",
             str(cache_dir / "uploads_by_country_city_asn.json"),
         ],
-        f"Stage 1f: Querying upload metrics by country/city/ASN for {period_str}",
-    )
-
-    # Stage 1g: Query downloads by country/ASN (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "downloads_by_country_asn",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "downloads_by_country_asn.json"),
-        ],
-        f"Stage 1g: Querying download metrics by country/ASN for {period_str}",
-    )
-
-    # Stage 1h: Query uploads by country/ASN (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "uploads_by_country_asn",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "uploads_by_country_asn.json"),
-        ],
-        f"Stage 1h: Querying upload metrics by country/ASN for {period_str}",
-    )
-
-    # Stage 1i: Query downloads by country/city (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "downloads_by_country_city",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "downloads_by_country_city.json"),
-        ],
-        f"Stage 1i: Querying download metrics by country/city for {period_str}",
-    )
-
-    # Stage 1j: Query uploads by country/city (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "uploads_by_country_city",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "uploads_by_country_city.json"),
-        ],
-        f"Stage 1j: Querying upload metrics by country/city for {period_str}",
+        f"Stage 1d: Querying upload metrics by country/city/ASN for {period_str}",
     )
 
     # Stage 2: Merge data

@@ -30,6 +30,46 @@ class IQBPipeline:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
         """
+        # TODO(bassosimone): Consider adding query sampling support for development/testing
+        #
+        # Use case: When developing new queries, it's often useful to test on a sample
+        # (e.g., 10-25%) of the data to avoid:
+        #   - High BigQuery costs during iteration
+        #   - Rate limiting / quota exhaustion
+        #   - Long query execution times
+        #
+        # BigQuery supports TABLESAMPLE SYSTEM for efficient block-level sampling:
+        #   FROM table TABLESAMPLE SYSTEM (25 PERCENT)
+        #
+        # Benefits:
+        #   - Only scans ~25% of data blocks (cost savings!)
+        #   - Fast query execution
+        #   - Perfect for development/testing
+        #
+        # CRITICAL GOTCHA: TABLESAMPLE (100 PERCENT) != omitting the clause!
+        #   - Regular queries (no TABLESAMPLE): Results are CACHED by BigQuery
+        #   - TABLESAMPLE (100 PERCENT): NO CACHING, full scan every time
+        #   - See: https://cloud.google.com/bigquery/docs/table-sampling
+        #
+        # Therefore, implementation MUST use conditional logic:
+        #   - If sample_percent == 100: omit TABLESAMPLE entirely (use cache)
+        #   - If sample_percent < 100: add TABLESAMPLE SYSTEM (X PERCENT)
+        #
+        # Potential implementation:
+        #   1. Add sample_percent parameter to __init__ (default: 100)
+        #   2. Query templates get {TABLESAMPLE} placeholder
+        #   3. Replace with "" (100%) or "TABLESAMPLE SYSTEM (X PERCENT)" (< 100%)
+        #   4. Cache path includes sample rate when < 100 to prevent mixing data:
+        #      cache/v1/{since}/{until}/{dataset}/data.parquet          # 100%
+        #      cache/v1/{since}/{until}/{dataset}_sample25/data.parquet # 25%
+        #
+        # Alternative quick implementation:
+        #   - Use environment variable: IQB_SAMPLE_PERCENT (default: 100)
+        #   - No code changes to queries
+        #   - Usage: IQB_SAMPLE_PERCENT=25 python run_query.py ...
+        #
+        # Decision: Not implementing now (YAGNI - add when actually needed)
+
         self.client = PipelineBQPQClient(project=project)
         self.manager = PipelineCacheManager(data_dir=data_dir)
 

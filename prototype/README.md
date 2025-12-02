@@ -10,7 +10,7 @@ The dashboard is automatically published using Cloud Run:
 | Trigger | Environment | URL |
 |---------|-------------|-----|
 | Push to `sandbox-*` branch | Sandbox | https://iqb.mlab-sandbox.measurementlab.net/ |
-| Merge pull request | Staging | http://iqb.mlab-staging.measurementlab.net/ |
+| Merge pull request | Staging | https://iqb.mlab-staging.measurementlab.net/ |
 
 Use sandbox deployments to see experimental changes or share them
 with a colleague for feedback.

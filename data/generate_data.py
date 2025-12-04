@@ -10,7 +10,6 @@ This script:
 
 import subprocess
 import sys
-import tempfile
 from pathlib import Path
 
 
@@ -51,37 +50,27 @@ def generate_for_period(
         "country_asn",
         "country_city",
         "country_city_asn",
+        "country_subdivision1",
     )
 
     directions = ("downloads", "uploads")
 
-    # TODO(bassosimone): The entire JSON conversion process is legacy at this point.
-    # We only care about the v1 Parquet cache that run_query.py creates. The JSON
-    # output (via -o) triggers unnecessary Parquet→JSON conversion + disk I/O that
-    # slows down the pipeline, only to be immediately deleted when the temp directory
-    # is cleaned up. We should either: (1) make -o truly optional in run_query.py and
-    # skip JSON generation entirely, or (2) add a --cache-only flag. For now keeping
-    # this as-is since the PR scope is already large, but this is pure waste.
-    with tempfile.TemporaryDirectory() as tmpdir:
-        cache_dir = Path(tmpdir)
-
-        for dataset in datasets:
-            for direction in directions:
-                full_dataset = f"{direction}_by_{dataset}"
-                run_command(
-                    [
-                        "python3",
-                        str(data_dir / "run_query.py"),
-                        full_dataset,
-                        "--start-date",
-                        start_date,
-                        "--end-date",
-                        end_date,
-                        "-o",
-                        str(cache_dir / f"{full_dataset}.json"),
-                    ],
-                    f"Querying {full_dataset} metrics for {period_str}",
-                )
+    for dataset in datasets:
+        for direction in directions:
+            full_dataset = f"{direction}_by_{dataset}"
+            run_command(
+                [
+                    "python3",
+                    str(data_dir / "run_query.py"),
+                    full_dataset,
+                    "--start-date",
+                    start_date,
+                    "--end-date",
+                    end_date,
+                    # No -o argument: skips JSON conversion, only creates v1 Parquet cache
+                ],
+                f"Querying {full_dataset} metrics for {period_str}",
+            )
 
 
 def main():

@@ -132,16 +132,69 @@ class TestPipelineCacheManager:
         assert entry.start_time == datetime(2024, 10, 1)
         assert entry.end_time == datetime(2024, 11, 1)
 
-    def test_get_cache_entry_validates_dataset_name(self, tmp_path):
-        """Test that get_cache_entry validates the dataset name."""
+    def test_get_cache_entry_validates_dataset_name_rejects_invalid(self, tmp_path):
+        """Test that get_cache_entry rejects invalid dataset names."""
         manager = PipelineCacheManager(data_dir=tmp_path)
 
+        # Should reject hyphens
         with pytest.raises(ValueError, match="Invalid dataset name"):
             manager.get_cache_entry(
                 dataset_name="invalid_dataset-name",
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
+
+        # Should reject uppercase letters
+        with pytest.raises(ValueError, match="Invalid dataset name"):
+            manager.get_cache_entry(
+                dataset_name="InvalidDataset",
+                start_date="2024-10-01",
+                end_date="2024-11-01",
+            )
+
+        # Should reject special characters
+        with pytest.raises(ValueError, match="Invalid dataset name"):
+            manager.get_cache_entry(
+                dataset_name="dataset@name",
+                start_date="2024-10-01",
+                end_date="2024-11-01",
+            )
+
+    def test_get_cache_entry_accepts_valid_dataset_names(self, tmp_path):
+        """Test that get_cache_entry accepts valid dataset names including numbers."""
+        manager = PipelineCacheManager(data_dir=tmp_path)
+
+        # Should accept lowercase letters and underscores
+        entry1 = manager.get_cache_entry(
+            dataset_name="downloads_by_country",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+        assert entry1.dataset_name == "downloads_by_country"
+
+        # Should accept numbers (new requirement)
+        entry2 = manager.get_cache_entry(
+            dataset_name="downloads_by_country_subdivision1",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+        assert entry2.dataset_name == "downloads_by_country_subdivision1"
+
+        # Should accept names starting with numbers
+        entry3 = manager.get_cache_entry(
+            dataset_name="2024_dataset",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+        assert entry3.dataset_name == "2024_dataset"
+
+        # Should accept all lowercase alphanumeric with underscores
+        entry4 = manager.get_cache_entry(
+            dataset_name="test_123_data_v2",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+        assert entry4.dataset_name == "test_123_data_v2"
 
     def test_get_cache_entry_validates_dates(self, tmp_path):
         """Test that get_cache_entry validates date range."""

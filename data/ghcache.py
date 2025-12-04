@@ -71,7 +71,7 @@ def validate_cache_path(path: str) -> bool:
       - Component 2: "v1"
       - Component 3: RFC3339 timestamp (e.g., 20241001T000000Z)
       - Component 4: RFC3339 timestamp
-      - Component 5: lowercase letters and underscores [a-z_]+
+      - Component 5: lowercase letters, numbers, and underscores [a-z0-9_]+
       - Component 6: "data.parquet" or "stats.json"
     """
     parts = path.split("/")
@@ -93,8 +93,8 @@ def validate_cache_path(path: str) -> bool:
     if not rfc3339_pattern.match(parts[3]):
         return False
 
-    # Component 5: lowercase letters and underscores
-    name_pattern = re.compile(r"^[a-z_]+$")
+    # Component 5: lowercase letters, numbers, and underscores
+    name_pattern = re.compile(r"^[a-z0-9_]+$")
     if not name_pattern.match(parts[4]):
         return False
 

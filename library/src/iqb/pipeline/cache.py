@@ -79,7 +79,7 @@ class PipelineCacheManager:
         start_time, end_time = _parse_both_dates(start_date, end_date)
 
         # 2. ensure the dataset name is correct
-        if not re.match(r"^[a-z_]+$", dataset_name):
+        if not re.match(r"^[a-z0-9_]+$", dataset_name):
             raise ValueError(f"Invalid dataset name: {dataset_name}")
 
         # 3. return the corresponding entry

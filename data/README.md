@@ -122,11 +122,11 @@ uv run python generate_data.py
 
 This orchestrates the complete pipeline:
 
-1. Queries BigQuery for multiple datasets (country, country_asn, country_city, country_city_asn)
+1. Queries BigQuery for multiple datasets (country, country_asn, country_city, country_city_asn, country_subdivision1)
 
 2. Queries both download and upload metrics for each dataset
 
-3. Saves results to v1 Parquet cache with query metadata
+3. Saves results to v1 Parquet cache with query metadata (skips JSON conversion for performance)
 
 Generated files: v1 Parquet files in `./cache/v1/` with query metadata.
 
@@ -135,15 +135,17 @@ Generated files: v1 Parquet files in `./cache/v1/` with query metadata.
 ```bash
 cd data/
 
-# Query specific dataset
+# Run a single query
 uv run python run_query.py downloads_by_country \
-  --start-date 2024-10-01 --end-date 2024-11-01 \
-  -o cache/v0/downloads_by_country.json
+  --start-date 2024-10-01 --end-date 2024-11-01
 
-# Query another dataset
-uv run python run_query.py uploads_by_country_asn \
-  --start-date 2024-10-01 --end-date 2024-11-01 \
-  -o cache/v0/uploads_by_country_asn.json
+# Inspect results with pandas
+python3 << 'EOF'
+import pandas as pd
+df = pd.read_parquet('cache/v1/2024-10-01/2024-11-01/downloads_by_country/data.parquet')
+print(df.head())
+print(df.info())
+EOF
 ```
 
 **Pipeline Scripts**:
@@ -151,7 +153,7 @@ uv run python run_query.py uploads_by_country_asn \
 - [generate_data.py](generate_data.py) - Orchestrates the complete pipeline
 
 - [run_query.py](run_query.py) - Executes BigQuery queries using IQBPipeline,
-saves v1 cache (parquet + stats) and optional JSON output
+saves v1 Parquet cache only (use pandas to inspect results)
 
 ## Notes
 

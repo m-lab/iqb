@@ -5,11 +5,12 @@ Orchestrate the data generation pipeline for IQB static data.
 This script:
 0. Syncs cached files from GitHub (if available)
 1. Runs BigQuery queries for downloads and uploads for multiple time periods
-2. Merges the results into per-country JSON files
+2. Saves results to v1 Parquet cache
 """
 
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 
@@ -45,117 +46,42 @@ def generate_for_period(
     print(f"Date range: [{start_date}, {end_date})")
     print(f"{'#' * 60}")
 
-    cache_dir = data_dir / "cache" / "v0"
-
-    # Stage 1a: Query downloads
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "downloads_by_country",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "downloads.json"),
-        ],
-        f"Stage 1a: Querying download metrics for {period_str}",
+    datasets = (
+        "country",
+        "country_asn",
+        "country_city",
+        "country_city_asn",
     )
 
-    # Stage 1b: Query uploads
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "uploads_by_country",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "uploads.json"),
-        ],
-        f"Stage 1b: Querying upload metrics for {period_str}",
-    )
+    directions = ("downloads", "uploads")
 
-    # Stage 1c: Query downloads by country/city/ASN (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "downloads_by_country_city_asn",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "downloads_by_country_city_asn.json"),
-        ],
-        f"Stage 1c: Querying download metrics by country/city/ASN for {period_str}",
-    )
+    # TODO(bassosimone): The entire JSON conversion process is legacy at this point.
+    # We only care about the v1 Parquet cache that run_query.py creates. The JSON
+    # output (via -o) triggers unnecessary Parquet→JSON conversion + disk I/O that
+    # slows down the pipeline, only to be immediately deleted when the temp directory
+    # is cleaned up. We should either: (1) make -o truly optional in run_query.py and
+    # skip JSON generation entirely, or (2) add a --cache-only flag. For now keeping
+    # this as-is since the PR scope is already large, but this is pure waste.
+    with tempfile.TemporaryDirectory() as tmpdir:
+        cache_dir = Path(tmpdir)
 
-    # Stage 1d: Query uploads by country/city/ASN (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "uploads_by_country_city_asn",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "uploads_by_country_city_asn.json"),
-        ],
-        f"Stage 1d: Querying upload metrics by country/city/ASN for {period_str}",
-    )
-
-    # Stage 1e: Query downloads by country/ASN (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "downloads_by_country_asn",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "downloads_by_country_asn.json"),
-        ],
-        f"Stage 1e: Querying download metrics by country/ASN for {period_str}",
-    )
-
-    # Stage 1f: Query uploads by country/ASN (parquet cache only, no JSON output yet)
-    run_command(
-        [
-            "python3",
-            str(data_dir / "run_query.py"),
-            "uploads_by_country_asn",
-            "--start-date",
-            start_date,
-            "--end-date",
-            end_date,
-            "-o",
-            str(cache_dir / "uploads_by_country_asn.json"),
-        ],
-        f"Stage 1f: Querying upload metrics by country/ASN for {period_str}",
-    )
-
-    # Stage 2: Merge data
-    # Creates: {country}_{period_str}.json (e.g., us_2024_10.json)
-    # Note: This only merges downloads_by_country and uploads_by_country
-    # The country/city/ASN queries are cached as parquet only for now
-    run_command(
-        [
-            "python3",
-            str(data_dir / "merge_data.py"),
-            "--output-suffix",
-            period_str,
-        ],
-        f"Stage 2: Merging data for {period_str}",
-    )
+        for dataset in datasets:
+            for direction in directions:
+                full_dataset = f"{direction}_by_{dataset}"
+                run_command(
+                    [
+                        "python3",
+                        str(data_dir / "run_query.py"),
+                        full_dataset,
+                        "--start-date",
+                        start_date,
+                        "--end-date",
+                        end_date,
+                        "-o",
+                        str(cache_dir / f"{full_dataset}.json"),
+                    ],
+                    f"Querying {full_dataset} metrics for {period_str}",
+                )
 
 
 def main():

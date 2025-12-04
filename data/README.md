@@ -14,14 +14,17 @@ This directory contains static reference data used by the IQB prototype.
 
 We maintain two data formats in `./cache/`:
 
-### v0 - JSON Format (Golden Files)
+### v0 - JSON Format (Deprecated - Golden Files Only)
+
+**IMPORTANT**: The v0 cache is no longer actively updated. Files in `./cache/v0/` are
+kept as golden files for testing and backward compatibility only.
 
 Per-country JSON files with pre-aggregated percentiles:
 
 - **Location**: `./cache/v0/{country}_{year}_{month}.json`
 - **Example**: `us_2024_10.json` (~31M download samples, ~24M upload samples)
 - **Structure**: Simple JSON with percentiles (p1, p5, p10, p25, p50, p75, p90, p95, p99)
-- **Use case**: Casual data processing, backward compatibility, quick inspection
+- **Use case**: Golden files for testing, backward compatibility
 
 ```json
 {
@@ -44,8 +47,7 @@ Raw query results stored efficiently for flexible analysis:
   - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
 - **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
 
-**Migration**: The [../library](../library) `IQBCache` uses v1. We are keeping v0 data
-around as golden files, for backward compatibility, and casual use.
+**Current format**: The [../library](../library) `IQBCache` uses v1 exclusively.
 
 ## GitHub Cache Synchronization (Interim Solution)
 
@@ -120,32 +122,28 @@ uv run python generate_data.py
 
 This orchestrates the complete pipeline:
 
-1. Queries BigQuery for download metrics (throughput, latency, packet loss)
+1. Queries BigQuery for multiple datasets (country, country_asn, country_city, country_city_asn)
 
-2. Queries BigQuery for upload metrics (throughput)
+2. Queries both download and upload metrics for each dataset
 
-3. Merges the data into per-country JSON files
+3. Saves results to v1 Parquet cache with query metadata
 
-Generated files: v0 JSON files `${country}_2024_10.json` and `${country}_2025_10.json`
-inside [./cache/v0](./cache/v0), plus v1 Parquet cache with query metadata.
+Generated files: v1 Parquet files in `./cache/v1/` with query metadata.
 
 **Individual Pipeline Stages** (for debugging):
 
 ```bash
 cd data/
 
-# Stage 1a: Query downloads
+# Query specific dataset
 uv run python run_query.py downloads_by_country \
   --start-date 2024-10-01 --end-date 2024-11-01 \
-  -o downloads.json
+  -o cache/v0/downloads_by_country.json
 
-# Stage 1b: Query uploads
-uv run python run_query.py uploads_by_country \
+# Query another dataset
+uv run python run_query.py uploads_by_country_asn \
   --start-date 2024-10-01 --end-date 2024-11-01 \
-  -o uploads.json
-
-# Stage 2: Merge data
-uv run python merge_data.py
+  -o cache/v0/uploads_by_country_asn.json
 ```
 
 **Pipeline Scripts**:
@@ -153,18 +151,12 @@ uv run python merge_data.py
 - [generate_data.py](generate_data.py) - Orchestrates the complete pipeline
 
 - [run_query.py](run_query.py) - Executes BigQuery queries using IQBPipeline,
-saves v1 cache (parquet + stats) and v0 JSON output
-
-- [merge_data.py](merge_data.py) - Merges download and upload data into
-per-country v0 files
+saves v1 cache (parquet + stats) and optional JSON output
 
 ## Notes
 
-- **Static data**: These files contain pre-aggregated percentiles
-for Phase 1 prototype. Phase 2 will add dynamic data fetching.
-
-- **Data formats**: v0 JSON files (~1.4KB) for quick analysis;
-v1 Parquet files (~1-60 MiB) with stats.json for efficient processing and cost tracking.
+- **Cache format**: v1 Parquet files (~1-60 MiB) with stats.json for efficient
+processing and cost tracking. v0 JSON files are deprecated and kept only as golden files.
 
 - **Time granularity**: Data is aggregated over the entire
 months of October 2024 and October 2025. The analyst decides which
@@ -173,9 +165,8 @@ time window to use for running IQB calculations.
 - **Percentile selection**: The Streamlit UI allows users
 to select which percentile(s) to use for IQB score calculations.
 
-- **File size**: Each per-country JSON file is ~1.4KB (uncompressed). No
-compression needed. For more fine grained queries, the Parquet files
-allow for more efficient storage and data processing.
+- **Query results**: Raw query results are stored in Parquet format for efficient
+filtering and analysis. Use the [../library](../library) `IQBCache` to access them.
 
 ## M-Lab NDT Data Schema
 

@@ -1,5 +1,9 @@
 SELECT
     client.Geo.CountryCode as country_code,
+    client.Geo.Subdivision1ISOCode as subdivision1_iso_code,
+    client.Geo.Subdivision1Name as subdivision1_name,
+    client.Network.ASNumber as asn,
+    client.Network.ASName as as_name,
     COUNT(*) as sample_count,
 
     -- ============================================================================
@@ -70,8 +74,12 @@ FROM
 WHERE
     date >= "{START_DATE}" AND date < "{END_DATE}"
     AND client.Geo.CountryCode IS NOT NULL
+    AND client.Geo.Subdivision1ISOCode IS NOT NULL
+    AND client.Geo.Subdivision1Name IS NOT NULL
+    AND client.Network.ASNumber IS NOT NULL
+    AND client.Network.ASName IS NOT NULL
     AND a.MeanThroughputMbps IS NOT NULL
     AND a.MinRTT IS NOT NULL
     AND a.LossRate IS NOT NULL
-GROUP BY country_code
-ORDER BY country_code
+GROUP BY country_code, subdivision1_iso_code, subdivision1_name, asn, as_name
+ORDER BY country_code, subdivision1_iso_code, subdivision1_name, asn, as_name

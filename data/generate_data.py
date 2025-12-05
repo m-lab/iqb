@@ -51,6 +51,7 @@ def generate_for_period(
         "country_city",
         "country_city_asn",
         "country_subdivision1",
+        "country_subdivision1_asn",
     )
 
     directions = ("downloads", "uploads")

@@ -572,24 +572,6 @@ if country_data:
                             st.session_state.selected_country = clicked_iso_a3
                         st.rerun()
 
-        if st.session_state.selected_country:
-            col1, col2 = st.columns([1, 5])
-            with col1:
-                if st.button("← Clear Selection"):
-                    st.session_state.selected_country = None
-                    st.rerun()
-
-            # Find country info
-            data = country_data.get(st.session_state.selected_country)
-            if data:
-                country_code = data["code"]
-                country_name = data["name"]
-                st.markdown("---")
-                create_trend_charts(country_code, country_name)
-            else:
-                st.error(
-                    f"Country data not found for {st.session_state.selected_country}"
-                )
     with col_info:
         if (
             st.session_state.selected_country
@@ -597,6 +579,7 @@ if country_data:
         ):
             data = country_data[st.session_state.selected_country]
             metrics = data["metrics"]
+            country_name = data["country_name"]
             percentile = st.session_state.selected_percentile
 
             # Update state with cache data
@@ -656,7 +639,7 @@ if country_data:
                     metrics["upload_throughput_mbps"][p] for p in percentiles
                 ],
                 "Latency (ms)": [metrics["latency_ms"][p] for p in percentiles],
-                "Packet Loss(%)": [metrics["packet_loss"][p] for p in percentiles],
+                "Packet Loss (%)": [metrics["packet_loss"][p] for p in percentiles],
             }
 
             df = pd.DataFrame(table_data)
@@ -673,7 +656,7 @@ if country_data:
                         "Download (Mbps)": "{:.2f}",
                         "Upload (Mbps)": "{:.2f}",
                         "Latency (ms)": "{:.2f}",
-                        " Packet Loss (%)": "{:.4f}",
+                        "Packet Loss (%)": "{:.4f}",
                     }
                 ),
                 use_container_width=True,

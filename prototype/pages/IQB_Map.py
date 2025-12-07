@@ -602,6 +602,16 @@ if country_data:
                             st.session_state.selected_country = clicked_iso_a3
                         st.rerun()
 
+        if (
+            st.session_state.selected_country
+            and st.session_state.selected_country in country_data
+        ):
+            data = country_data[st.session_state.selected_country]
+            country_code = data["code"]
+            country_name = data["name"]
+            st.markdown("---")
+            create_trend_charts(country_code, country_name)
+
     with col_info:
         if (
             st.session_state.selected_country

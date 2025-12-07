@@ -37,7 +37,7 @@ DATASET_COLORS = {
 # ============================================================================
 # VISUALIZATION SETTINGS
 # ============================================================================
-SUNBURST_HEIGHT = 700
+SUNBURST_HEIGHT = 500
 COMPONENT_FONT_SIZE = 20
 DATASET_FONT_SIZE = 16
 USE_CASE_FONT_SIZE = 18

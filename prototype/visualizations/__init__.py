@@ -12,6 +12,7 @@ from .ui_components import (
     render_dataset_weights_editor,
     render_measurement_inputs,
     render_requirement_weights_editor,
+    render_sunburst,
     render_threshold_editor,
     render_use_case_weights_editor,
 )
@@ -25,6 +26,7 @@ __all__ = [
     "render_dataset_weights_editor",
     "render_calculation_details",
     "render_config_editor",
+    "render_sunburst",
     # Sunburst Data
     "prepare_requirements_sunburst_data",
     "prepare_use_cases_sunburst_data",

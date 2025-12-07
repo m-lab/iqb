@@ -73,23 +73,23 @@ def main():
                 data=data_for_calculation, print_details=False
             )
 
-            sun_col1, sun_col2, sun_col3 = st.columns(3)
+            tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
 
-            with sun_col1:
+            with tab1:
                 render_sunburst(
                     prepare_requirements_sunburst_data(state),
                     title="Requirements → Datasets",
                     iqb_score=iqb_score,
                 )
 
-            with sun_col2:
+            with tab2:
                 render_sunburst(
                     prepare_use_cases_sunburst_data(state),
                     title="Use Cases → Datasets",
                     iqb_score=iqb_score,
                 )
 
-            with sun_col3:
+            with tab3:
                 render_sunburst(
                     prepare_complete_hierarchy_sunburst_data(state),
                     title="Use Cases → Requirements → Datasets",

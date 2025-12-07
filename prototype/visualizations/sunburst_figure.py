@@ -23,8 +23,11 @@ def create_sunburst_figure(
     hover_text: List,
     title: str = "",
     hierarchy_levels: int = 2,
+    height: int = None,
 ) -> go.Figure:
     """Create a single sunburst plotly figure."""
+
+    chart_height = height if height is not None else SUNBURST_HEIGHT
     font_sizes = []
 
     if hierarchy_levels == 3:
@@ -64,7 +67,7 @@ def create_sunburst_figure(
     )
 
     fig.update_layout(
-        height=SUNBURST_HEIGHT,
+        height=chart_height,
         margin=dict(t=40, b=10, l=10, r=10),
         showlegend=False,
         title=dict(

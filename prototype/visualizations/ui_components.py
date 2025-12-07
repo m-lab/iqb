@@ -40,6 +40,8 @@ from utils.data_utils import (
     identify_requirement_type,
 )
 
+from .sunburst_figure import add_iqb_score_annotation, create_sunburst_figure
+
 # ============================================================================
 # INPUT COMPONENTS
 # ============================================================================
@@ -457,3 +459,22 @@ def render_config_editor(state: IQBAppState) -> None:
 
         with col4:
             render_dataset_weights_editor(state)
+
+
+def render_sunburst(
+    data, title: str, iqb_score: float, hierarchy_levels: int = 2, height: int = 300
+):
+    """Render a sunburst chart from SunburstData."""
+    fig = create_sunburst_figure(
+        data.labels,
+        data.parents,
+        data.values,
+        data.colors,
+        data.ids,
+        data.hover_text,
+        title=title,
+        hierarchy_levels=hierarchy_levels,
+        height=height,
+    )
+    add_iqb_score_annotation(fig, iqb_score)
+    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})

@@ -325,6 +325,14 @@ def create_world_map(country_data: dict, selected_country: str = None):
         landcolor="#F5F5F5",
     )
 
+    # If a country is selected, zoom into it
+    if selected_country:
+        center_coords = get_country_center(selected_country)
+        if center_coords:
+            lat, lon, scale = center_coords
+            geo_settings["center"] = dict(lat=lat, lon=lon)
+            geo_settings["projection_scale"] = scale
+
     fig.update_layout(
         geo=geo_settings,
         height=500,
@@ -332,6 +340,28 @@ def create_world_map(country_data: dict, selected_country: str = None):
     )
 
     return fig
+
+
+def get_country_center(iso_a3: str) -> tuple | None:
+    """
+    Return (latitude, longitude, zoom_scale) for a country.
+    Higher scale = more zoomed in.
+    """
+    # Country centers with appropriate zoom levels
+    country_coords = {
+        # North America
+        "USA": (39.8, -98.5, 3.0),
+        "CAN": (56.1, -106.3, 2.0),
+        "MEX": (23.6, -102.5, 4.0),
+        # Europe
+        "DEU": (51.2, 10.5, 10.0),
+        "FRA": (46.2, 2.2, 8.0),
+        "CZE": (49.8, 15.5, 12.0),
+        # Oceania
+        "AUS": (-25.3, 133.8, 2.8),
+    }
+
+    return country_coords.get(iso_a3)
 
 
 def create_trend_charts(country_code: str, country_name: str):
@@ -579,7 +609,7 @@ if country_data:
         ):
             data = country_data[st.session_state.selected_country]
             metrics = data["metrics"]
-            country_name = data["country_name"]
+            country_name = data["name"]
             percentile = st.session_state.selected_percentile
 
             # Update state with cache data

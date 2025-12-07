@@ -4,8 +4,6 @@ IQB Interactive Map Page
 Displays world map with countries that have data, allows clicking for historical trends.
 """
 
-# Add this right after the imports, before anything else
-
 import json
 import re
 from pathlib import Path
@@ -34,8 +32,6 @@ CACHE_DIR = SCRIPT_DIR.parent / "cache" / "v0"
 
 if "app_state" not in st.session_state:
     st.session_state.app_state = initialize_app_state()
-
-
 state = st.session_state.app_state
 
 
@@ -150,7 +146,7 @@ def get_percentile_value(metrics, metric_name, percentile="p50"):
     metric_data = metrics[metric_name]
     if isinstance(metric_data, dict):
         return metric_data.get(percentile)
-    return metric_data  # If it's just a value
+    return metric_data
 
 
 def calculate_iqb_score_from_metrics(
@@ -203,9 +199,7 @@ def load_country_data_for_date(year: int, month: int, percentile: str = "p95"):
                 "code": code,
                 "iso_a3": iso_a3,
                 "name": country_info["info"]["name"],
-                "score": calculate_iqb_score_from_metrics(
-                    metrics, percentile
-                ),  # Changed
+                "score": calculate_iqb_score_from_metrics(metrics, percentile),
                 "download": get_percentile_value(
                     metrics, "download_throughput_mbps", percentile
                 ),
@@ -303,6 +297,8 @@ def create_world_map(country_data: dict, selected_country: str = None):
             customdata=iso_codes,
             colorscale="RdYlBu",
             showscale=True,
+            zmin=0,
+            zmax=1,
             marker_line_color=[
                 "red" if selected_country and iso == selected_country else "white"
                 for iso in iso_codes
@@ -547,6 +543,10 @@ with st.spinner("Loading data..."):
     )
 
 if country_data:
+    if st.session_state.selected_country:
+        if st.button("← Clear Selection"):
+            st.session_state.selected_country = None
+            st.rerun()
     col_map, col_info = st.columns(2)
 
     with col_map:

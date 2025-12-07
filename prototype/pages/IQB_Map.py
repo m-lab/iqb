@@ -5,6 +5,7 @@ Displays world map with countries that have data, allows clicking for historical
 """
 
 import json
+import os
 import re
 from pathlib import Path
 
@@ -27,7 +28,11 @@ st.title("Global Internet Quality Barometer Map")
 
 SCRIPT_DIR = Path(__file__).parent
 GEOJSON_DIR = SCRIPT_DIR / "natural_earth" / "geojson_countries"
-CACHE_DIR = SCRIPT_DIR.parent.parent / "data" / "cache" / "v0"
+
+# Allow override via environment variable, with fallback to relative path
+CACHE_DIR = Path(
+    os.environ.get("CACHE_DIR", SCRIPT_DIR.parent.parent / "data" / "cache" / "v0")
+)
 
 
 def initialize_session_state() -> None:
@@ -696,4 +701,5 @@ else:
 
         if CACHE_DIR.exists():
             files = list(CACHE_DIR.glob("*.json"))[:10]
+            st.write(f"Sample files: {[f.name for f in files]}")
             st.write(f"Sample files: {[f.name for f in files]}")

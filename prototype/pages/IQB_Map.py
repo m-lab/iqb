@@ -7,7 +7,6 @@ Displays world map with countries that have data, allows clicking for historical
 # Add this right after the imports, before anything else
 
 import json
-import os
 import re
 from pathlib import Path
 
@@ -24,41 +23,13 @@ from visualizations.sunburst_data import (
 )
 from visualizations.ui_components import render_sunburst
 
-st.write("### Path Debugging")
-
-# Check current working directory
-st.write(f"**Current working directory:** {Path.cwd()}")
-st.write(f"**Contents:** {list(Path.cwd().iterdir())}")
-
-# Check /app directory
-app_path = Path("/app")
-if app_path.exists():
-    st.write(f"**/app contents:** {list(app_path.iterdir())}")
-
-    # Go deeper
-    for item in app_path.iterdir():
-        if item.is_dir():
-            st.write(
-                f"**/app/{item.name}/:** {list(item.iterdir())[:10]}"
-            )  # First 10 items
-
-# Check where the script actually is
-st.write(f"**__file__:** {__file__}")
-st.write(f"**SCRIPT_DIR:** {Path(__file__).parent}")
-st.write(f"**SCRIPT_DIR contents:** {list(Path(__file__).parent.iterdir())}")
-
-
 st.set_page_config(page_title="IQB Map", layout="wide")
 
 st.title("Global Internet Quality Barometer Map")
 
 SCRIPT_DIR = Path(__file__).parent
 GEOJSON_DIR = SCRIPT_DIR / "natural_earth" / "geojson_countries"
-
-# Allow override via environment variable, with fallback to relative path
-CACHE_DIR = Path(
-    os.environ.get("CACHE_DIR", SCRIPT_DIR.parent.parent / "data" / "cache" / "v0")
-)
+CACHE_DIR = SCRIPT_DIR.parent / "cache" / "v0"
 
 
 if "app_state" not in st.session_state:

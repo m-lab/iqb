@@ -626,7 +626,7 @@ if country_data:
             update_state_from_cache(state, metrics, percentile)
 
             st.subheader(country_name)
-            st.subheader("IQB Score")
+            st.subheader("### IQB Score")
 
             # Tabs for sunbursts
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
@@ -666,7 +666,7 @@ if country_data:
 
             # Raw data table
             st.markdown("---")
-            st.subheader("Raw Metrics")
+            st.subheader("### Raw Metrics")
 
             # Build table data
             percentiles = ["p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99"]
@@ -690,7 +690,8 @@ if country_data:
                     return ["background-color: #ffffcc"] * len(row)
                 return [""] * len(row)
 
-            st.dataframe(
+            # Use st.dataframe with selection enabled
+            event = st.dataframe(
                 df.style.apply(highlight_selected, axis=1).format(
                     {
                         "Download (Mbps)": "{:.2f}",
@@ -701,7 +702,18 @@ if country_data:
                 ),
                 use_container_width=True,
                 hide_index=True,
+                on_select="rerun",
+                selection_mode="single-row",
             )
+
+            # Handle row selection
+            if event and event.selection and event.selection.rows:
+                selected_row_idx = event.selection.rows[0]
+                selected_percentile = percentiles[selected_row_idx]
+
+                if selected_percentile != st.session_state.selected_percentile:
+                    st.session_state.selected_percentile = selected_percentile
+                    st.rerun()
 
         else:
             st.info("Select a country on the map to view details")

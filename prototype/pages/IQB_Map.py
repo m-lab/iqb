@@ -335,7 +335,7 @@ def create_world_map(country_data: dict, selected_country: str = None):
 
     fig.update_layout(
         geo=geo_settings,
-        height=500,
+        height=800,
         margin={"r": 0, "t": 0, "l": 0, "b": 0},
     )
 
@@ -670,131 +670,130 @@ if country_data:
         if st.button("← Clear Selection"):
             st.session_state.selected_country = None
             st.rerun()
-    col_map, col_info = st.columns(2)
 
-    with col_map:
-        fig = create_world_map(country_data, st.session_state.selected_country)
+    # FULL WIDTH MAP
+    fig = create_world_map(country_data, st.session_state.selected_country)
+    if fig:
+        event = st.plotly_chart(
+            fig,
+            use_container_width=True,
+            key=f"world_map_{st.session_state.selected_country}",
+            on_select="rerun",
+        )
+        if event and event.selection and event.selection.points:
+            clicked_point = event.selection.points[0]
+            if "customdata" in clicked_point:
+                clicked_iso_a3 = clicked_point["customdata"]
+                if clicked_iso_a3 in country_data:
+                    if st.session_state.selected_country == clicked_iso_a3:
+                        st.session_state.selected_country = None
+                    else:
+                        st.session_state.selected_country = clicked_iso_a3
+                    st.rerun()
 
-        if fig:
-            event = st.plotly_chart(
-                fig,
-                use_container_width=True,
-                key=f"world_map_{st.session_state.selected_country}",
-                on_select="rerun",
-            )
-
-            if event and event.selection and event.selection.points:
-                clicked_point = event.selection.points[0]
-
-                if "customdata" in clicked_point:
-                    clicked_iso_a3 = clicked_point["customdata"]
-                    if clicked_iso_a3 in country_data:
-                        if st.session_state.selected_country == clicked_iso_a3:
-                            st.session_state.selected_country = None
-                        else:
-                            st.session_state.selected_country = clicked_iso_a3
-                        st.rerun()
-
-        if (
-            st.session_state.selected_country
-            and st.session_state.selected_country in country_data
-        ):
-            data = country_data[st.session_state.selected_country]
-            country_code = data["code"]
-            country_name = data["name"]
-            st.markdown("---")
-            create_trend_charts(country_code, country_name)
-
-    with col_info:
+        # ONLY SHOW DETAILS WHEN COUNTRY SELECTED
         if (
             st.session_state.selected_country
             and st.session_state.selected_country in country_data
         ):
             data = country_data[st.session_state.selected_country]
             metrics = data["metrics"]
+            country_code = data["code"]
             country_name = data["name"]
             percentile = st.session_state.selected_percentile
 
             # Update state with cache data
             update_state_from_cache(state, metrics, percentile)
 
-            st.subheader(country_name)
-            st.subheader("IQB Score")
-
-            # Tabs for sunbursts
-            tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
-
-            try:
-                iqb_data = build_iqb_data_from_cache(metrics, percentile)
-                iqb_score = state.iqb.calculate_iqb_score(
-                    data=iqb_data, print_details=False
-                )
-
-                with tab1:
-                    render_sunburst(
-                        prepare_requirements_sunburst_data(state),
-                        title="Requirements → Datasets",
-                        iqb_score=iqb_score,
-                        height=400,
-                    )
-
-                with tab2:
-                    render_sunburst(
-                        prepare_use_cases_sunburst_data(state),
-                        title="Use Cases → Datasets",
-                        iqb_score=iqb_score,
-                        height=400,
-                    )
-
-                with tab3:
-                    render_sunburst(
-                        prepare_complete_hierarchy_sunburst_data(state),
-                        title="Use Cases → Requirements → Datasets",
-                        iqb_score=iqb_score,
-                        hierarchy_levels=3,
-                        height=400,
-                    )
-            except Exception as e:
-                st.error(f"Error rendering sunbursts: {e}")
-
-            # Raw data table
             st.markdown("---")
-            st.subheader("Raw Metrics")
 
-            # Build table data
-            percentiles = ["p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99"]
-            table_data = {
-                "Percentile": percentiles,
-                "Download (Mbps)": [
-                    metrics["download_throughput_mbps"][p] for p in percentiles
-                ],
-                "Upload (Mbps)": [
-                    metrics["upload_throughput_mbps"][p] for p in percentiles
-                ],
-                "Latency (ms)": [metrics["latency_ms"][p] for p in percentiles],
-                "Packet Loss (%)": [metrics["packet_loss"][p] for p in percentiles],
-            }
+            # Section 1: Sunburst and Details side-by-side
+            col_sunburst, col_details = st.columns(2)
 
-            df = pd.DataFrame(table_data)
+            with col_sunburst:
+                st.subheader(f"{country_name} - IQB Score")
+                # Tabs for sunbursts
+                tab1, tab2, tab3 = st.tabs(
+                    ["Requirements", "Use Cases", "Full Hierarchy"]
+                )
+                try:
+                    iqb_data = build_iqb_data_from_cache(metrics, percentile)
+                    iqb_score = state.iqb.calculate_iqb_score(
+                        data=iqb_data, print_details=False
+                    )
+                    with tab1:
+                        render_sunburst(
+                            prepare_requirements_sunburst_data(state),
+                            title="Requirements → Datasets",
+                            iqb_score=iqb_score,
+                            height=400,
+                        )
+                    with tab2:
+                        render_sunburst(
+                            prepare_use_cases_sunburst_data(state),
+                            title="Use Cases → Datasets",
+                            iqb_score=iqb_score,
+                            height=400,
+                        )
+                    with tab3:
+                        render_sunburst(
+                            prepare_complete_hierarchy_sunburst_data(state),
+                            title="Use Cases → Requirements → Datasets",
+                            iqb_score=iqb_score,
+                            hierarchy_levels=3,
+                            height=400,
+                        )
+                except Exception as e:
+                    st.error(f"Error rendering sunbursts: {e}")
 
-            # Highlight selected percentile
-            def highlight_selected(row):
-                if row["Percentile"] == percentile:
-                    return ["background-color: #ffffcc"] * len(row)
-                return [""] * len(row)
+            with col_details:
+                st.subheader("Raw Metrics")
+                # Build table data
+                percentiles = [
+                    "p1",
+                    "p5",
+                    "p10",
+                    "p25",
+                    "p50",
+                    "p75",
+                    "p90",
+                    "p95",
+                    "p99",
+                ]
+                table_data = {
+                    "Percentile": percentiles,
+                    "Download (Mbps)": [
+                        metrics["download_throughput_mbps"][p] for p in percentiles
+                    ],
+                    "Upload (Mbps)": [
+                        metrics["upload_throughput_mbps"][p] for p in percentiles
+                    ],
+                    "Latency (ms)": [metrics["latency_ms"][p] for p in percentiles],
+                    "Packet Loss (%)": [metrics["packet_loss"][p] for p in percentiles],
+                }
+                df = pd.DataFrame(table_data)
 
-            st.dataframe(
-                df.style.apply(highlight_selected, axis=1).format(
-                    {
-                        "Download (Mbps)": "{:.2f}",
-                        "Upload (Mbps)": "{:.2f}",
-                        "Latency (ms)": "{:.2f}",
-                        "Packet Loss (%)": "{:.4f}",
-                    }
-                ),
-                use_container_width=True,
-                hide_index=True,
-            )
+                # Highlight selected percentile
+                def highlight_selected(row):
+                    if row["Percentile"] == percentile:
+                        return ["background-color: #ffffcc"] * len(row)
+                    return [""] * len(row)
+
+                st.dataframe(
+                    df.style.apply(highlight_selected, axis=1).format(
+                        {
+                            "Download (Mbps)": "{:.2f}",
+                            "Upload (Mbps)": "{:.2f}",
+                            "Latency (ms)": "{:.2f}",
+                            "Packet Loss (%)": "{:.4f}",
+                        }
+                    ),
+                    use_container_width=True,
+                    hide_index=True,
+                )
+            # Section 2: Trends below (full width)
+            st.markdown("---")
+            create_trend_charts(country_code, country_name)
 
         else:
             st.info("Select a country on the map to view details")

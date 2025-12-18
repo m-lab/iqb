@@ -10,6 +10,8 @@ dependencies = [
     "plotly>=5.17.0",
     "pytest>=8.0.0",
     "mlab-iqb",
+    "geopandas>=0.14.0",
+    "pycountry>=23.12.11",
 ]
 
 [tool.uv.sources]

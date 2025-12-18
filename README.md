@@ -32,6 +32,12 @@ https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf).
 
 ## Repository Architecture
 
+### **`docs/`**
+
+Documentation and presentations.
+
+See [docs/README.md](docs/README.md) for details.
+
 ### **`library/`**
 
 The IQB library containing methods for calculating the IQB score and data collection.

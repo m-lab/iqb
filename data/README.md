@@ -10,34 +10,7 @@ This directory contains static reference data used by the IQB prototype.
 
 **Countries**: All available countries
 
-## Data Formats
-
-We maintain two data formats in `./cache/`:
-
-### v0 - JSON Format (Deprecated - Golden Files Only)
-
-**IMPORTANT**: The v0 cache is no longer actively updated. Files in `./cache/v0/` are
-kept as golden files for testing and backward compatibility only.
-
-Per-country JSON files with pre-aggregated percentiles:
-
-- **Location**: `./cache/v0/{country}_{year}_{month}.json`
-- **Example**: `us_2024_10.json` (~31M download samples, ~24M upload samples)
-- **Structure**: Simple JSON with percentiles (p1, p5, p10, p25, p50, p75, p90, p95, p99)
-- **Use case**: Golden files for testing, backward compatibility
-
-```json
-{
-  "metrics": {
-    "download_throughput_mbps": {"p1": 0.38, "p99": 891.82},
-    "upload_throughput_mbps": {"p1": 0.06, "p99": 813.73},
-    "latency_ms": {"p1": 0.16, "p99": 254.34},
-    "packet_loss": {"p1": 0.0, "p99": 0.25}
-  }
-}
-```
-
-### v1 - Parquet Format (Current)
+## Data Format
 
 Raw query results stored efficiently for flexible analysis:
 
@@ -46,8 +19,6 @@ Raw query results stored efficiently for flexible analysis:
   - `data.parquet` - Query results (~1-60 MiB, streamable, chunked row groups)
   - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
 - **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
-
-**Current format**: The [../library](../library) `IQBCache` uses v1 exclusively.
 
 ## GitHub Cache Synchronization (Interim Solution)
 
@@ -158,7 +129,7 @@ saves v1 Parquet cache only (use pandas to inspect results)
 ## Notes
 
 - **Cache format**: v1 Parquet files (~1-60 MiB) with stats.json for efficient
-processing and cost tracking. v0 JSON files are deprecated and kept only as golden files.
+processing and cost tracking.
 
 - **Time granularity**: Data is aggregated over the entire
 months of October 2024 and October 2025. The analyst decides which

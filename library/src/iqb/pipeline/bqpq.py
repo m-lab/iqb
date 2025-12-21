@@ -132,12 +132,14 @@ class PipelineBQPQClient:
 
     @property
     def client(self) -> bigquery.Client:
+        """Lazy initialization of the BigQuery Client"""
         if self._client is None:
             self._client = bigquery.Client(project=self._project)
         return self._client
 
     @property
     def bq_read_clnt(self) -> bigquery_storage_v1.BigQueryReadClient:
+        """Lazy initialization of the BigQueryReadClient."""
         if self._bq_read_clnt is None:
             self._bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
         return self._bq_read_clnt

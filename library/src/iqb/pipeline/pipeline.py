@@ -4,6 +4,7 @@ import hashlib
 from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
+from typing import Protocol
 
 from .. import queries
 from .bqpq import (
@@ -14,6 +15,19 @@ from .cache import (
     PipelineCacheEntry,
     PipelineCacheManager,
 )
+
+
+class RemoteCache(Protocol):
+    """
+    Represent the possibility of fetching a cache entry from a
+    remote location or service (e.g. a GCS bucket).
+
+    Methods:
+        sync: sync remote cache entry to disk and return whether
+            we successfully synced it or not.
+    """
+
+    def sync(self, entry: PipelineCacheEntry) -> bool: ...
 
 
 class IQBPipeline:
@@ -80,16 +94,25 @@ class IQBPipeline:
         start_date: str,
         end_date: str,
         fetch_if_missing: bool = False,
+        remote_cache: RemoteCache | None = None,
     ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query template.
+
+        If fetch_if_missing is False and the entry does not exist on
+        disk, this method raises a FileNotFoundError exception.
+
+        Otherwise, if remote_cache is not None, we attempt to use
+        the given RemoteCache to fetch the entry.
+
+        Otherwise, we use BigQuery to execute the query.
 
         Args:
             dataset_name: Name for the dataset (e.g., "downloads_by_country")
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
-            fetch_if_missing: if True, execute query and save if cache doesn't exist.
-                Default is False (do not fetch automatically).
+            fetch_if_missing: Whether to try to fetch or query for the entry
+            remote_cache: Remote cache for fetching cached query results
 
         Returns:
             PipelineCacheEntry with paths to data.parquet and stats.json.
@@ -116,12 +139,15 @@ class IQBPipeline:
                 f"Set fetch_if_missing=True to execute query."
             )
 
-        # 4. execute query and update the cache
+        # 4. prefer the remote cache, if available, to running the
+        # query through BigQuery (it's faster and it costs less)
+        if remote_cache and remote_cache.sync(entry):
+            return entry
+
+        # 5. execute query, update the cache, and return entry
         result = self._execute_query_template(entry)
         result.save_data_parquet()
         result.save_stats_json()
-
-        # 5. return information about the cache entry
         return entry
 
     def execute_query_template(

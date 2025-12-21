@@ -124,7 +124,7 @@ class PipelineBQPQClient:
         Initialize client with BigQuery project ID.
 
         Parameters:
-            project: BigQuery project.
+            project: billing BigQuery project.
         """
         self.client = bigquery.Client(project=project)
         self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()

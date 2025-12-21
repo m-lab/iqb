@@ -19,6 +19,28 @@ the on-disk cache data structure. The cache package, which reads the
 cache, conforms to the expected data structure by using code in
 this package that hides the specific implementation details.
 
+Remote Cache Support
+--------------------
+
+The pipeline supports an optional remote cache layer that sits between the
+local cache and BigQuery. When provided, the pipeline will attempt to fetch
+missing cache entries from the remote cache before executing expensive
+BigQuery queries.
+
+The remote cache is implemented as a Protocol (see `pipeline.RemoteCache`)
+that requires a `sync(entry: PipelineCacheEntry) -> bool` method. This
+design allows pluggable remote cache implementations (e.g., GCS, GitHub
+releases, S3) without coupling the pipeline to specific storage backends.
+
+Cache lookup order:
+1. Local disk cache (fast, free)
+2. Remote cache if provided (medium speed, cheap)
+3. BigQuery query (slow, expensive)
+
+This architecture enables sharing pre-computed query results across team
+members and CI/CD environments, significantly reducing BigQuery costs and
+query execution time for common datasets.
+
 Data Directory Convention
 -------------------------
 

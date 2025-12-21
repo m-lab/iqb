@@ -126,8 +126,21 @@ class PipelineBQPQClient:
         Parameters:
             project: billing BigQuery project.
         """
-        self.client = bigquery.Client(project=project)
-        self.bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
+        self._project = project
+        self._client = None
+        self._bq_read_clnt = None
+
+    @property
+    def client(self) -> bigquery.Client:
+        if self._client is None:
+            self._client = bigquery.Client(project=self._project)
+        return self._client
+
+    @property
+    def bq_read_clnt(self) -> bigquery_storage_v1.BigQueryReadClient:
+        if self._bq_read_clnt is None:
+            self._bq_read_clnt = bigquery_storage_v1.BigQueryReadClient()
+        return self._bq_read_clnt
 
     def execute_query(
         self,

@@ -32,12 +32,26 @@ class TestPipelineBQPQClient:
     @patch("iqb.pipeline.bqpq.bigquery.Client")
     @patch("iqb.pipeline.bqpq.bigquery_storage_v1.BigQueryReadClient")
     def test_init_calls_bigquery_initializers(self, mock_storage, mock_client):
-        """Test that initialization calls the required BigQuery initializers."""
+        """Test that BigQuery clients are lazy-loaded on first access."""
         client = PipelineBQPQClient(project="test-project")
+
+        # Clients should NOT be initialized during __init__ (lazy loading)
+        mock_client.assert_not_called()
+        mock_storage.assert_not_called()
+
+        # Accessing client property should trigger initialization
+        _ = client.client
         mock_client.assert_called_once_with(project="test-project")
+
+        # Accessing bq_read_clnt property should trigger initialization
+        _ = client.bq_read_clnt
         mock_storage.assert_called_once()
-        assert client.bq_read_clnt is not None
-        assert client.client is not None
+
+        # Subsequent access should not re-initialize (cached)
+        _ = client.client
+        _ = client.bq_read_clnt
+        mock_client.assert_called_once()  # Still only called once
+        mock_storage.assert_called_once()  # Still only called once
 
     @patch("iqb.pipeline.bqpq.bigquery.Client")
     @patch("iqb.pipeline.bqpq.bigquery_storage_v1.BigQueryReadClient")

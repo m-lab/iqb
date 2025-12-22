@@ -4,8 +4,7 @@
 GitHub cache synchronization tool for IQB data files.
 
 **INTERIM SOLUTION**: This is a throwaway script for the initial phase of the
-project. It will eventually be replaced by a proper GCS-based solution. The
-script assumes Unix file paths and will not work on Windows.
+project. It will eventually be replaced by a proper GCS-based solution.
 
 This tool manages caching of large parquet/JSON files using GitHub releases
 as a distribution mechanism, with local SHA256 verification.
@@ -36,7 +35,6 @@ import argparse
 import hashlib
 import json
 import os
-import platform
 import re
 import shutil
 import subprocess
@@ -272,8 +270,8 @@ def cmd_scan(args) -> int:
     files_to_upload = []
 
     for file_path in ignored_files:
-        # Convert to relative path string (already relative since we chdir'd)
-        rel_path = str(file_path)
+        # Convert to relative path string with forward slashes for cross-platform compatibility
+        rel_path = file_path.as_posix()
 
         # Validate path format
         if not validate_cache_path(rel_path):
@@ -328,16 +326,6 @@ def cmd_scan(args) -> int:
 
 
 def main() -> int:
-    # Reject Windows - this script assumes Unix file paths
-    if platform.system() == "Windows":
-        print("ERROR: This script does not support Windows.", file=sys.stderr)
-        print("Reason: Assumes Unix file path conventions.", file=sys.stderr)
-        print(
-            "Note: This is an interim solution that will be replaced by GCS.",
-            file=sys.stderr,
-        )
-        return 1
-
     # Change to script's directory (./data) so all paths are relative to it
     script_dir = Path(__file__).resolve().parent
     os.chdir(script_dir)

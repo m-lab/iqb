@@ -6,7 +6,6 @@ import hashlib
 import json
 import logging
 import os
-import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.request import urlopen
@@ -42,7 +41,9 @@ class Manifest:
         Raises:
             KeyError: if the given remote entry does not exist.
         """
-        key = str(full_path.relative_to(data_dir))
+        # Use .as_posix() to ensure forward slashes for cross-platform compatibility
+        # Manifest keys should always use forward slashes regardless of OS
+        key = full_path.relative_to(data_dir).as_posix()
         try:
             return self.files[key]
         except KeyError as exc:
@@ -87,15 +88,7 @@ class IQBGitHubRemoteCache:
             return False
 
     def _sync(self, entry: PipelineCacheEntry):
-        # 0. Warn the user that this code probably does not work
-        # on Windows systems. TODO(bassosimone): fix this.
-        (
-            logging.warning("ghremote: this code has not been tested on Windows")
-            if sys.platform == "windows"
-            else None
-        )
-
-        # 1. Lookup files in the manifest using pipeline-provided paths
+        # Lookup files in the manifest using pipeline-provided paths
         # so we don't need to revalidate them again.
         parquet_entry = self.manifest.get_file_entry(
             full_path=entry.data_parquet_file_path(),
@@ -106,7 +99,7 @@ class IQBGitHubRemoteCache:
             data_dir=entry.data_dir,
         )
 
-        # 2. Sync both entries given preference to the JSON since it's smaller
+        # Sync both entries given preference to the JSON since it's smaller
         # and leads to less wasted bandwidth if the parquet doesn't exist.
         _sync_file_entry(json_entry, entry.stats_json_file_path())
         _sync_file_entry(parquet_entry, entry.data_parquet_file_path())

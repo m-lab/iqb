@@ -149,37 +149,6 @@ class TestIQBGitHubRemoteCacheSync:
 
         return mock_urlopen
 
-    def test_warning_on_windows_systems(self, tmp_path, caplog):
-        """Make sure there is a warning when running on windows."""
-        json_content = b'{"test": "data"}'
-        parquet_content = b"PARQUET_DATA"
-        json_sha256 = _compute_test_sha256(json_content)
-        parquet_sha256 = _compute_test_sha256(parquet_content)
-
-        entry = self._create_mock_entry(tmp_path)
-
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(
-                    sha256=parquet_sha256, url="https://example.com/data.parquet"
-                ),
-                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
-            },
-        )
-        cache = IQBGitHubRemoteCache(manifest)
-
-        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
-
-        with (
-            patch("iqb.ghremote.cache.sys.platform", "windows"),
-            patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen),
-            caplog.at_level(logging.WARNING),
-        ):
-            cache.sync(entry)
-
-        assert "this code has not been tested on Windows" in caplog.text
-
     def test_missing_parquet_entry(self, tmp_path, caplog):
         """Make sure we return False if there's no remote parquet entry."""
         entry = self._create_mock_entry(tmp_path)

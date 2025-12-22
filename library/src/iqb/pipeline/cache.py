@@ -1,7 +1,5 @@
 """Module to manage the on-disk IQB measurements cache."""
 
-from __future__ import annotations
-
 import re
 from dataclasses import dataclass
 from datetime import datetime

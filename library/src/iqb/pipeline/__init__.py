@@ -35,6 +35,8 @@ strategy ensures eventual consistency on Unix. Windows does not
 quite support that, but maybe it's best to avoid using Windows to
 implement servers anyway, so we don't need extra complexity.
 
+Pipeline code and `ghremote` code use this strategy.
+
 Cache Spec Ownership
 --------------------
 

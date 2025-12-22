@@ -126,7 +126,7 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
 
 
 def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
-    # Download into the destination file directly
+    # Download into the temporary file
     logging.info(f"ghremote: fetching {entry}... start")
     with urlopen(entry.url) as response, open(tmp_file, "wb") as filep:
         while chunk := response.read(8192):

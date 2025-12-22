@@ -4,7 +4,6 @@ import hashlib
 from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
-from typing import Protocol
 
 from .. import queries
 from .bqpq import (
@@ -14,20 +13,8 @@ from .bqpq import (
 from .cache import (
     PipelineCacheEntry,
     PipelineCacheManager,
+    PipelineRemoteCache,
 )
-
-
-class RemoteCache(Protocol):
-    """
-    Represent the possibility of fetching a cache entry from a
-    remote location or service (e.g. a GCS bucket).
-
-    Methods:
-        sync: sync remote cache entry to disk and return whether
-            we successfully synced it or not.
-    """
-
-    def sync(self, entry: PipelineCacheEntry) -> bool: ...
 
 
 class IQBPipeline:
@@ -94,7 +81,7 @@ class IQBPipeline:
         start_date: str,
         end_date: str,
         fetch_if_missing: bool = False,
-        remote_cache: RemoteCache | None = None,
+        remote_cache: PipelineRemoteCache | None = None,
     ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query template.

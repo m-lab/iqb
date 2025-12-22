@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Final
+from typing import Final, Protocol
 
 # Cache file names
 PIPELINE_CACHE_DATA_FILENAME: Final[str] = "data.parquet"
@@ -46,6 +46,19 @@ class PipelineCacheEntry:
         return self.dir_path() / PIPELINE_CACHE_STATS_FILENAME
 
 
+class PipelineRemoteCache(Protocol):
+    """
+    Represent the possibility of fetching a cache entry from a
+    remote location or service (e.g. a GCS bucket).
+
+    Methods:
+        sync: sync remote cache entry to disk and return whether
+            we successfully synced it or not.
+    """
+
+    def sync(self, entry: PipelineCacheEntry) -> bool: ...
+
+
 class PipelineCacheManager:
     """Manages the cache populated by the IQBPipeline."""
 
@@ -66,7 +79,7 @@ class PipelineCacheManager:
         start_date: str,
         end_date: str,
         fetch_if_missing: bool = False,
-        remote_cache: RemoteCache | None = None,
+        remote_cache: PipelineRemoteCache | None = None,
     ) -> PipelineCacheEntry:
         """
         Get cache entry for the given query template.

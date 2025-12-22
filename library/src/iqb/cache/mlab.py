@@ -297,7 +297,6 @@ class MLabCacheReader:
         start_date: str,
         end_date: str,
         granularity: IQBDatasetGranularity,
-        fetch_if_missing: bool = False,
     ) -> MLabCacheEntry:
         """
         Get cache entry associated with given dates and granularity.
@@ -308,13 +307,9 @@ class MLabCacheReader:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
             end_date: end measurement date expressed as YYYY-MM-DD (excluded)
             granularity: the granularity to use
-            fetch_if_missing: whether to fetch from remote cache if missing locally
 
         Return:
             A CacheEntry instance.
-
-        Raises:
-            FileNotFoundError: if cache entries are missing and not fetched
 
         Example:
             >>> # Returns data for October 2025
@@ -333,7 +328,6 @@ class MLabCacheReader:
             dataset_name=download_dataset_name,
             start_date=start_date,
             end_date=end_date,
-            fetch_if_missing=fetch_if_missing,
         )
 
         # 2. get the upload entry
@@ -345,7 +339,6 @@ class MLabCacheReader:
             dataset_name=upload_dataset_name,
             start_date=start_date,
             end_date=end_date,
-            fetch_if_missing=fetch_if_missing,
         )
 
         # 3. bail if entries are missing

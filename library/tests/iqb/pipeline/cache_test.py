@@ -348,6 +348,7 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_calls_remote_when_missing(self, tmp_path):
         """Test that remote cache is called when files are missing and fetch_if_missing=True."""
+
         # Mock remote cache that creates the files
         def mock_sync(entry):
             cache_dir = entry.dir_path()

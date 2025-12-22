@@ -8,7 +8,7 @@ from pathlib import Path
 from dateutil.relativedelta import relativedelta
 
 from ..pipeline.dataset import IQBDatasetGranularity
-from ..pipeline.pipeline import PipelineCacheManager
+from ..pipeline.pipeline import PipelineCacheManager, RemoteCache
 from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheReader
 
 
@@ -63,6 +63,8 @@ class IQBCache:
         start_date: str,
         end_date: str,
         granularity: IQBDatasetGranularity,
+        fetch_if_missing: bool = False,
+        remote_cache: RemoteCache | None = None,
     ) -> CacheEntry:
         """
         Get cache entry associated with given dates and granularity.
@@ -73,9 +75,14 @@ class IQBCache:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
             end_date: end measurement date expressed as YYYY-MM-DD (excluded)
             granularity: the granularity to use
+            fetch_if_missing: whether to fetch from remote cache if missing locally
+            remote_cache: optional remote cache for fetching
 
         Return:
             A CacheEntry instance.
+
+        Raises:
+            FileNotFoundError: if cache entries are missing and not fetched
 
         Example:
             >>> # Returns the cached data for October 2025
@@ -91,6 +98,8 @@ class IQBCache:
             start_date=start_date,
             end_date=end_date,
             granularity=granularity,
+            fetch_if_missing=fetch_if_missing,
+            remote_cache=remote_cache,
         )
 
         # 2. Try obtaining cached cloudflare data

@@ -10,7 +10,7 @@ from ..pipeline import (
     iqb_parquet_read,
 )
 from ..pipeline.dataset import IQBDatasetGranularity, PipelineDatasetMLabTable
-from ..pipeline.pipeline import PipelineCacheManager
+from ..pipeline.pipeline import PipelineCacheManager, RemoteCache
 
 
 @dataclass(frozen=True)
@@ -283,6 +283,8 @@ class MLabCacheReader:
         start_date: str,
         end_date: str,
         granularity: IQBDatasetGranularity,
+        fetch_if_missing: bool = False,
+        remote_cache: RemoteCache | None = None,
     ) -> MLabCacheEntry:
         """
         Get cache entry associated with given dates and granularity.
@@ -293,9 +295,14 @@ class MLabCacheReader:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
             end_date: end measurement date expressed as YYYY-MM-DD (excluded)
             granularity: the granularity to use
+            fetch_if_missing: whether to fetch from remote cache if missing locally
+            remote_cache: optional remote cache for fetching
 
         Return:
             A CacheEntry instance.
+
+        Raises:
+            FileNotFoundError: if cache entries are missing and not fetched
 
         Example:
             >>> # Returns data for October 2025
@@ -314,6 +321,8 @@ class MLabCacheReader:
             dataset_name=download_dataset_name,
             start_date=start_date,
             end_date=end_date,
+            fetch_if_missing=fetch_if_missing,
+            remote_cache=remote_cache,
         )
         download_data = download_entry.data_parquet_file_path()
         download_stats = download_entry.stats_json_file_path()
@@ -328,6 +337,8 @@ class MLabCacheReader:
             dataset_name=upload_dataset_name,
             start_date=start_date,
             end_date=end_date,
+            fetch_if_missing=fetch_if_missing,
+            remote_cache=remote_cache,
         )
         upload_data = upload_entry.data_parquet_file_path()
         upload_stats = upload_entry.stats_json_file_path()

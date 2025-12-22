@@ -1,5 +1,7 @@
 """Module to manage the on-disk IQB measurements cache."""
 
+from __future__ import annotations
+
 import re
 from dataclasses import dataclass
 from datetime import datetime
@@ -63,14 +65,23 @@ class PipelineCacheManager:
         dataset_name: str,
         start_date: str,
         end_date: str,
+        fetch_if_missing: bool = False,
+        remote_cache: RemoteCache | None = None,
     ) -> PipelineCacheEntry:
         """
         Get cache entry for the given query template.
+
+        If the entry exists on disk, returns it immediately.
+
+        If the entry does not exist and fetch_if_missing is True and
+        remote_cache is provided, attempts to sync from remote cache.
 
         Args:
             dataset_name: Name of the dataset (e.g., "downloads_by_country")
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+            fetch_if_missing: Whether to try fetching from remote cache if missing
+            remote_cache: Optional remote cache for fetching cached query results
 
         Returns:
             PipelineCacheEntry with correctly initialized fields.
@@ -82,13 +93,24 @@ class PipelineCacheManager:
         if not re.match(r"^[a-z0-9_]+$", dataset_name):
             raise ValueError(f"Invalid dataset name: {dataset_name}")
 
-        # 3. return the corresponding entry
-        return PipelineCacheEntry(
+        # 3. create the cache entry
+        entry = PipelineCacheEntry(
             data_dir=self.data_dir,
             dataset_name=dataset_name,
             start_time=start_time,
             end_time=end_time,
         )
+
+        # 4. if the entry exists locally, we're done
+        if entry.data_parquet_file_path().exists() and entry.stats_json_file_path().exists():
+            return entry
+
+        # 5. try fetching from remote cache if requested and available
+        if fetch_if_missing and remote_cache is not None:
+            remote_cache.sync(entry)
+
+        # 6. return the entry (may or may not exist on disk now)
+        return entry
 
 
 def data_dir_or_default(data_dir: str | Path | None) -> Path:

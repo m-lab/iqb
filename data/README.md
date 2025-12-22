@@ -27,21 +27,8 @@ Raw query results stored efficiently for flexible analysis:
 Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
 constraints, we use GitHub releases to distribute pre-generated cache files.
 
-### For Data Scientists (Manual Workflow)
-
-Sync cached files from GitHub before analysis:
-
-```bash
-cd data/
-./ghcache.py sync
-```
-
-This downloads any missing cache files listed in `ghcache.json` and verifies SHA256.
-
-### For Pipeline Users (Automatic)
-
-The `generate_data.py` script automatically syncs cached files before running queries,
-so you don't need to run `ghcache.py` manually.
+The `generate_data.py` script automatically syncs cached files to avoid running
+potentially expensive BigQuery queries.
 
 ### For Maintainers (Publishing New Cache)
 
@@ -61,8 +48,6 @@ This:
 Then manually:
 1. Upload mangled files to GitHub release (e.g., v0.1.0)
 2. Commit updated `ghcache.json` to repository
-
-**Note**: This system assumes Unix paths and won't work on Windows.
 
 ## How This Data Was Generated
 

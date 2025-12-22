@@ -117,35 +117,6 @@ def mangle_path(local_path: str, sha256: str) -> str:
     return f"{sha_prefix}__{mangled}"
 
 
-def demangle_path(mangled_name: str) -> str | None:
-    """
-    Convert mangled filename back to local path.
-
-    Returns None if the format is invalid.
-
-    Example:
-      Input:  3a421c62179a__cache__v1__20241001T000000Z__20241101T000000Z__downloads_by_country__data.parquet
-      Output: cache/v1/20241001T000000Z/20241101T000000Z/downloads_by_country/data.parquet
-    """
-    # Expected format: {12-char-hex}__cache__v1__...
-    if not re.match(r"^[a-f0-9]{12}__", mangled_name):
-        return None
-
-    # Remove SHA256 prefix
-    parts = mangled_name.split("__", 1)
-    if len(parts) != 2:
-        return None
-
-    # Convert __ back to /
-    local_path = parts[1].replace("__", "/")
-
-    # Validate the demangled path
-    if not validate_cache_path(local_path):
-        return None
-
-    return local_path
-
-
 def load_manifest() -> dict:
     """Load manifest from ghcache.json, or return empty manifest if not found."""
     manifest_path = Path(MANIFEST_FILE)
@@ -178,57 +149,12 @@ def is_git_ignored(file_path: Path) -> bool:
         return False
 
 
-def download_file(url: str, dest_path: Path) -> None:
-    """Download a file from URL to destination path."""
-    print(f"  Downloading from {url}")
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with urllib.request.urlopen(url) as response:
-        with open(dest_path, "wb") as f:
-            while chunk := response.read(8192):
-                f.write(chunk)
-
-
 def cmd_sync(args) -> int:
     """
-    Sync command: Download files from GitHub based on manifest.
-
-    For each entry in the manifest:
-    1. Check if local file exists
-    2. If exists, verify SHA256
-    3. If missing or SHA256 mismatch, download from URL
+    Sync command: A relic from the past, now replaced by a message.
     """
-    manifest = load_manifest()
-
-    if not manifest.get("files"):
-        print("No files in manifest.")
-        return 0
-
-    print(f"Checking {len(manifest['files'])} files from manifest...")
-
-    for local_path, file_info in manifest["files"].items():
-        expected_sha256 = file_info["sha256"]
-        url = file_info["url"]
-
-        file_path = Path(local_path)
-
-        # Check if file exists
-        if not file_path.exists():
-            print(f"Missing: {local_path}")
-            download_file(url, file_path)
-            continue
-
-        # Verify SHA256
-        actual_sha256 = compute_sha256(file_path)
-        if actual_sha256 != expected_sha256:
-            print(f"SHA256 mismatch: {local_path}")
-            print(f"  Expected: {expected_sha256}")
-            print(f"  Actual:   {actual_sha256}")
-            print("  Re-downloading...")
-            download_file(url, file_path)
-        else:
-            print(f"OK: {local_path}")
-
+    print("The sync subcommand is no longer required. We integrated its")
+    print("functionality directly into the pipeline package")
     return 0
 
 
@@ -336,14 +262,10 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
     # Scan subcommand
-    subparsers.add_parser(
-        "scan", help="Scan local files and prepare for upload"
-    )
+    subparsers.add_parser("scan", help="Scan local files and prepare for upload")
 
     # Sync subcommand
-    subparsers.add_parser(
-        "sync", help="Download files from GitHub based on manifest"
-    )
+    subparsers.add_parser("sync", help="Download files from GitHub based on manifest")
 
     args = parser.parse_args()
 

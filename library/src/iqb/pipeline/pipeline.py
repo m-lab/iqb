@@ -102,10 +102,8 @@ class IQBPipeline:
         If fetch_if_missing is False and the entry does not exist on
         disk, this method raises a FileNotFoundError exception.
 
-        Otherwise, if remote_cache is not None, we attempt to use
-        the given RemoteCache to fetch the entry.
-
-        Otherwise, we use BigQuery to execute the query.
+        Otherwise, attempts to fetch from remote_cache (if provided),
+        then falls back to BigQuery execution if still missing.
 
         Args:
             dataset_name: Name for the dataset (e.g., "downloads_by_country")
@@ -120,14 +118,16 @@ class IQBPipeline:
         Raises:
             FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
         """
-        # 1. get the cache entry
+        # 1. get the cache entry (manager handles local cache check and remote sync)
         entry = self.manager.get_cache_entry(
             dataset_name=dataset_name,
             start_date=start_date,
             end_date=end_date,
+            fetch_if_missing=fetch_if_missing,
+            remote_cache=remote_cache,
         )
 
-        # 2. if the entry exists, there's nothing to do
+        # 2. if the entry exists (either was local or synced from remote), we're done
         if entry.data_parquet_file_path().exists() and entry.stats_json_file_path().exists():
             return entry
 
@@ -139,12 +139,7 @@ class IQBPipeline:
                 f"Set fetch_if_missing=True to execute query."
             )
 
-        # 4. prefer the remote cache, if available, to running the
-        # query through BigQuery (it's faster and it costs less)
-        if remote_cache and remote_cache.sync(entry):
-            return entry
-
-        # 5. execute query, update the cache, and return entry
+        # 4. fall back to BigQuery execution if remote cache didn't have it
         result = self._execute_query_template(entry)
         result.save_data_parquet()
         result.save_stats_json()

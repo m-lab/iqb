@@ -7,13 +7,34 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
+import colorlog
+
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 from iqb.ghremote.cache import iqb_github_load_manifest
 from iqb.pipeline import IQBPipeline
 from iqb.ghremote import IQBGitHubRemoteCache
 
-logging.basicConfig(level=logging.DEBUG)
+if sys.stderr.isatty():
+    LOG_COLORS = {
+        "DEBUG": "bold_cyan",
+        "INFO": "bold_green",
+        "WARNING": "bold_yellow",
+        "ERROR": "bold_red",
+        "CRITICAL": "bold_red,bg_white",
+    }
+    handler = logging.StreamHandler()
+    handler.setFormatter(
+        colorlog.ColoredFormatter(
+            fmt="%(log_color)s[%(asctime)s] <%(name)s> %(levelname)s:%(reset)s %(message)s",
+            log_colors=LOG_COLORS,
+            datefmt="%Y-%m-%d %H:%M:%S",
+        )
+    )
+    logging.basicConfig(
+        level=logging.DEBUG,
+        handlers=[handler],
+    )
 
 
 def validate_date(date_str: str) -> str:
@@ -89,11 +110,15 @@ def run_bq_query(
     # Data directory is ./iqb/data (where this script lives)
     data_dir = Path(__file__).parent
 
+    # Create GitHub remote cache
+    manifest = iqb_github_load_manifest(data_dir / "ghcache.json")
+    ghcache = IQBGitHubRemoteCache(manifest)
+
     # Create and sync cache entry (idempotent)
     # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
     #   - data.parquet: query results (empty file if no results)
     #   - stats.json: query metadata
-    pipeline = IQBPipeline(project=project_id, data_dir=data_dir)
+    pipeline = IQBPipeline(project=project_id, data_dir=data_dir, remote_cache=ghcache)
     entry = pipeline.get_cache_entry(
         dataset_name=query_name,
         start_date=start_date,

@@ -16,6 +16,8 @@ from dacite import from_dict
 
 from ..pipeline.cache import PipelineCacheEntry
 
+log = logging.getLogger("ghremote/cache")
+
 
 @dataclass(frozen=True)
 class FileEntry:
@@ -81,12 +83,12 @@ class IQBGitHubRemoteCache:
         occurred while trying to sync from the remote.
         """
         try:
-            logging.info(f"ghremote: syncing {entry}... start")
+            log.info("syncing %s... start", entry)
             self._sync(entry)
-            logging.info(f"ghremote: syncing {entry}... ok")
+            log.info("syncing %s... ok", entry)
             return True
         except Exception as exc:
-            logging.warning(f"ghremote: syncing {entry}... failure: {exc}")
+            log.warning("syncing %s... failure: %s", entry, exc)
             return False
 
     def _sync(self, entry: PipelineCacheEntry):
@@ -127,18 +129,18 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
 
 def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
     # Download into the temporary file
-    logging.info(f"ghremote: fetching {entry}... start")
+    log.info("fetching %s... start", entry)
     with urlopen(entry.url) as response, open(tmp_file, "wb") as filep:
         while chunk := response.read(8192):
             filep.write(chunk)
-    logging.info(f"ghremote: fetching {entry}... ok")
+    log.info("fetching %s... ok", entry)
 
     # Make sure the sha256 matches
-    logging.info(f"ghremote: validating {entry}... start")
+    log.info("validating %s... start", entry)
     sha256 = _compute_sha256(tmp_file)
     if sha256 != entry.sha256:
         raise ValueError(f"SHA256 mismatch: expected {entry.sha256}, got {sha256}")
-    logging.info(f"ghremote: validating {entry}... ok")
+    log.info("validating %s... ok", entry)
 
 
 def _compute_sha256(path: Path) -> str:

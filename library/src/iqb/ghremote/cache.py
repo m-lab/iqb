@@ -7,7 +7,7 @@ import json
 import logging
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from urllib.request import urlopen
 
@@ -29,7 +29,11 @@ class Manifest:
     """Manifest for cached files stored in GitHub releases."""
 
     v: int
-    files: dict[str, FileEntry]
+    files: dict[str, FileEntry] = field(default_factory=dict)
+
+    def __post_init__(self):
+        if self.v != 0:
+            raise ValueError(f"Unsupported manifest version: {self.v} (only v=0 supported)")
 
     def get_file_entry(self, *, full_path: Path, data_dir: Path) -> FileEntry:
         """

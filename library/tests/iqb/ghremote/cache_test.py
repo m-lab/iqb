@@ -1,0 +1,489 @@
+"""Tests for the iqb.ghremote.cache module."""
+
+import hashlib
+import json
+import logging
+from unittest.mock import Mock, patch
+from urllib.error import URLError
+
+import pytest
+from dacite.exceptions import WrongTypeError
+
+from iqb.ghremote.cache import (
+    FileEntry,
+    IQBGitHubRemoteCache,
+    Manifest,
+    iqb_github_load_manifest,
+)
+
+
+def _compute_test_sha256(content: bytes) -> str:
+    """Helper to compute SHA256 for test data."""
+    return hashlib.sha256(content).hexdigest()
+
+
+class TestIQBGitHubLoadManifest:
+    """Tests for loading the iqb_github_load_manifest function."""
+
+    def test_load_invalid_json_string(self, tmp_path):
+        """Verify we get JSONDecodeError when loading an invalid JSON string."""
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text("{ invalid json }")
+
+        with pytest.raises(json.JSONDecodeError):
+            iqb_github_load_manifest(manifest_file)
+
+    def test_load_invalid_json_fields_types(self, tmp_path):
+        """Verify that dacite throws if the fields have invalid types."""
+        manifest_file = tmp_path / "manifest.json"
+        # v should be int, not string
+        manifest_file.write_text('{"v": "not an int", "files": {}}')
+
+        with pytest.raises((WrongTypeError, ValueError, TypeError)):
+            iqb_github_load_manifest(manifest_file)
+
+    def test_load_invalid_version_number(self, tmp_path):
+        """Verify that there is a ValueError when the version number is invalid."""
+        manifest_file = tmp_path / "manifest.json"
+        manifest_file.write_text('{"v": 1, "files": {}}')
+
+        with pytest.raises(ValueError, match="Unsupported manifest version"):
+            iqb_github_load_manifest(manifest_file)
+
+    def test_load_success_with_file(self, tmp_path):
+        """Verify that we can correctly load a manifest when backed by an existing file."""
+        manifest_file = tmp_path / "manifest.json"
+        manifest_data = {
+            "v": 0,
+            "files": {
+                "cache/v1/2024-01-01/2024-01-31/test/data.parquet": {
+                    "sha256": "abc123def456",
+                    "url": "https://example.com/file.parquet",
+                }
+            },
+        }
+        manifest_file.write_text(json.dumps(manifest_data))
+
+        manifest = iqb_github_load_manifest(manifest_file)
+
+        assert manifest.v == 0
+        assert len(manifest.files) == 1
+        assert "cache/v1/2024-01-01/2024-01-31/test/data.parquet" in manifest.files
+        entry = manifest.files["cache/v1/2024-01-01/2024-01-31/test/data.parquet"]
+        assert entry.sha256 == "abc123def456"
+        assert entry.url == "https://example.com/file.parquet"
+
+    def test_load_success_without_file(self, tmp_path):
+        """Verify that we return a default manifest when the file is missing."""
+        manifest_file = tmp_path / "nonexistent.json"
+
+        manifest = iqb_github_load_manifest(manifest_file)
+
+        assert manifest.v == 0
+        assert len(manifest.files) == 0
+
+
+class TestManifestGetFileEntry:
+    """Tests for the Manifest.get_file_entry method."""
+
+    def test_success(self, tmp_path):
+        """Verify that we get a FileEntry when the entry exists."""
+        # Create a manifest with a file entry
+        entry = FileEntry(sha256="abc123def456", url="https://example.com/file.parquet")
+        manifest = Manifest(
+            v=0,
+            files={"cache/v1/2024-01-01/2024-01-31/test/data.parquet": entry},
+        )
+
+        # Set up paths - using tmp_path to ensure they're realistic
+        data_dir = tmp_path / "data"
+        full_path = data_dir / "cache/v1/2024-01-01/2024-01-31/test/data.parquet"
+
+        # Get the entry
+        result = manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
+
+        # Verify it's the same entry
+        assert result == entry
+        assert result.sha256 == "abc123def456"
+        assert result.url == "https://example.com/file.parquet"
+
+    def test_failure(self, tmp_path):
+        """Verify that we raise KeyError when the entry does not exist."""
+        # Create an empty manifest
+        manifest = Manifest(v=0, files={})
+
+        # Set up paths
+        data_dir = tmp_path / "data"
+        full_path = data_dir / "cache/v1/2024-01-01/2024-01-31/test/data.parquet"
+
+        # Should raise KeyError with the relative path in the message
+        expected_key = "cache/v1/2024-01-01/2024-01-31/test/data.parquet"
+        with pytest.raises(KeyError, match=f"no remotely-cached file for {expected_key}"):
+            manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
+
+
+class TestIQBGitHubRemoteCacheSync:
+    """Tests for the IQBGitHubRemoteCache.sync method."""
+
+    # XXX(bassosimone): we should probably capture that which is
+    # logged _at least_ as far as emitting errors is concerned
+
+    # XXX(bassosimone): the logging we are using is TERRIBLE for
+    # readability... I wonder if there are tweaks to make it a
+    # bit more readable since, well, yeah, pet peeve, but I find
+    # this Python logger to be pretty useless
+
+    # NOTE(bassosimone): we probably want to go for external
+    # behavior testing here, rather than testing the internals
+    # since this is more robust to change
+
+    def _create_mock_entry(self, tmp_path):
+        """Helper to create a mock PipelineCacheEntry."""
+        entry = Mock()
+        entry.data_dir = tmp_path
+        entry.data_parquet_file_path.return_value = tmp_path / "data.parquet"
+        entry.stats_json_file_path.return_value = tmp_path / "stats.json"
+        return entry
+
+    def _mock_urlopen_with_content(self, json_content, parquet_content):
+        """Helper to create urlopen mock that returns specified content."""
+
+        def mock_urlopen(url):
+            # Determine which content to return based on URL
+            content = json_content if "stats.json" in url else parquet_content
+
+            # Create mock response with explicit context manager support
+            response = Mock()
+            response.read = Mock(side_effect=[content, b""])
+            response.__enter__ = Mock(return_value=response)
+            response.__exit__ = Mock(return_value=False)
+            return response
+
+        return mock_urlopen
+
+    def test_warning_on_windows_systems(self, tmp_path, caplog):
+        """Make sure there is a warning when running on windows."""
+        # Motivation: well, until we fix the bug, we really want to be
+        # sure that users are informed about this shit
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        json_sha256 = _compute_test_sha256(json_content)
+        parquet_sha256 = _compute_test_sha256(parquet_content)
+
+        entry = self._create_mock_entry(tmp_path)
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(
+                    sha256=parquet_sha256, url="https://example.com/data.parquet"
+                ),
+                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
+
+        with (
+            patch("iqb.ghremote.cache.sys.platform", "windows"),
+            patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen),
+            caplog.at_level(logging.WARNING),
+        ):
+            cache.sync(entry)
+
+        assert "this code has not been tested on Windows" in caplog.text
+
+    def test_missing_parquet_entry(self, tmp_path, caplog):
+        """Make sure we return False if there's no remote parquet entry."""
+        entry = self._create_mock_entry(tmp_path)
+
+        # Manifest only has JSON, not parquet
+        manifest = Manifest(
+            v=0,
+            files={
+                "stats.json": FileEntry(sha256="abc123", url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        with caplog.at_level(logging.WARNING):
+            result = cache.sync(entry)
+
+        assert result is False
+        assert "failure" in caplog.text
+        assert "no remotely-cached file for data.parquet" in caplog.text
+
+    def test_missing_json_entry(self, tmp_path, caplog):
+        """Make sure we return False if there's no remote JSON entry."""
+        entry = self._create_mock_entry(tmp_path)
+
+        # Manifest only has parquet, not JSON
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(sha256="abc123", url="https://example.com/data.parquet"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        with caplog.at_level(logging.WARNING):
+            result = cache.sync(entry)
+
+        assert result is False
+        assert "failure" in caplog.text
+        assert "no remotely-cached file for stats.json" in caplog.text
+
+    # NOTE(bassosimone): given how the code is implemented, we only need to
+    # elicit failure modes for one of the two files. Obviously, it is more
+    # robust to test both, however, unless there is a smart way to factor the
+    # common code, we'll end up with so much duplication that uuuuugh.
+
+    # NOTE(bassosimone): we should assert that the following happens:
+    #
+    # 1. unlink previous file if needed
+    #
+    # 2. creation of parent directory
+    #
+    # 3. logging happens with specified output
+    #
+    # 4. download of content correctly copied into file
+    #
+    # 5. sha256 validation
+    #
+    # 6. anything else? XXX XXX XXX
+
+    def test_download_if_not_exists(self, tmp_path):
+        """Ensure that we download the file if it does not exist."""
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        json_sha256 = _compute_test_sha256(json_content)
+        parquet_sha256 = _compute_test_sha256(parquet_content)
+
+        entry = self._create_mock_entry(tmp_path)
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(
+                    sha256=parquet_sha256, url="https://example.com/data.parquet"
+                ),
+                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
+
+        with patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen):
+            result = cache.sync(entry)
+
+        # Verify success
+        assert result is True
+        assert entry.stats_json_file_path().exists()
+        assert entry.data_parquet_file_path().exists()
+        assert entry.stats_json_file_path().read_bytes() == json_content
+        assert entry.data_parquet_file_path().read_bytes() == parquet_content
+
+    def test_no_download_if_exists_and_correct_sha256(self, tmp_path):
+        """Ensure that we do not re-download a file we already downloaded."""
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        json_sha256 = _compute_test_sha256(json_content)
+        parquet_sha256 = _compute_test_sha256(parquet_content)
+
+        entry = self._create_mock_entry(tmp_path)
+
+        # Pre-create files with correct content
+        entry.stats_json_file_path().write_bytes(json_content)
+        entry.data_parquet_file_path().write_bytes(parquet_content)
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(
+                    sha256=parquet_sha256, url="https://example.com/data.parquet"
+                ),
+                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        # Mock urlopen - it should NOT be called
+        mock_urlopen = Mock(side_effect=AssertionError("Should not download!"))
+
+        with patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen):
+            result = cache.sync(entry)
+
+        # Verify success without downloading
+        assert result is True
+        assert entry.stats_json_file_path().read_bytes() == json_content
+        assert entry.data_parquet_file_path().read_bytes() == parquet_content
+
+    def test_download_if_sha256_mismatch(self, tmp_path):
+        """Ensure that we download on sha256 mismatch."""
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        json_sha256 = _compute_test_sha256(json_content)
+        parquet_sha256 = _compute_test_sha256(parquet_content)
+
+        entry = self._create_mock_entry(tmp_path)
+
+        # Pre-create files with WRONG content
+        entry.stats_json_file_path().write_bytes(b"wrong content")
+        entry.data_parquet_file_path().write_bytes(b"wrong parquet")
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(
+                    sha256=parquet_sha256, url="https://example.com/data.parquet"
+                ),
+                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
+
+        with patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen):
+            result = cache.sync(entry)
+
+        # Verify files were re-downloaded with correct content
+        assert result is True
+        assert entry.stats_json_file_path().read_bytes() == json_content
+        assert entry.data_parquet_file_path().read_bytes() == parquet_content
+
+    def test_sync_success_both_files(self, tmp_path, caplog):
+        """Ensure that both JSON and parquet files are synced successfully."""
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        json_sha256 = _compute_test_sha256(json_content)
+        parquet_sha256 = _compute_test_sha256(parquet_content)
+
+        entry = self._create_mock_entry(tmp_path)
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(
+                    sha256=parquet_sha256, url="https://example.com/data.parquet"
+                ),
+                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
+
+        with (
+            patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen),
+            caplog.at_level(logging.INFO),
+        ):
+            result = cache.sync(entry)
+
+        # Verify success
+        assert result is True
+        assert entry.stats_json_file_path().exists()
+        assert entry.data_parquet_file_path().exists()
+        # Verify logging shows both files were fetched
+        assert "fetching" in caplog.text
+        assert "validating" in caplog.text
+        assert "syncing" in caplog.text
+
+    def test_download_failure(self, tmp_path, caplog):
+        """Ensure that we return False when download fails (network error, 404, etc)."""
+        entry = self._create_mock_entry(tmp_path)
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(sha256="abc123", url="https://example.com/data.parquet"),
+                "stats.json": FileEntry(sha256="def456", url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        # Mock urlopen to raise URLError
+        with (
+            patch("iqb.ghremote.cache.urlopen", side_effect=URLError("Network error")),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = cache.sync(entry)
+
+        assert result is False
+        assert "failure" in caplog.text
+
+    def test_sha256_mismatch_after_download(self, tmp_path, caplog):
+        """Ensure that we return False and delete file when SHA256 validation fails."""
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        # Use WRONG sha256 in manifest
+        wrong_sha256 = "0" * 64
+
+        entry = self._create_mock_entry(tmp_path)
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "data.parquet": FileEntry(
+                    sha256=wrong_sha256, url="https://example.com/data.parquet"
+                ),
+                "stats.json": FileEntry(sha256=wrong_sha256, url="https://example.com/stats.json"),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
+
+        with (
+            patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen),
+            caplog.at_level(logging.WARNING),
+        ):
+            result = cache.sync(entry)
+
+        # Verify failure and files are deleted
+        assert result is False
+        assert "SHA256 mismatch" in caplog.text
+        # Files should be deleted after failed validation
+        assert not entry.stats_json_file_path().exists()
+
+    def test_creates_parent_directories(self, tmp_path):
+        """Ensure that parent directories are created when they don't exist."""
+        json_content = b'{"test": "data"}'
+        parquet_content = b"PARQUET_DATA"
+        json_sha256 = _compute_test_sha256(json_content)
+        parquet_sha256 = _compute_test_sha256(parquet_content)
+
+        # Create entry with nested paths that don't exist yet
+        entry = Mock()
+        entry.data_dir = tmp_path
+        entry.data_parquet_file_path.return_value = tmp_path / "nested" / "dir" / "data.parquet"
+        entry.stats_json_file_path.return_value = tmp_path / "nested" / "dir" / "stats.json"
+
+        manifest = Manifest(
+            v=0,
+            files={
+                "nested/dir/data.parquet": FileEntry(
+                    sha256=parquet_sha256, url="https://example.com/data.parquet"
+                ),
+                "nested/dir/stats.json": FileEntry(
+                    sha256=json_sha256, url="https://example.com/stats.json"
+                ),
+            },
+        )
+        cache = IQBGitHubRemoteCache(manifest)
+
+        mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
+
+        # Verify parent directories don't exist yet
+        assert not entry.data_parquet_file_path().parent.exists()
+
+        with patch("iqb.ghremote.cache.urlopen", side_effect=mock_urlopen):
+            result = cache.sync(entry)
+
+        # Verify success and directories were created
+        assert result is True
+        assert entry.stats_json_file_path().exists()
+        assert entry.data_parquet_file_path().exists()
+        assert entry.data_parquet_file_path().parent.exists()

@@ -7,8 +7,9 @@ from pathlib import Path
 
 from dateutil.relativedelta import relativedelta
 
+from ..pipeline.cache import PipelineRemoteCache
 from ..pipeline.dataset import IQBDatasetGranularity
-from ..pipeline.pipeline import PipelineCacheManager, RemoteCache
+from ..pipeline.pipeline import PipelineCacheManager
 from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheReader
 
 
@@ -41,15 +42,20 @@ class IQBData:
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""
 
-    def __init__(self, data_dir: str | Path | None = None):
+    def __init__(
+        self,
+        data_dir: str | Path | None = None,
+        remote_cache: PipelineRemoteCache | None = None,
+    ):
         """
         Initialize cache with data directory path.
 
         Parameters:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
+            remote_cache: Optional remote cache for fetching cached query results.
         """
-        self.manager = PipelineCacheManager(data_dir)
+        self.manager = PipelineCacheManager(data_dir, remote_cache=remote_cache)
         self.mlab = MLabCacheReader(self.manager)
 
     @property
@@ -64,7 +70,6 @@ class IQBCache:
         end_date: str,
         granularity: IQBDatasetGranularity,
         fetch_if_missing: bool = False,
-        remote_cache: RemoteCache | None = None,
     ) -> CacheEntry:
         """
         Get cache entry associated with given dates and granularity.
@@ -76,7 +81,6 @@ class IQBCache:
             end_date: end measurement date expressed as YYYY-MM-DD (excluded)
             granularity: the granularity to use
             fetch_if_missing: whether to fetch from remote cache if missing locally
-            remote_cache: optional remote cache for fetching
 
         Return:
             A CacheEntry instance.
@@ -99,7 +103,6 @@ class IQBCache:
             end_date=end_date,
             granularity=granularity,
             fetch_if_missing=fetch_if_missing,
-            remote_cache=remote_cache,
         )
 
         # 2. Try obtaining cached cloudflare data

@@ -60,15 +60,21 @@ class PipelineRemoteCache(Protocol):
 class PipelineCacheManager:
     """Manages the cache populated by the IQBPipeline."""
 
-    def __init__(self, data_dir: str | Path | None = None):
+    def __init__(
+        self,
+        data_dir: str | Path | None = None,
+        remote_cache: PipelineRemoteCache | None = None,
+    ):
         """
         Initialize cache with data directory path.
 
         Parameters:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
+            remote_cache: Optional remote cache for fetching cached query results.
         """
         self.data_dir = data_dir_or_default(data_dir)
+        self.remote_cache = remote_cache
 
     def get_cache_entry(
         self,
@@ -77,7 +83,6 @@ class PipelineCacheManager:
         start_date: str,
         end_date: str,
         fetch_if_missing: bool = False,
-        remote_cache: PipelineRemoteCache | None = None,
     ) -> PipelineCacheEntry:
         """
         Get cache entry for the given query template.
@@ -85,14 +90,13 @@ class PipelineCacheManager:
         If the entry exists on disk, returns it immediately.
 
         If the entry does not exist and fetch_if_missing is True and
-        remote_cache is provided, attempts to sync from remote cache.
+        a remote_cache was configured, attempts to sync from remote cache.
 
         Args:
             dataset_name: Name of the dataset (e.g., "downloads_by_country")
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
             fetch_if_missing: Whether to try fetching from remote cache if missing
-            remote_cache: Optional remote cache for fetching cached query results
 
         Returns:
             PipelineCacheEntry with correctly initialized fields.
@@ -117,8 +121,8 @@ class PipelineCacheManager:
             return entry
 
         # 5. try fetching from remote cache if requested and available
-        if fetch_if_missing and remote_cache is not None:
-            remote_cache.sync(entry)
+        if fetch_if_missing and self.remote_cache is not None:
+            self.remote_cache.sync(entry)
 
         # 6. return the entry (may or may not exist on disk now)
         return entry

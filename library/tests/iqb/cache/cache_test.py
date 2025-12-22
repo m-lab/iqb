@@ -286,9 +286,7 @@ class TestIQBCacheRemoteCache:
     """Tests for IQBCache remote cache functionality."""
 
     def test_get_cache_entry_with_remote_cache(self, data_dir, tmp_path):
-        """Test that IQBCache.get_cache_entry passes remote_cache parameter correctly."""
-        cache = IQBCache(data_dir=tmp_path)
-
+        """Test that IQBCache.get_cache_entry uses configured remote_cache correctly."""
         # Mock remote cache that creates the files
         def mock_sync(entry):
             cache_dir = entry.dir_path()
@@ -300,13 +298,15 @@ class TestIQBCacheRemoteCache:
         remote_cache = Mock()
         remote_cache.sync.side_effect = mock_sync
 
-        # Get cache entry with remote cache
+        # Create cache with remote_cache configured
+        cache = IQBCache(data_dir=tmp_path, remote_cache=remote_cache)
+
+        # Get cache entry
         result = cache.get_cache_entry(
             start_date="2024-10-01",
             end_date="2024-11-01",
             granularity=IQBDatasetGranularity.COUNTRY,
             fetch_if_missing=True,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was called twice (once for download, once for upload)
@@ -315,7 +315,7 @@ class TestIQBCacheRemoteCache:
 
     def test_get_cache_entry_without_remote_cache_raises_error(self, tmp_path):
         """Test that IQBCache.get_cache_entry raises FileNotFoundError when cache is missing."""
-        cache = IQBCache(data_dir=tmp_path)
+        cache = IQBCache(data_dir=tmp_path, remote_cache=None)
 
         # Without fetch_if_missing=True, should raise FileNotFoundError
         with pytest.raises(FileNotFoundError):
@@ -324,15 +324,15 @@ class TestIQBCacheRemoteCache:
                 end_date="2024-11-01",
                 granularity=IQBDatasetGranularity.COUNTRY,
                 fetch_if_missing=False,
-                remote_cache=None,
             )
 
     def test_get_cache_entry_skips_remote_when_cached(self, data_dir):
         """Test that remote cache is not called when data exists locally."""
-        cache = IQBCache(data_dir=data_dir)
-
         # Mock remote cache
         remote_cache = Mock()
+
+        # Create cache with remote_cache configured
+        cache = IQBCache(data_dir=data_dir, remote_cache=remote_cache)
 
         # Get cache entry for data that exists (US October 2024)
         result = cache.get_cache_entry(
@@ -340,7 +340,6 @@ class TestIQBCacheRemoteCache:
             end_date="2024-11-01",
             granularity=IQBDatasetGranularity.COUNTRY,
             fetch_if_missing=True,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was not called

@@ -94,13 +94,12 @@ def run_bq_query(
     ghcache = IQBGitHubRemoteCache(ghmanifest)
 
     # Get or create cache entry
-    pipeline = IQBPipeline(project=project_id, data_dir=data_dir)
+    pipeline = IQBPipeline(project=project_id, data_dir=data_dir, remote_cache=ghcache)
     entry = pipeline.get_cache_entry(
         dataset_name=query_name,
         start_date=start_date,
         end_date=end_date,
         fetch_if_missing=True,
-        remote_cache=ghcache,
     )
     data_path = entry.data_parquet_file_path()
     assert data_path.exists()

@@ -125,18 +125,6 @@ class TestManifestGetFileEntry:
 class TestIQBGitHubRemoteCacheSync:
     """Tests for the IQBGitHubRemoteCache.sync method."""
 
-    # XXX(bassosimone): we should probably capture that which is
-    # logged _at least_ as far as emitting errors is concerned
-
-    # XXX(bassosimone): the logging we are using is TERRIBLE for
-    # readability... I wonder if there are tweaks to make it a
-    # bit more readable since, well, yeah, pet peeve, but I find
-    # this Python logger to be pretty useless
-
-    # NOTE(bassosimone): we probably want to go for external
-    # behavior testing here, rather than testing the internals
-    # since this is more robust to change
-
     def _create_mock_entry(self, tmp_path):
         """Helper to create a mock PipelineCacheEntry."""
         entry = Mock()
@@ -163,8 +151,6 @@ class TestIQBGitHubRemoteCacheSync:
 
     def test_warning_on_windows_systems(self, tmp_path, caplog):
         """Make sure there is a warning when running on windows."""
-        # Motivation: well, until we fix the bug, we really want to be
-        # sure that users are informed about this shit
         json_content = b'{"test": "data"}'
         parquet_content = b"PARQUET_DATA"
         json_sha256 = _compute_test_sha256(json_content)
@@ -233,25 +219,6 @@ class TestIQBGitHubRemoteCacheSync:
         assert result is False
         assert "failure" in caplog.text
         assert "no remotely-cached file for stats.json" in caplog.text
-
-    # NOTE(bassosimone): given how the code is implemented, we only need to
-    # elicit failure modes for one of the two files. Obviously, it is more
-    # robust to test both, however, unless there is a smart way to factor the
-    # common code, we'll end up with so much duplication that uuuuugh.
-
-    # NOTE(bassosimone): we should assert that the following happens:
-    #
-    # 1. unlink previous file if needed
-    #
-    # 2. creation of parent directory
-    #
-    # 3. logging happens with specified output
-    #
-    # 4. download of content correctly copied into file
-    #
-    # 5. sha256 validation
-    #
-    # 6. anything else? XXX XXX XXX
 
     def test_download_if_not_exists(self, tmp_path):
         """Ensure that we download the file if it does not exist."""

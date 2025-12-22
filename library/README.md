@@ -40,7 +40,8 @@ iqb.print_config()
 
 ## Running Tests
 
-The library uses pytest for testing. Tests are located in the `tests/` directory and follow the `*_test.py` naming convention.
+The library uses `pytest` for testing. Tests are located in the `tests/`
+directory and follow the `*_test.py` naming convention.
 
 ```bash
 # From the repository root, sync dev dependencies
@@ -59,15 +60,20 @@ uv run pytest tests/iqb_score_test.py
 # Run specific test class or function
 uv run pytest tests/iqb_score_test.py::TestIQBInitialization
 uv run pytest tests/iqb_score_test.py::TestIQBInitialization::test_init_with_name
+
+# Get coverage
+uv run pytest --cov=.
 ```
 
 ## Code Quality Tools
 
-The library uses Ruff for linting/formatting and Pyright for type checking.
+The library uses `ruff` for linting/formatting and
+`pyright` for type checking.
 
 ### Linting with Ruff
 
-Ruff is a fast Python linter that checks code style, potential bugs, and code quality issues:
+Ruff is a fast Python linter that checks code style, potential
+bugs, and code quality issues:
 
 ```bash
 # From the library directory
@@ -105,7 +111,8 @@ uv run pyright --verbose
 
 **Verifying Pyright is Working:**
 
-Pyright can be silent if misconfigured. To verify it's actually checking your code:
+Pyright can be silent if misconfigured. To verify it's actually
+checking your code:
 
 ```bash
 # This should show which files are being analyzed
@@ -118,7 +125,7 @@ uv run pyright --verbose
 # - "X errors, Y warnings, Z informations"
 ```
 
-If you see "Found 0 source files", the configuration is wrong.
+If you see `"Found 0 source files"`, the configuration is wrong.
 
 To test that Pyright catches errors, temporarily introduce a type error:
 
@@ -127,7 +134,8 @@ To test that Pyright catches errors, temporarily introduce a type error:
 x: int = "this should fail"  # Pyright should catch this!
 ```
 
-If Pyright reports an error, it's working correctly. Remove the test line afterwards.
+If Pyright reports an error, it's working correctly. Remove the
+test line afterwards.
 
 Pyright configuration is in `pyproject.toml` under `[tool.pyright]`.
 
@@ -135,7 +143,8 @@ Pyright configuration is in `pyproject.toml` under `[tool.pyright]`.
 
 ### Adding New Tests
 
-Create new test files in the `tests/` directory following the naming pattern `*_test.py`:
+Create new test files in the `tests/` directory following the
+naming pattern `*_test.py`:
 
 ```python
 """tests/my_feature_test.py"""
@@ -151,4 +160,6 @@ class TestMyFeature:
 
 ### Running Tests in CI
 
-Tests run automatically on all pushes and pull requests to the main branch via GitHub Actions. See `.github/workflows/ci.yml` for the CI configuration.
+Tests run automatically on all pushes and pull requests to the
+`main` branch via GitHub Actions. See `.github/workflows/ci.yml`
+for the CI configuration.

@@ -1,4 +1,4 @@
-"""Tests for the IQBCache data fetching module."""
+"""Tests for the iqb.cache.cache module."""
 
 from datetime import datetime
 

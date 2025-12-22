@@ -378,6 +378,7 @@ class TestIQBPipelineGetCacheEntry:
 
             def sync(self, entry: PipelineCacheEntry) -> bool:
                 """Simulate successful remote cache sync."""
+                _ = entry
                 self.sync_called = True
                 # Create the files that remote cache would download
                 expected_cache_dir.mkdir(parents=True, exist_ok=True)
@@ -431,6 +432,7 @@ class TestIQBPipelineGetCacheEntry:
 
             def sync(self, entry: PipelineCacheEntry) -> bool:
                 """Simulate remote cache sync failure."""
+                _ = entry
                 self.sync_called = True
                 return False  # Sync failed
 

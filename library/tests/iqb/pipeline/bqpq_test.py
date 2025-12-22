@@ -114,6 +114,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
 
             # Create a side effect to actually create the data.parquet file
             def create_parquet_file(*args, **kwargs):
+                _, _ = args, kwargs
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 (cache_dir / "data.parquet").write_text("fake data")
 
@@ -153,6 +154,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
 
             # Create a side effect to actually create the data.parquet file
             def create_parquet_file(*args, **kwargs):
+                _, _ = args, kwargs
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 (cache_dir / "data.parquet").write_text("")
 
@@ -206,6 +208,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
 
             # Create a side effect to actually create the data.parquet file
             def create_parquet_file(*args, **kwargs):
+                _, _ = args, kwargs
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 (cache_dir / "data.parquet").write_text("fake data")
 
@@ -244,6 +247,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
 
             # Create a side effect to actually create the data.parquet file
             def create_parquet_file(*args, **kwargs):
+                _, _ = args, kwargs
                 cache_dir.mkdir(parents=True, exist_ok=True)
                 (cache_dir / "data.parquet").write_text("fake data")
 

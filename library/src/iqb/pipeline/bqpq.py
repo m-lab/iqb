@@ -60,8 +60,9 @@ class PipelineBQPQQueryResult:
         parquet_path = self.paths_provider.data_parquet_file_path()
         parquet_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Note: using .as_posix to avoid paths with backslashes
-        # that can cause issues with PyArrow on Windows
+        # Note: using .as_posix() for consistency with forward slashes across platforms.
+        # Modern PyArrow likely handles native Windows paths fine, but this is defensive
+        # programming that ensures compatibility without harm.
         posix_path = parquet_path.as_posix()
 
         # Access the first batch to obtain the schema

@@ -112,11 +112,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
-            # Create a side effect to actually create the data.parquet file
+            # Create a side effect to actually create the temp parquet file
             def create_parquet_file(*args, **kwargs):
                 _, _ = args, kwargs
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                (cache_dir / "data.parquet").write_text("fake data")
+                # Get the path that was passed to ParquetWriter
+                temp_path = Path(mock_writer.call_args[0][0])
+                temp_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_path.write_text("fake data")
 
             mock_writer_instance.write_batch.side_effect = create_parquet_file
 
@@ -152,11 +154,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
-            # Create a side effect to actually create the data.parquet file
+            # Create a side effect to actually create the temp parquet file
             def create_parquet_file(*args, **kwargs):
                 _, _ = args, kwargs
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                (cache_dir / "data.parquet").write_text("")
+                # Get the path that was passed to ParquetWriter
+                temp_path = Path(mock_writer.call_args[0][0])
+                temp_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_path.write_text("")
 
             mock_writer.return_value.__exit__.side_effect = create_parquet_file
 
@@ -176,10 +180,12 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             assert cache_dir.exists()
             assert file_path.exists()
 
-            # Verify ParquetWriter was called with empty schema
+            # Verify ParquetWriter was called with temp file path
             mock_writer.assert_called_once()
             call_args = mock_writer.call_args
-            assert call_args[0][0] == expected_path.as_posix()
+            # The first arg should be a temp path, not the final path
+            temp_file_arg = Path(call_args[0][0])
+            assert temp_file_arg.name == "data.parquet"
 
             # Verify schema is empty (no fields)
             schema_arg = call_args[0][1]
@@ -206,11 +212,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
-            # Create a side effect to actually create the data.parquet file
+            # Create a side effect to actually create the temp parquet file
             def create_parquet_file(*args, **kwargs):
                 _, _ = args, kwargs
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                (cache_dir / "data.parquet").write_text("fake data")
+                # Get the path that was passed to ParquetWriter
+                temp_path = Path(mock_writer.call_args[0][0])
+                temp_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_path.write_text("fake data")
 
             mock_writer_instance.write_batch.side_effect = create_parquet_file
 
@@ -245,11 +253,13 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
             mock_writer_instance = MagicMock()
             mock_writer.return_value.__enter__.return_value = mock_writer_instance
 
-            # Create a side effect to actually create the data.parquet file
+            # Create a side effect to actually create the temp parquet file
             def create_parquet_file(*args, **kwargs):
                 _, _ = args, kwargs
-                cache_dir.mkdir(parents=True, exist_ok=True)
-                (cache_dir / "data.parquet").write_text("fake data")
+                # Get the path that was passed to ParquetWriter
+                temp_path = Path(mock_writer.call_args[0][0])
+                temp_path.parent.mkdir(parents=True, exist_ok=True)
+                temp_path.write_text("fake data")
 
             mock_writer_instance.write_batch.side_effect = create_parquet_file
 

@@ -6,8 +6,10 @@ import hashlib
 import json
 import logging
 import os
+import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from urllib.request import urlopen
 
 from dacite import from_dict
@@ -114,21 +116,29 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
         if exists:
             os.unlink(dest_path)
 
-        # Download into the destination file directly
-        logging.info(f"ghremote: fetching {entry}... start")
-        dest_path.parent.mkdir(parents=True, exist_ok=True)
-        with urlopen(entry.url) as response, open(dest_path, "wb") as fp:
-            while chunk := response.read(8192):
-                fp.write(chunk)
-        logging.info(f"ghremote: fetching {entry}... ok")
+        # Operate inside a temporary directory such that the directory is always
+        # removed with or without the temporary file inside it
+        with TemporaryDirectory() as tmp_dir:
+            tmp_file = Path(tmp_dir) / dest_path.name
+            _sync_file_entry_tmp(entry, tmp_file)
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(tmp_file, dest_path)
 
-        # Make sure the sha256 matches
-        logging.info(f"ghremote: validating {entry}... start")
-        sha256 = _compute_sha256(dest_path)
-        if sha256 != entry.sha256:
-            os.unlink(dest_path)
-            raise ValueError(f"SHA256 mismatch: expected {entry.sha256}, got {sha256}")
-        logging.info(f"ghremote: validating {entry}... ok")
+
+def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
+    # Download into the temporary file
+    logging.info(f"ghremote: fetching {entry}... start")
+    with urlopen(entry.url) as response, open(tmp_file, "wb") as filep:
+        while chunk := response.read(8192):
+            filep.write(chunk)
+    logging.info(f"ghremote: fetching {entry}... ok")
+
+    # Make sure the sha256 matches
+    logging.info(f"ghremote: validating {entry}... start")
+    sha256 = _compute_sha256(tmp_file)
+    if sha256 != entry.sha256:
+        raise ValueError(f"SHA256 mismatch: expected {entry.sha256}, got {sha256}")
+    logging.info(f"ghremote: validating {entry}... ok")
 
 
 def _compute_sha256(path: Path) -> str:

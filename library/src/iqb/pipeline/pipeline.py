@@ -20,7 +20,12 @@ from .cache import (
 class IQBPipeline:
     """Component for populating the IQB-measurement-data cache."""
 
-    def __init__(self, project: str, data_dir: str | Path | None = None):
+    def __init__(
+        self,
+        project: str,
+        data_dir: str | Path | None = None,
+        remote_cache: PipelineRemoteCache | None = None,
+    ):
         """
         Initialize cache with data directory path.
 
@@ -30,6 +35,7 @@ class IQBPipeline:
                 lives is instead determinaed by the table name *in* the query.
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
+            remote_cache: Optional remote cache for fetching cached query results.
         """
         # TODO(bassosimone): Consider adding query sampling support for development/testing
         #
@@ -72,7 +78,7 @@ class IQBPipeline:
         # Decision: Not implementing now (YAGNI - add when actually needed)
 
         self.client = PipelineBQPQClient(project=project)
-        self.manager = PipelineCacheManager(data_dir=data_dir)
+        self.manager = PipelineCacheManager(data_dir=data_dir, remote_cache=remote_cache)
 
     def get_cache_entry(
         self,
@@ -81,7 +87,6 @@ class IQBPipeline:
         start_date: str,
         end_date: str,
         fetch_if_missing: bool = False,
-        remote_cache: PipelineRemoteCache | None = None,
     ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query template.
@@ -89,7 +94,7 @@ class IQBPipeline:
         If fetch_if_missing is False and the entry does not exist on
         disk, this method raises a FileNotFoundError exception.
 
-        Otherwise, attempts to fetch from remote_cache (if provided),
+        Otherwise, attempts to fetch from configured remote_cache (if any),
         then falls back to BigQuery execution if still missing.
 
         Args:
@@ -97,7 +102,6 @@ class IQBPipeline:
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
             fetch_if_missing: Whether to try to fetch or query for the entry
-            remote_cache: Remote cache for fetching cached query results
 
         Returns:
             PipelineCacheEntry with paths to data.parquet and stats.json.
@@ -111,7 +115,6 @@ class IQBPipeline:
             start_date=start_date,
             end_date=end_date,
             fetch_if_missing=fetch_if_missing,
-            remote_cache=remote_cache,
         )
 
         # 2. if the entry exists (either was local or synced from remote), we're done

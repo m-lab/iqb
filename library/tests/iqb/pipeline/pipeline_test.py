@@ -48,7 +48,7 @@ class TestIQBPipelineInit:
 
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
-        mock_manager.assert_called_once_with(data_dir=None)
+        mock_manager.assert_called_once_with(data_dir=None, remote_cache=None)
 
         # Verify that the client is initialized
         assert pipeline.client is not None
@@ -65,7 +65,7 @@ class TestIQBPipelineInit:
 
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
-        mock_manager.assert_called_once_with(data_dir=custom_dir)
+        mock_manager.assert_called_once_with(data_dir=custom_dir, remote_cache=None)
 
         # Verify that the client is initialized
         assert pipeline.client is not None
@@ -357,11 +357,8 @@ class TestIQBPipelineGetCacheEntry:
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_with_remote_cache_success(self, mock_client, tmp_path):
         """Test get_cache_entry uses remote cache when local cache missing."""
-        # Create the pipeline
-        data_dir = tmp_path / "iqb"
-        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
-
         # Expected cache directory
+        data_dir = tmp_path / "iqb"
         expected_cache_dir = (
             data_dir
             / "cache"
@@ -388,13 +385,15 @@ class TestIQBPipelineGetCacheEntry:
 
         mock_remote = MockRemoteCache()
 
-        # Get cache entry with remote_cache (should use remote, not BigQuery)
+        # Create the pipeline with remote_cache
+        pipeline = IQBPipeline(project="test-project", data_dir=data_dir, remote_cache=mock_remote)
+
+        # Get cache entry (should use remote, not BigQuery)
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=mock_remote,
         )
 
         # Verify remote cache sync was called
@@ -411,11 +410,8 @@ class TestIQBPipelineGetCacheEntry:
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_with_remote_cache_failure(self, mock_client, tmp_path):
         """Test get_cache_entry falls back to BigQuery when remote cache fails."""
-        # Create the pipeline
-        data_dir = tmp_path / "iqb"
-        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
-
         # Expected cache directory
+        data_dir = tmp_path / "iqb"
         expected_cache_dir = (
             data_dir
             / "cache"
@@ -455,13 +451,15 @@ class TestIQBPipelineGetCacheEntry:
         mock_result.save_stats_json = mock_save_stats
         mock_client.return_value.execute_query.return_value = mock_result
 
-        # Get cache entry with remote_cache (should fallback to BigQuery)
+        # Create the pipeline with remote_cache
+        pipeline = IQBPipeline(project="test-project", data_dir=data_dir, remote_cache=mock_remote)
+
+        # Get cache entry (should fallback to BigQuery)
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=mock_remote,
         )
 
         # Verify remote cache sync was attempted

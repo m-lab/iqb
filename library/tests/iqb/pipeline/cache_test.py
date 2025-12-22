@@ -299,7 +299,9 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_skips_remote_when_files_exist(self, tmp_path):
         """Test that remote cache is not called when files exist locally."""
-        manager = PipelineCacheManager(data_dir=tmp_path)
+        # Mock remote cache
+        remote_cache = Mock()
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
 
         # Create existing cache files
         entry = manager.get_cache_entry(
@@ -312,16 +314,12 @@ class TestPipelineCacheManagerRemoteCache:
         (cache_dir / "data.parquet").write_text("data")
         (cache_dir / "stats.json").write_text("{}")
 
-        # Mock remote cache
-        remote_cache = Mock()
-
         # Get cache entry with fetch_if_missing=True
         result = manager.get_cache_entry(
             dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was not called
@@ -331,10 +329,9 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_skips_remote_when_fetch_if_missing_false(self, tmp_path):
         """Test that remote cache is not called when fetch_if_missing=False."""
-        manager = PipelineCacheManager(data_dir=tmp_path)
-
         # Mock remote cache
         remote_cache = Mock()
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
 
         # Get cache entry with fetch_if_missing=False
         result = manager.get_cache_entry(
@@ -342,7 +339,6 @@ class TestPipelineCacheManagerRemoteCache:
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=False,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was not called
@@ -352,7 +348,6 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_calls_remote_when_missing(self, tmp_path):
         """Test that remote cache is called when files are missing and fetch_if_missing=True."""
-        manager = PipelineCacheManager(data_dir=tmp_path)
 
         # Mock remote cache that creates the files
         def mock_sync(entry):
@@ -364,6 +359,7 @@ class TestPipelineCacheManagerRemoteCache:
 
         remote_cache = Mock()
         remote_cache.sync.side_effect = mock_sync
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
 
         # Get cache entry with fetch_if_missing=True
         result = manager.get_cache_entry(
@@ -371,7 +367,6 @@ class TestPipelineCacheManagerRemoteCache:
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was called
@@ -381,7 +376,7 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_skips_remote_when_none(self, tmp_path):
         """Test that no error occurs when remote_cache=None and files are missing."""
-        manager = PipelineCacheManager(data_dir=tmp_path)
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=None)
 
         # Get cache entry with fetch_if_missing=True but remote_cache=None
         result = manager.get_cache_entry(
@@ -389,7 +384,6 @@ class TestPipelineCacheManagerRemoteCache:
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=None,
         )
 
         # Verify no error and files don't exist
@@ -398,11 +392,10 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_handles_remote_failure(self, tmp_path):
         """Test that get_cache_entry handles remote cache sync failures gracefully."""
-        manager = PipelineCacheManager(data_dir=tmp_path)
-
         # Mock remote cache that fails
         remote_cache = Mock()
         remote_cache.sync.return_value = False
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
 
         # Get cache entry with fetch_if_missing=True
         result = manager.get_cache_entry(
@@ -410,7 +403,6 @@ class TestPipelineCacheManagerRemoteCache:
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was called but files don't exist
@@ -420,7 +412,10 @@ class TestPipelineCacheManagerRemoteCache:
 
     def test_get_cache_entry_syncs_when_any_file_missing(self, tmp_path):
         """Test that remote cache is called when any file is missing (not just both)."""
-        manager = PipelineCacheManager(data_dir=tmp_path)
+        # Mock remote cache
+        remote_cache = Mock()
+        remote_cache.sync.return_value = True
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
 
         # Create only the data.parquet file (stats.json missing)
         entry = manager.get_cache_entry(
@@ -432,17 +427,12 @@ class TestPipelineCacheManagerRemoteCache:
         cache_dir.mkdir(parents=True, exist_ok=True)
         (cache_dir / "data.parquet").write_text("data")
 
-        # Mock remote cache
-        remote_cache = Mock()
-        remote_cache.sync.return_value = True
-
         # Get cache entry with fetch_if_missing=True
         result = manager.get_cache_entry(
             dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
             fetch_if_missing=True,
-            remote_cache=remote_cache,
         )
 
         # Verify remote cache was called (because stats.json is missing)

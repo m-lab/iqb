@@ -1,8 +1,10 @@
 """Module for streaming BigQuery (bq) queries into parquet (pq) files."""
 
 import json
+import shutil
 from dataclasses import dataclass
 from pathlib import Path
+from tempfile import TemporaryDirectory
 from typing import Protocol, runtime_checkable
 
 import pyarrow as pa
@@ -60,22 +62,22 @@ class PipelineBQPQQueryResult:
         parquet_path = self.paths_provider.data_parquet_file_path()
         parquet_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Note: using .as_posix() for consistency with forward slashes across platforms.
-        # Modern PyArrow likely handles native Windows paths fine, but this is defensive
-        # programming that ensures compatibility without harm.
-        posix_path = parquet_path.as_posix()
-
         # Access the first batch to obtain the schema
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
         first_batch = next(batches, None)
         schema = first_batch.schema if first_batch is not None else pa.schema([])
 
         # Write the possibly-empty parquet file
-        with pq.ParquetWriter(posix_path, schema) as writer:
-            if first_batch is not None:
-                writer.write_batch(first_batch)
-            for batch in batches:
-                writer.write_batch(batch)
+        # Use a temporary directory, which is always removed regardless
+        # of whether there's still a temporary file inside it
+        with TemporaryDirectory() as tmp_dir:
+            tmp_file = Path(tmp_dir) / parquet_path.name
+            with pq.ParquetWriter(tmp_file, schema) as writer:
+                if first_batch is not None:
+                    writer.write_batch(first_batch)
+                for batch in batches:
+                    writer.write_batch(batch)
+            shutil.move(tmp_file, parquet_path)
 
         return parquet_path
 
@@ -110,9 +112,14 @@ class PipelineBQPQQueryResult:
             "total_bytes_billed": total_bytes_billed,
         }
 
-        with stats_path.open("w") as filep:
-            json.dump(stats, filep, indent=2)
-            filep.write("\n")
+        # Use a temporary directory, which is always removed regardless
+        # of whether there's still a temporary file inside it
+        with TemporaryDirectory() as tmp_dir:
+            tmp_file = Path(tmp_dir) / stats_path.name
+            with tmp_file.open("w") as filep:
+                json.dump(stats, filep, indent=2)
+                filep.write("\n")
+            shutil.move(tmp_file, stats_path)
 
         return stats_path
 

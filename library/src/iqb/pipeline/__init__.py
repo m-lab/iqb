@@ -14,12 +14,26 @@ to obtain them are configured (e.g., the remote_cache argument for
 `PipelineCacheManager` and/or `IQBPipeline` and the billing BigQuery
 project for `IQBPipeline`).
 
+The `iqb_parquet_read` function allows to efficiently read and
+filter data inside an arbitrary parquet file.
+
+Atomicity Guarantees
+--------------------
+
 The `PipelineCacheEntry.lock()` method allows to lock a specific
 entry in exclusive mode to avoid concurrency issues. To implement
 this feature we use advisory file locking (e.g., `flock`).
 
-The `iqb_parquet_read` function allows to efficiently read and
-filter data inside an arbitrary parquet file.
+You should use this kind of locks to protect against concurrent
+writes (e.g., when multiple processes may write the same files and
+you want to ensure just one writer can do this).
+
+With respect to read atomicity, code generating files MUST always
+create a temporary directory where to write a temporary file and
+then, when done, move the temporary file into the actual path. This
+strategy ensures eventual consistency on Unix. Windows does not
+quite support that, but maybe it's best to avoid using Windows to
+implement servers anyway, so we don't need extra complexity.
 
 Cache Spec Ownership
 --------------------

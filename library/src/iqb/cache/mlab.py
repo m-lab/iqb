@@ -6,10 +6,12 @@ from pathlib import Path
 import pandas as pd
 
 from ..pipeline import (
+    IQBDatasetGranularity,
     iqb_dataset_name_for_mlab,
     iqb_parquet_read,
 )
-from ..pipeline.dataset import IQBDatasetGranularity, PipelineDatasetMLabTable
+from ..pipeline.cache import PipelineCacheEntry
+from ..pipeline.dataset import PipelineDatasetMLabTable
 from ..pipeline.pipeline import PipelineCacheManager
 
 
@@ -124,19 +126,31 @@ class MLabCacheEntry:
         granularity: granularity used by this dataset
         start_date: the start date used by this dataset (YYYY-MM-DD; included)
         end_date: the end date used by this dataset (YYYY-MM-DD; excluded)
-        download_data: full path to data.parquet for download
-        upload_data: full path to data.parquet for upload
-        download_stats: full path to stats.json for download
-        upload_stats: full path to stats.json for upload
+        upload: reference to the upload entry
+        download: reference to the download entry
     """
 
     start_date: str
     end_date: str
     granularity: IQBDatasetGranularity
-    download_data: Path
-    upload_data: Path
-    download_stats: Path
-    upload_stats: Path
+    download: PipelineCacheEntry
+    upload: PipelineCacheEntry
+
+    @property
+    def download_data(self) -> Path:
+        return self.download.data_parquet_file_path()
+
+    @property
+    def download_stats(self) -> Path:
+        return self.download.stats_json_file_path()
+
+    @property
+    def upload_data(self) -> Path:
+        return self.upload.data_parquet_file_path()
+
+    @property
+    def upload_stats(self) -> Path:
+        return self.upload.stats_json_file_path()
 
     def read_download_data_frame(
         self,
@@ -315,9 +329,6 @@ class MLabCacheReader:
             start_date=start_date,
             end_date=end_date,
         )
-        download_data = download_entry.data_parquet_file_path()
-        download_stats = download_entry.stats_json_file_path()
-        download_exists = download_data.exists() and download_stats.exists()
 
         # 2. get the upload entry
         upload_dataset_name = iqb_dataset_name_for_mlab(
@@ -329,12 +340,9 @@ class MLabCacheReader:
             start_date=start_date,
             end_date=end_date,
         )
-        upload_data = upload_entry.data_parquet_file_path()
-        upload_stats = upload_entry.stats_json_file_path()
-        upload_exists = upload_data.exists() and upload_stats.exists()
 
         # 3. bail if entries are missing
-        if not download_exists or not upload_exists:
+        if not download_entry.exists() or not upload_entry.exists():
             raise FileNotFoundError(
                 f"Cache entry not found for {download_dataset_name} {upload_dataset_name}"
                 f" ({start_date} to {end_date})"
@@ -345,10 +353,8 @@ class MLabCacheReader:
             granularity=granularity,
             start_date=start_date,
             end_date=end_date,
-            download_data=download_data,
-            upload_data=upload_data,
-            download_stats=download_stats,
-            upload_stats=upload_stats,
+            download=download_entry,
+            upload=upload_entry,
         )
 
     def get_iqb_data(

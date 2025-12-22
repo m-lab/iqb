@@ -5,10 +5,12 @@ from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
+from filelock import BaseFileLock
 
 from iqb.pipeline.cache import (
     PipelineCacheEntry,
     PipelineCacheManager,
+    PipelineEntrySyncError,
     _parse_both_dates,
     _parse_date,
     data_dir_or_default,
@@ -208,9 +210,171 @@ class TestPipelineCacheManager:
                 end_date="2024-10-01",
             )
 
+    def test_entry_has_no_syncers_when_no_remote_cache(self, tmp_path):
+        """Verify entry.syncers is empty when remote_cache is None."""
+        manager = PipelineCacheManager(data_dir=tmp_path)
+        entry = manager.get_cache_entry(
+            dataset_name="downloads_by_country",
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+        )
+        assert entry.syncers == []
+
+    def test_entry_has_syncer_when_remote_cache_provided(self, tmp_path):
+        """Verify entry.syncers contains remote_cache.sync when configured."""
+        mock_remote = Mock()
+        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=mock_remote)
+        entry = manager.get_cache_entry(
+            dataset_name="downloads_by_country",
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+        )
+        assert len(entry.syncers) == 1
+        assert entry.syncers[0] == mock_remote.sync
+
 
 class TestPipelineCacheEntry:
     """Test for PipelineCacheEntry class."""
+
+    def test_lock_creates_filelock(self, tmp_path):
+        """Verify lock() returns a FileLock instance."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        lock = entry.lock()
+        assert isinstance(lock, BaseFileLock)
+        assert lock.lock_file == str(entry.dir_path() / ".lock")
+
+    def test_exists_returns_false_when_files_missing(self, tmp_path):
+        """Verify exists() returns False when files don't exist."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        assert not entry.exists()
+
+    def test_exists_returns_false_when_only_data_exists(self, tmp_path):
+        """Verify exists() returns False when only data.parquet exists."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        # Create only data.parquet
+        entry.data_parquet_file_path().parent.mkdir(parents=True, exist_ok=True)
+        entry.data_parquet_file_path().touch()
+        assert not entry.exists()
+
+    def test_exists_returns_false_when_only_stats_exists(self, tmp_path):
+        """Verify exists() returns False when only stats.json exists."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        # Create only stats.json
+        entry.stats_json_file_path().parent.mkdir(parents=True, exist_ok=True)
+        entry.stats_json_file_path().touch()
+        assert not entry.exists()
+
+    def test_exists_returns_true_when_both_files_exist(self, tmp_path):
+        """Verify exists() returns True when both files exist."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        # Create both files
+        entry.data_parquet_file_path().parent.mkdir(parents=True, exist_ok=True)
+        entry.data_parquet_file_path().touch()
+        entry.stats_json_file_path().touch()
+        assert entry.exists()
+
+    def test_sync_raises_when_no_syncers(self, tmp_path):
+        """Verify sync() raises PipelineEntrySyncError when syncers is empty."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        with pytest.raises(PipelineEntrySyncError, match="Cannot sync"):
+            entry.sync()
+
+    def test_sync_calls_first_successful_syncer(self, tmp_path):
+        """Verify sync() uses any() short-circuit (stops after first success)."""
+        syncer1 = Mock(return_value=False)
+        syncer2 = Mock(return_value=True)
+        syncer3 = Mock(return_value=True)
+
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[syncer1, syncer2, syncer3],
+        )
+        entry.sync()
+
+        syncer1.assert_called_once_with(entry)
+        syncer2.assert_called_once_with(entry)
+        syncer3.assert_not_called()  # Short-circuit after syncer2 succeeded
+
+    def test_sync_raises_when_all_syncers_fail(self, tmp_path):
+        """Verify sync() raises when all syncers return False."""
+        syncer1 = Mock(return_value=False)
+        syncer2 = Mock(return_value=False)
+
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[syncer1, syncer2],
+        )
+        with pytest.raises(PipelineEntrySyncError):
+            entry.sync()
+
+        syncer1.assert_called_once()
+        syncer2.assert_called_once()
+
+    def test_lock_sync_pattern_integration(self, tmp_path):
+        """Integration test: verify lock + sync pattern works end-to-end."""
+
+        def mock_syncer(entry: PipelineCacheEntry) -> bool:
+            # Simulate creating files
+            entry.data_parquet_file_path().parent.mkdir(parents=True, exist_ok=True)
+            entry.data_parquet_file_path().touch()
+            entry.stats_json_file_path().touch()
+            return True
+
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[mock_syncer],
+        )
+
+        with entry.lock():
+            if not entry.exists():
+                entry.sync()
+
+        assert entry.exists()
 
     def test_dir_path_construction(self, tmp_path):
         """Test that dir_path constructs correct cache directory path."""
@@ -219,6 +383,7 @@ class TestPipelineCacheEntry:
             dataset_name="downloads_by_country",
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
+            syncers=[],
         )
 
         expected = (
@@ -238,6 +403,7 @@ class TestPipelineCacheEntry:
             dataset_name="downloads_by_country",
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
+            syncers=[],
         )
 
         # Create the file
@@ -256,6 +422,7 @@ class TestPipelineCacheEntry:
             dataset_name="downloads_by_country",
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
+            syncers=[],
         )
 
         data_file = entry.dir_path() / "data.parquet"
@@ -269,6 +436,7 @@ class TestPipelineCacheEntry:
             dataset_name="downloads_by_country",
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
+            syncers=[],
         )
 
         # Create the file
@@ -287,155 +455,9 @@ class TestPipelineCacheEntry:
             dataset_name="downloads_by_country",
             start_time=datetime(2024, 10, 1),
             end_time=datetime(2024, 11, 1),
+            syncers=[],
         )
 
         stats_file = entry.dir_path() / "stats.json"
         assert entry.stats_json_file_path() == stats_file
         assert not entry.stats_json_file_path().exists()
-
-
-class TestPipelineCacheManagerRemoteCache:
-    """Tests for PipelineCacheManager remote cache functionality."""
-
-    def test_get_cache_entry_skips_remote_when_files_exist(self, tmp_path):
-        """Test that remote cache is not called when files exist locally."""
-        # Mock remote cache
-        remote_cache = Mock()
-        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
-
-        # Create existing cache files
-        entry = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-        )
-        cache_dir = entry.dir_path()
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        (cache_dir / "data.parquet").write_text("data")
-        (cache_dir / "stats.json").write_text("{}")
-
-        # Get cache entry with fetch_if_missing=True
-        result = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify remote cache was not called
-        remote_cache.sync.assert_not_called()
-        assert result.data_parquet_file_path().exists()
-        assert result.stats_json_file_path().exists()
-
-    def test_get_cache_entry_skips_remote_when_fetch_if_missing_false(self, tmp_path):
-        """Test that remote cache is not called when fetch_if_missing=False."""
-        # Mock remote cache
-        remote_cache = Mock()
-        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
-
-        # Get cache entry with fetch_if_missing=False
-        result = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=False,
-        )
-
-        # Verify remote cache was not called
-        remote_cache.sync.assert_not_called()
-        assert not result.data_parquet_file_path().exists()
-        assert not result.stats_json_file_path().exists()
-
-    def test_get_cache_entry_calls_remote_when_missing(self, tmp_path):
-        """Test that remote cache is called when files are missing and fetch_if_missing=True."""
-
-        # Mock remote cache that creates the files
-        def mock_sync(entry):
-            cache_dir = entry.dir_path()
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            (cache_dir / "data.parquet").write_text("remote data")
-            (cache_dir / "stats.json").write_text("{}")
-            return True
-
-        remote_cache = Mock()
-        remote_cache.sync.side_effect = mock_sync
-        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
-
-        # Get cache entry with fetch_if_missing=True
-        result = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify remote cache was called
-        remote_cache.sync.assert_called_once()
-        assert result.data_parquet_file_path().exists()
-        assert result.stats_json_file_path().exists()
-
-    def test_get_cache_entry_skips_remote_when_none(self, tmp_path):
-        """Test that no error occurs when remote_cache=None and files are missing."""
-        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=None)
-
-        # Get cache entry with fetch_if_missing=True but remote_cache=None
-        result = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify no error and files don't exist
-        assert not result.data_parquet_file_path().exists()
-        assert not result.stats_json_file_path().exists()
-
-    def test_get_cache_entry_handles_remote_failure(self, tmp_path):
-        """Test that get_cache_entry handles remote cache sync failures gracefully."""
-        # Mock remote cache that fails
-        remote_cache = Mock()
-        remote_cache.sync.return_value = False
-        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
-
-        # Get cache entry with fetch_if_missing=True
-        result = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify remote cache was called but files don't exist
-        remote_cache.sync.assert_called_once()
-        assert not result.data_parquet_file_path().exists()
-        assert not result.stats_json_file_path().exists()
-
-    def test_get_cache_entry_syncs_when_any_file_missing(self, tmp_path):
-        """Test that remote cache is called when any file is missing (not just both)."""
-        # Mock remote cache
-        remote_cache = Mock()
-        remote_cache.sync.return_value = True
-        manager = PipelineCacheManager(data_dir=tmp_path, remote_cache=remote_cache)
-
-        # Create only the data.parquet file (stats.json missing)
-        entry = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-        )
-        cache_dir = entry.dir_path()
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        (cache_dir / "data.parquet").write_text("data")
-
-        # Get cache entry with fetch_if_missing=True
-        result = manager.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify remote cache was called (because stats.json is missing)
-        remote_cache.sync.assert_called_once()
-        assert result.data_parquet_file_path().exists()
-        assert not result.stats_json_file_path().exists()

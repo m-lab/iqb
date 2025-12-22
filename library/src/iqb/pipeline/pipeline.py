@@ -1,6 +1,7 @@
 """Module implementing the IQBPipeline type."""
 
 import hashlib
+import logging
 from datetime import datetime
 from importlib.resources import files
 from pathlib import Path
@@ -86,54 +87,45 @@ class IQBPipeline:
         dataset_name: str,
         start_date: str,
         end_date: str,
-        fetch_if_missing: bool = False,
     ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query template.
 
-        If fetch_if_missing is False and the entry does not exist on
-        disk, this method raises a FileNotFoundError exception.
-
-        Otherwise, attempts to fetch from configured remote_cache (if any),
-        then falls back to BigQuery execution if still missing.
+        Use `PipelineCacheEntry.sync` to fetch the files.
 
         Args:
             dataset_name: Name for the dataset (e.g., "downloads_by_country")
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
-            fetch_if_missing: Whether to try to fetch or query for the entry
 
         Returns:
             PipelineCacheEntry with paths to data.parquet and stats.json.
-
-        Raises:
-            FileNotFoundError: if cache doesn't exist and fetch_if_missing is False.
         """
-        # 1. get the cache entry (manager handles local cache check and remote sync)
+        # 1. create the entry
         entry = self.manager.get_cache_entry(
             dataset_name=dataset_name,
             start_date=start_date,
             end_date=end_date,
-            fetch_if_missing=fetch_if_missing,
         )
 
-        # 2. if the entry exists (either was local or synced from remote), we're done
-        if entry.data_parquet_file_path().exists() and entry.stats_json_file_path().exists():
-            return entry
+        # 2. prepare for synching from BigQuery
+        entry.syncers.append(self._bq_syncer)
 
-        # 3. handle missing cache without auto-fetching
-        if not fetch_if_missing:
-            raise FileNotFoundError(
-                f"Cache entry not found for {dataset_name} "
-                f"({start_date} to {end_date}). "
-                f"Set fetch_if_missing=True to execute query."
-            )
-
-        # 4. fall back to BigQuery execution if remote cache didn't have it
-        result = self._execute_query_template(entry)
-        result.save_data_parquet()
-        result.save_stats_json()
+        # 3. return the entry
         return entry
+
+    def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
+        """Internal method to get the entry files using a BigQuery query."""
+        try:
+            logging.info(f"bq: querying for {entry}... start")
+            result = self._execute_query_template(entry)
+            result.save_data_parquet()
+            result.save_stats_json()
+            logging.info(f"bq: querying for {entry}... ok")
+            return True
+        except Exception as exc:
+            logging.info(f"bq: querying for {entry}... failure: {exc}")
+            return False
 
     def execute_query_template(
         self,

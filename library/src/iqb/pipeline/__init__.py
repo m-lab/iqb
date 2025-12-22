@@ -8,6 +8,16 @@ within the `iqb` library`, allows to read/write query entries.
 The `iqb_dataset_name_for_{project}` family of functions allow to
 derive the correct dataset name for a given project.
 
+The `PipelineCacheEntry` class is a lazy cache entry whose files
+you can safely obtain using the `.sync` method, provided that mechanisms
+to obtain them are configured (e.g., the remote_cache argument for
+`PipelineCacheManager` and/or `IQBPipeline` and the billing BigQuery
+project for `IQBPipeline`).
+
+The `PipelineCacheEntry.lock()` method allows to lock a specific
+entry in exclusive mode to avoid concurrency issues. To implement
+this feature we use advisory file locking (e.g., `flock`).
+
 The `iqb_parquet_read` function allows to efficiently read and
 filter data inside an arbitrary parquet file.
 

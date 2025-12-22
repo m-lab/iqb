@@ -1,17 +1,27 @@
 """Module to manage the on-disk IQB measurements cache."""
 
+from __future__ import annotations
+
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Final, Protocol
 
+from filelock import BaseFileLock, FileLock
+
 # Cache file names
 PIPELINE_CACHE_DATA_FILENAME: Final[str] = "data.parquet"
+PIPELINE_CACHE_DOTLOCK_FILENAME: Final[str] = ".lock"
 PIPELINE_CACHE_STATS_FILENAME: Final[str] = "stats.json"
 
 
-@dataclass(frozen=True)
+class PipelineEntrySyncError(RuntimeError):
+    """Error emitted when we cannot sync the entry."""
+
+
+@dataclass
 class PipelineCacheEntry:
     """
     Reference to a cache entry containing query results and metadata.
@@ -21,12 +31,14 @@ class PipelineCacheEntry:
         dataset_name: the name of the dataset
         start_time: the datetime containing the start time
         end_time: the datetime containing the end time
+        syncers: functions to sync the entry
     """
 
     data_dir: Path
     dataset_name: str
     start_time: datetime
     end_time: datetime
+    syncers: list[Callable[[PipelineCacheEntry], bool]]
 
     def dir_path(self) -> Path:
         """Returns the directory path where to write files."""
@@ -42,6 +54,21 @@ class PipelineCacheEntry:
     def stats_json_file_path(self) -> Path:
         """Returns the path to the `stats.json` file."""
         return self.dir_path() / PIPELINE_CACHE_STATS_FILENAME
+
+    def lock(self) -> BaseFileLock:
+        """Return a FileLock locking the entry."""
+        lock_file_path = self.dir_path() / PIPELINE_CACHE_DOTLOCK_FILENAME
+        lock_file_path.parent.mkdir(parents=True, exist_ok=True)
+        return FileLock(lock_file_path)
+
+    def exists(self) -> bool:
+        """Return True if the entry files exist, False otherwise."""
+        return self.stats_json_file_path().exists() and self.data_parquet_file_path().exists()
+
+    def sync(self) -> None:
+        """Unconditionally sync the entry using all the configured syncers."""
+        if not any(sync(self) for sync in self.syncers):
+            raise PipelineEntrySyncError(f"Cannot sync {self}: see above logs")
 
 
 class PipelineRemoteCache(Protocol):
@@ -82,21 +109,16 @@ class PipelineCacheManager:
         dataset_name: str,
         start_date: str,
         end_date: str,
-        fetch_if_missing: bool = False,
     ) -> PipelineCacheEntry:
         """
         Get cache entry for the given query template.
 
-        If the entry exists on disk, returns it immediately.
-
-        If the entry does not exist and fetch_if_missing is True and
-        a remote_cache was configured, attempts to sync from remote cache.
+        Use `PipelineCacheEntry.sync` to fetch the files.
 
         Args:
             dataset_name: Name of the dataset (e.g., "downloads_by_country")
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
-            fetch_if_missing: Whether to try fetching from remote cache if missing
 
         Returns:
             PipelineCacheEntry with correctly initialized fields.
@@ -114,17 +136,14 @@ class PipelineCacheManager:
             dataset_name=dataset_name,
             start_time=start_time,
             end_time=end_time,
+            syncers=[],
         )
 
-        # 4. if the entry exists locally, we're done
-        if entry.data_parquet_file_path().exists() and entry.stats_json_file_path().exists():
-            return entry
+        # 4. if a remote_cache exists, configure it as a syncer
+        if self.remote_cache is not None:
+            entry.syncers.append(self.remote_cache.sync)
 
-        # 5. try fetching from remote cache if requested and available
-        if fetch_if_missing and self.remote_cache is not None:
-            self.remote_cache.sync(entry)
-
-        # 6. return the entry (may or may not exist on disk now)
+        # 5. return the entry (may not exist on disk until we .sync it)
         return entry
 
 

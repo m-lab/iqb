@@ -214,6 +214,32 @@ class TestMLabCacheReaderIntegration:
         assert data["latency_ms"] == 0.806
         assert data["packet_loss"] == 0.0
 
+    def test_download_stats_property(self, data_dir):
+        """Test backward compatibility property download_stats."""
+        reader = _create_reader(data_dir)
+        entry = _get_country_cache_entry_2024_10(reader)
+
+        # Use the backward compatibility property
+        stats_path = entry.download_stats
+
+        # Verify it returns the correct path
+        assert stats_path == entry.download.stats_json_file_path()
+        assert stats_path.exists()
+        assert stats_path.name == "stats.json"
+
+    def test_upload_stats_property(self, data_dir):
+        """Test backward compatibility property upload_stats."""
+        reader = _create_reader(data_dir)
+        entry = _get_country_cache_entry_2024_10(reader)
+
+        # Use the backward compatibility property
+        stats_path = entry.upload_stats
+
+        # Verify it returns the correct path
+        assert stats_path == entry.upload.stats_json_file_path()
+        assert stats_path.exists()
+        assert stats_path.name == "stats.json"
+
 
 class TestMLabDataFramePairExceptions:
     def test_download_multiple_rows_raises(self):

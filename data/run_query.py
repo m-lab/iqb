@@ -89,18 +89,19 @@ def run_bq_query(
     # Data directory is ./iqb/data (where this script lives)
     data_dir = Path(__file__).parent
 
-    # Use the GitHub remote cache to avoid hitting BigQuery when not needed
-    ghmanifest = iqb_github_load_manifest(data_dir / "ghcache.json")
-    ghcache = IQBGitHubRemoteCache(ghmanifest)
-
-    # Get or create cache entry
-    pipeline = IQBPipeline(project=project_id, data_dir=data_dir, remote_cache=ghcache)
+    # Create and sync cache entry (idempotent)
+    # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
+    #   - data.parquet: query results (empty file if no results)
+    #   - stats.json: query metadata
+    pipeline = IQBPipeline(project=project_id, data_dir=data_dir)
     entry = pipeline.get_cache_entry(
         dataset_name=query_name,
         start_date=start_date,
         end_date=end_date,
-        fetch_if_missing=True,
     )
+    with entry.lock():
+        if not entry.exists():
+            entry.sync()
     data_path = entry.data_parquet_file_path()
     assert data_path.exists()
     stats_path = entry.stats_json_file_path()

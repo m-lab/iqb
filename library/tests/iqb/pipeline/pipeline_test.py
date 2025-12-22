@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 
 from iqb.pipeline.bqpq import PipelineBQPQQueryResult
+from iqb.pipeline.cache import PipelineEntrySyncError
 from iqb.pipeline.pipeline import (
     IQBPipeline,
     PipelineCacheEntry,
@@ -194,27 +195,8 @@ class TestIQBPipelineGetCacheEntry:
         mock_client.return_value.query.assert_not_called()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_get_cache_entry_missing_without_fetch(self, mock_client, tmp_path):
-        """Test get_cache_entry raises FileNotFoundError when cache missing and fetch_if_missing=False."""
-        # Create the pipeline
-        data_dir = tmp_path / "iqb"
-        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
-
-        # Verify that we correctly instantiated dependencies
-        mock_client.assert_called_once_with(project="test-project")
-
-        # Don't create cache
-        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
-            pipeline.get_cache_entry(
-                dataset_name="downloads_by_country",
-                start_date="2024-10-01",
-                end_date="2024-11-01",
-                fetch_if_missing=False,
-            )
-
-    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_get_cache_entry_fetch_if_missing(self, mock_client, tmp_path):
-        """Test get_cache_entry executes query when cache missing and fetch_if_missing=True."""
+    def test_bq_syncer_success(self, mock_client, tmp_path):
+        """Test that _bq_syncer successfully fetches from BigQuery when called via entry.sync()."""
         # Create the pipeline
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
@@ -248,13 +230,20 @@ class TestIQBPipelineGetCacheEntry:
         # Tell execute_query to return our mock result
         mock_client.return_value.execute_query.return_value = mock_result
 
-        # Get cache entry with fetch_if_missing=True
+        # Get cache entry (BigQuery syncer is automatically added)
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
             start_date="2024-10-01",
             end_date="2024-11-01",
-            fetch_if_missing=True,
         )
+
+        # Verify entry has syncer configured
+        assert len(entry.syncers) == 1
+
+        # Call sync() to trigger the BigQuery syncer
+        with entry.lock():
+            if not entry.exists():
+                entry.sync()
 
         # Verify execute_query was called
         mock_client.return_value.execute_query.assert_called_once()
@@ -269,8 +258,8 @@ class TestIQBPipelineGetCacheEntry:
         assert entry.stats_json_file_path().exists()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_get_cache_entry_partial_cache_data_only(self, mock_client, tmp_path):
-        """Test get_cache_entry when only data.parquet exists (missing stats.json)."""
+    def test_bq_syncer_failure(self, mock_client, tmp_path):
+        """Test that _bq_syncer handles exceptions and returns False."""
         # Create the pipeline
         data_dir = tmp_path / "iqb"
         pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
@@ -278,55 +267,30 @@ class TestIQBPipelineGetCacheEntry:
         # Verify that we correctly instantiated dependencies
         mock_client.assert_called_once_with(project="test-project")
 
-        # Create only data.parquet, NOT stats.json
-        cache_dir = (
-            data_dir
-            / "cache"
-            / "v1"
-            / "20241001T000000Z"
-            / "20241101T000000Z"
-            / "downloads_by_country"
+        # Mock execute_query to raise an exception
+        mock_client.return_value.execute_query.side_effect = RuntimeError("BigQuery failed")
+
+        # Get cache entry
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
         )
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        (cache_dir / "data.parquet").write_text("fake parquet data")
 
-        # Should raise FileNotFoundError (cache incomplete)
-        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
-            pipeline.get_cache_entry(
-                dataset_name="downloads_by_country",
-                start_date="2024-10-01",
-                end_date="2024-11-01",
-            )
+        # Verify entry has syncer configured
+        assert len(entry.syncers) == 1
 
-    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_get_cache_entry_partial_cache_stats_only(self, mock_client, tmp_path):
-        """Test get_cache_entry when only stats.json exists (missing data.parquet)."""
-        # Create the pipeline
-        data_dir = tmp_path / "iqb"
-        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
+        # Call sync() - should raise PipelineEntrySyncError because all syncers failed
+        with pytest.raises(PipelineEntrySyncError, match="Cannot sync"), entry.lock():
+            if not entry.exists():
+                entry.sync()
 
-        # Verify that we correctly instantiated dependencies
-        mock_client.assert_called_once_with(project="test-project")
+        # Verify BigQuery was attempted
+        mock_client.return_value.execute_query.assert_called_once()
 
-        # Create only stats.json, NOT data.parquet
-        cache_dir = (
-            data_dir
-            / "cache"
-            / "v1"
-            / "20241001T000000Z"
-            / "20241101T000000Z"
-            / "downloads_by_country"
-        )
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        (cache_dir / "stats.json").write_text("{}")
-
-        # Should raise FileNotFoundError (cache incomplete)
-        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
-            pipeline.get_cache_entry(
-                dataset_name="downloads_by_country",
-                start_date="2024-10-01",
-                end_date="2024-11-01",
-            )
+        # Verify no files were created
+        assert not entry.data_parquet_file_path().exists()
+        assert not entry.stats_json_file_path().exists()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_get_cache_entry_validation_checks(self, mock_client, tmp_path):
@@ -353,122 +317,3 @@ class TestIQBPipelineGetCacheEntry:
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )
-
-    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_get_cache_entry_with_remote_cache_success(self, mock_client, tmp_path):
-        """Test get_cache_entry uses remote cache when local cache missing."""
-        # Expected cache directory
-        data_dir = tmp_path / "iqb"
-        expected_cache_dir = (
-            data_dir
-            / "cache"
-            / "v1"
-            / "20241001T000000Z"
-            / "20241101T000000Z"
-            / "downloads_by_country"
-        )
-
-        # Create a mock remote cache that succeeds
-        class MockRemoteCache:
-            def __init__(self):
-                self.sync_called = False
-
-            def sync(self, entry: PipelineCacheEntry) -> bool:
-                """Simulate successful remote cache sync."""
-                _ = entry
-                self.sync_called = True
-                # Create the files that remote cache would download
-                expected_cache_dir.mkdir(parents=True, exist_ok=True)
-                (expected_cache_dir / "data.parquet").write_text("remote data")
-                (expected_cache_dir / "stats.json").write_text("{}")
-                return True
-
-        mock_remote = MockRemoteCache()
-
-        # Create the pipeline with remote_cache
-        pipeline = IQBPipeline(project="test-project", data_dir=data_dir, remote_cache=mock_remote)
-
-        # Get cache entry (should use remote, not BigQuery)
-        entry = pipeline.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify remote cache sync was called
-        assert mock_remote.sync_called
-
-        # Verify BigQuery was NOT called (remote cache succeeded)
-        mock_client.return_value.execute_query.assert_not_called()
-
-        # Verify the returned entry has correct paths and files exist
-        assert isinstance(entry, PipelineCacheEntry)
-        assert entry.data_parquet_file_path().exists()
-        assert entry.stats_json_file_path().exists()
-
-    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
-    def test_get_cache_entry_with_remote_cache_failure(self, mock_client, tmp_path):
-        """Test get_cache_entry falls back to BigQuery when remote cache fails."""
-        # Expected cache directory
-        data_dir = tmp_path / "iqb"
-        expected_cache_dir = (
-            data_dir
-            / "cache"
-            / "v1"
-            / "20241001T000000Z"
-            / "20241101T000000Z"
-            / "downloads_by_country"
-        )
-
-        # Create a mock remote cache that fails
-        class MockRemoteCache:
-            def __init__(self):
-                self.sync_called = False
-
-            def sync(self, entry: PipelineCacheEntry) -> bool:
-                """Simulate remote cache sync failure."""
-                _ = entry
-                self.sync_called = True
-                return False  # Sync failed
-
-        mock_remote = MockRemoteCache()
-
-        # Mock the BigQuery query result
-        mock_result = MagicMock(spec=PipelineBQPQQueryResult)
-
-        def mock_save_parquet():
-            expected_cache_dir.mkdir(parents=True, exist_ok=True)
-            (expected_cache_dir / "data.parquet").write_text("bq data")
-            return expected_cache_dir / "data.parquet"
-
-        def mock_save_stats():
-            expected_cache_dir.mkdir(parents=True, exist_ok=True)
-            (expected_cache_dir / "stats.json").write_text("{}")
-            return expected_cache_dir / "stats.json"
-
-        mock_result.save_data_parquet = mock_save_parquet
-        mock_result.save_stats_json = mock_save_stats
-        mock_client.return_value.execute_query.return_value = mock_result
-
-        # Create the pipeline with remote_cache
-        pipeline = IQBPipeline(project="test-project", data_dir=data_dir, remote_cache=mock_remote)
-
-        # Get cache entry (should fallback to BigQuery)
-        entry = pipeline.get_cache_entry(
-            dataset_name="downloads_by_country",
-            start_date="2024-10-01",
-            end_date="2024-11-01",
-            fetch_if_missing=True,
-        )
-
-        # Verify remote cache sync was attempted
-        assert mock_remote.sync_called
-
-        # Verify BigQuery WAS called (remote cache failed)
-        mock_client.return_value.execute_query.assert_called_once()
-
-        # Verify the returned entry has correct paths and files exist
-        assert isinstance(entry, PipelineCacheEntry)
-        assert entry.data_parquet_file_path().exists()
-        assert entry.stats_json_file_path().exists()

@@ -126,7 +126,7 @@ class IQBPipeline:
             log.info("querying for %s... ok", entry)
             return True
         except Exception as exc:
-            log.info("querying for %s... failure: %s", entry, exc)
+            log.warning("querying for %s... failure: %s", entry, exc)
             return False
 
     def execute_query_template(

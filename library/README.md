@@ -38,6 +38,28 @@ score = iqb.calculate_iqb_score(print_details=True)
 iqb.print_config()
 ```
 
+## GCloud Configuration
+
+To run BigQuery queries, you need to be logged in using the
+user account subscribed to the `discuss@` mailing list.
+
+To install `gcloud` (on Ubuntu):
+
+```bash
+sudo snap install --classic google-cloud-sdk
+```
+
+Then login with:
+
+```bash
+gcloud auth application-default login
+```
+
+You should then be able to run queries within the (small) quota.
+
+The billing project should be `measurement-lab`.
+
+
 ## Running Tests
 
 The library uses `pytest` for testing. Tests are located in the `tests/`

@@ -6,7 +6,6 @@ import hashlib
 import json
 import logging
 import os
-import shutil
 from dataclasses import dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory

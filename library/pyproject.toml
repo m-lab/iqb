@@ -20,6 +20,7 @@ dependencies = [
     "dacite>=1.9.2",
     "filelock>=3.20.1",
     "colorlog>=6.10.1",
+    "tqdm>=4.67.1",
 ]
 
 [project.urls]

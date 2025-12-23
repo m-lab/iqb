@@ -13,6 +13,7 @@ from tempfile import TemporaryDirectory
 from urllib.request import urlopen
 
 from dacite import from_dict
+from tqdm import tqdm
 
 from ..pipeline.cache import PipelineCacheEntry
 
@@ -130,9 +131,26 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
 def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
     # Download into the temporary file
     log.info("fetching %s... start", entry)
+
     with urlopen(entry.url) as response, open(tmp_file, "wb") as filep:
-        while chunk := response.read(8192):
-            filep.write(chunk)
+        total = response.headers.get("Content-Length")
+        total = int(total) if total is not None else None
+
+        with tqdm(
+            total=total,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            desc=tmp_file.name,
+            leave=True,
+        ) as pbar:
+            while True:
+                chunk = response.read(8192)
+                if not chunk:
+                    break
+                filep.write(chunk)
+                pbar.update(len(chunk))
+
     log.info("fetching %s... ok", entry)
 
     # Make sure the sha256 matches

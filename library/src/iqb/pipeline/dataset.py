@@ -14,6 +14,10 @@ class IQBDatasetGranularity(str, Enum):
     """Enumerate available dataset granularity."""
 
     COUNTRY = "by_country"
+    COUNTRY_ASN = "by_country_asn"
+    COUNTRY_SUBDIVISION1 = "by_country_subdivision1"
+    COUNTRY_SUBDIVISION1_ASN = "by_country_subdivision1_asn"
+    COUNTRY_CITY = "by_country_city"
     COUNTRY_CITY_ASN = "by_country_city_asn"
 
 

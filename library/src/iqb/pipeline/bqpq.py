@@ -38,7 +38,7 @@ class PipelineBQPQPathsProvider(Protocol):
     def stats_json_file_path(self) -> Path: ...
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class PipelineBQPQQueryResult:
     """
     Result of the query with reference to job and row iterator.

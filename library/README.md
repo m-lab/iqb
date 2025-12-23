@@ -69,6 +69,12 @@ pipeline = IQBPipeline(
 
 You can then use `pipeline` to run queries up to a daily quota.
 
+## Coding Style
+
+We strongly prefer keyword-only arguments for public constructors (e.g.,
+`IQBPipeline`, `IQBCache`) and functions, because they are harder to misuse
+and they enable incremental refactoring.
+
 ## Running Tests
 
 The library uses `pytest` for testing. Tests are located in the `tests/`

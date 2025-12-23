@@ -19,7 +19,7 @@ from ..pipeline.cache import PipelineCacheEntry
 log = logging.getLogger("ghremote/cache")
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class FileEntry:
     """Entry in the manifest for a single cached file."""
 
@@ -27,7 +27,7 @@ class FileEntry:
     url: str
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class Manifest:
     """Manifest for cached files stored in GitHub releases."""
 

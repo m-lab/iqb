@@ -55,28 +55,33 @@ class TestPipelineBQPQClient:
 
     @patch("iqb.pipeline.bqpq.bigquery.Client")
     @patch("iqb.pipeline.bqpq.bigquery_storage_v1.BigQueryReadClient")
-    def test_execute_query(self, mock_storage, mock_client, tmp_path):
-        """Test that execute_query_template constructs correct cache directory."""
-        # Setup mocks
-        mock_job = Mock()
-        mock_rows = Mock()
+    def test_execute_query_waits_for_job(self, mock_storage, mock_client, tmp_path):
+        """Test that execute_query polls job.state and calls job.reload."""
+        # ARRANGE: Set up a mock job that will report "RUNNING" twice
+        # before reporting "DONE".
         mock_client_instance = Mock()
+        mock_job = Mock()
         mock_client_instance.query.return_value = mock_job
         mock_job.total_bytes_processed = 123456789
-        mock_job.state = "DONE"
-        state_values = iter(["" * 1000])
-        type(mock_job).state = property(lambda _: next(state_values, "DONE"))
+        mock_job.state = "RUNNING"
+        mock_rows = Mock()
         mock_job.result.return_value = mock_rows
+
+        # This side effect is called by mock_job.reload().
+        # It changes the state to "DONE" on the second call.
+        def reload_side_effect():
+            if mock_job.reload.call_count == 2:
+                mock_job.state = "DONE"
+
+        mock_job.reload.side_effect = reload_side_effect
         mock_client.return_value = mock_client_instance
         mock_storage_client = Mock()
         mock_storage.return_value = mock_storage_client
 
-        # Create the client
         client = PipelineBQPQClient(project="test-project")
+        paths_provider = FakePathsProvider(tmp_path)
 
-        # Execute query
-        data_dir = tmp_path / "iqb"
-        paths_provider = FakePathsProvider(data_dir)
+        # ACT: Execute the query. The _sleep_secs avoids long waits.
         result = client.execute_query(
             paths_provider=paths_provider,
             template_hash="hash123",
@@ -84,13 +89,12 @@ class TestPipelineBQPQClient:
             _sleep_secs=0.001,
         )
 
-        # Verify client.query was called
+        # ASSERT: Verify the polling logic worked as expected.
         mock_client_instance.query.assert_called_once()
 
-        # Verify that job.reload was called
-        mock_job.reload.assert_called()
-
-        # Verify job.result was called
+        # The loop should run until state is "DONE", which we configured
+        # to happen after the second reload call.
+        assert mock_job.reload.call_count == 2
         mock_job.result.assert_called_once()
 
         # Verify the result structure

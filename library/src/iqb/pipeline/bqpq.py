@@ -2,7 +2,7 @@
 
 import json
 import logging
-import shutil
+import os
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -88,7 +88,7 @@ class PipelineBQPQQueryResult:
             # Write the possibly-empty parquet file
             # Use a temporary directory, which is always removed regardless
             # of whether there's still a temporary file inside it
-            with TemporaryDirectory() as tmp_dir:
+            with TemporaryDirectory(dir=parquet_path.parent) as tmp_dir:
                 tmp_file = Path(tmp_dir) / parquet_path.name
                 with pq.ParquetWriter(tmp_file, schema) as writer:
                     if first_batch is not None:
@@ -96,7 +96,9 @@ class PipelineBQPQQueryResult:
                     for batch in batches:
                         writer.write_batch(batch)
                         pbar.update(batch.num_rows)
-                shutil.move(tmp_file, parquet_path)
+                # On Windows, readers may block replace due to missing
+                # FILE_SHARE_DELETE. YAGNI: add retry/backoff if it arises.
+                os.replace(tmp_file, parquet_path)
 
         log.info("BigQuery download... ok")
         return parquet_path
@@ -134,12 +136,14 @@ class PipelineBQPQQueryResult:
 
         # Use a temporary directory, which is always removed regardless
         # of whether there's still a temporary file inside it
-        with TemporaryDirectory() as tmp_dir:
+        with TemporaryDirectory(dir=stats_path.parent) as tmp_dir:
             tmp_file = Path(tmp_dir) / stats_path.name
             with tmp_file.open("w") as filep:
                 json.dump(stats, filep, indent=2)
                 filep.write("\n")
-            shutil.move(tmp_file, stats_path)
+            # On Windows, readers may block replace due to missing
+            # FILE_SHARE_DELETE. YAGNI: add retry/backoff if it arises.
+            os.replace(tmp_file, stats_path)
 
         return stats_path
 

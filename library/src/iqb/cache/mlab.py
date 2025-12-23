@@ -11,7 +11,7 @@ from ..pipeline import (
     iqb_parquet_read,
 )
 from ..pipeline.cache import PipelineCacheEntry
-from ..pipeline.dataset import PipelineDatasetMLabTable
+from ..pipeline.dataset import IQBDatasetMLabTable
 from ..pipeline.pipeline import PipelineCacheManager
 
 
@@ -322,7 +322,7 @@ class MLabCacheManager:
         # 1. get the download entry
         download_dataset_name = iqb_dataset_name_for_mlab(
             granularity=granularity,
-            table=PipelineDatasetMLabTable.DOWNLOAD,
+            table=IQBDatasetMLabTable.DOWNLOAD,
         )
         download_entry = self.manager.get_cache_entry(
             dataset_name=download_dataset_name,
@@ -333,7 +333,7 @@ class MLabCacheManager:
         # 2. get the upload entry
         upload_dataset_name = iqb_dataset_name_for_mlab(
             granularity=granularity,
-            table=PipelineDatasetMLabTable.UPLOAD,
+            table=IQBDatasetMLabTable.UPLOAD,
         )
         upload_entry = self.manager.get_cache_entry(
             dataset_name=upload_dataset_name,

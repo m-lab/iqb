@@ -2,7 +2,7 @@
 
 from iqb.pipeline.dataset import (
     IQBDatasetGranularity,
-    PipelineDatasetMLabTable,
+    IQBDatasetMLabTable,
     iqb_dataset_name_for_mlab,
 )
 
@@ -13,13 +13,13 @@ class TestIQBDatasetNameForMLab:
     def test_downloads_by_country(self):
         value = iqb_dataset_name_for_mlab(
             granularity=IQBDatasetGranularity.COUNTRY,
-            table=PipelineDatasetMLabTable.DOWNLOAD,
+            table=IQBDatasetMLabTable.DOWNLOAD,
         )
         assert value == "downloads_by_country"
 
     def test_uploads_by_country_city_asn(self):
         value = iqb_dataset_name_for_mlab(
             granularity=IQBDatasetGranularity.COUNTRY_CITY_ASN,
-            table=PipelineDatasetMLabTable.UPLOAD,
+            table=IQBDatasetMLabTable.UPLOAD,
         )
         assert value == "uploads_by_country_city_asn"

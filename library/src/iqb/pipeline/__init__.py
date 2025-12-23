@@ -140,6 +140,7 @@ immediately projecting out columns we don't need.
 
 from .dataset import (
     IQBDatasetGranularity,
+    IQBDatasetMLabTable,
     iqb_dataset_name_for_mlab,
 )
 from .pipeline import IQBPipeline
@@ -147,6 +148,7 @@ from .pqread import iqb_parquet_read
 
 __all__ = [
     "IQBDatasetGranularity",
+    "IQBDatasetMLabTable",
     "IQBPipeline",
     "iqb_dataset_name_for_mlab",
     "iqb_parquet_read",

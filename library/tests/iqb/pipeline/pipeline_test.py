@@ -258,6 +258,43 @@ class TestIQBPipelineGetCacheEntry:
         assert entry.stats_json_file_path().exists()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    def test_bq_syncer_skip_when_exists(self, mock_client, tmp_path):
+        """Test that _bq_syncer skips BigQuery when cache files already exist."""
+        # Create the pipeline
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
+
+        # Create cache directory and files
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "data.parquet").write_text("fake parquet data")
+        (cache_dir / "stats.json").write_text("{}")
+
+        # Get cache entry (BigQuery syncer is automatically added)
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+
+        # Verify entry has syncer configured
+        assert len(entry.syncers) == 1
+
+        # Call sync() to trigger the BigQuery syncer
+        with entry.lock():
+            entry.sync()
+
+        # Verify BigQuery was not attempted
+        mock_client.return_value.execute_query.assert_not_called()
+
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_bq_syncer_failure(self, mock_client, tmp_path):
         """Test that _bq_syncer handles exceptions and returns False."""
         # Create the pipeline

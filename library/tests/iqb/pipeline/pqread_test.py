@@ -4,7 +4,6 @@ from pathlib import Path
 
 import pytest
 
-import pytest
 from iqb.pipeline.pqread import iqb_parquet_read
 
 

@@ -348,14 +348,10 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
     # Scan subcommand
-    subparsers.add_parser(
-        "scan", help="Scan local files and prepare for upload"
-    )
+    subparsers.add_parser("scan", help="Scan local files and prepare for upload")
 
     # Sync subcommand
-    subparsers.add_parser(
-        "sync", help="Download files from GitHub based on manifest"
-    )
+    subparsers.add_parser("sync", help="Download files from GitHub based on manifest")
 
     args = parser.parse_args()
 

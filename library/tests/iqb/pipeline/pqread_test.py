@@ -7,64 +7,68 @@ import pytest
 from iqb.pipeline.pqread import iqb_parquet_read
 
 
-def _basepath() -> Path:
-    return Path(__file__).parent.parent.parent.parent.parent
-
-
-def _country_dataset() -> Path:
-    return (
-        _basepath()
-        / "data"
-        / "cache"
-        / "v1"
-        / "20241001T000000Z"
-        / "20241101T000000Z"
-        / "downloads_by_country"
-        / "data.parquet"
-    )
+@pytest.fixture
+def test_data_path() -> Path:
+    """Fixture that returns the path to the test_data.parquet file."""
+    return Path(__file__).parent.parent.parent / "fixtures" / "test_data.parquet"
 
 
 class TestIQBParquetRead:
     """Test for iqb_parquet_read function."""
 
-    def test_country_dataset_simple(self):
-        fullpath = _country_dataset()
-        df = iqb_parquet_read(fullpath)
-        assert len(df) == 236
-        assert len(df.columns) == 29
+    def test_simple_read(self, test_data_path: Path):
+        df = iqb_parquet_read(test_data_path)
+        assert len(df) == 5
+        assert len(df.columns) == 7
 
-    def test_country_dataset_with_country_filter(self):
-        fullpath = _country_dataset()
-        df = iqb_parquet_read(fullpath, country_code="IT")
+    def test_with_country_filter(self, test_data_path: Path):
+        df = iqb_parquet_read(test_data_path, country_code="US")
+        assert len(df) == 3
+        assert len(df.columns) == 7
+        assert all(df["country_code"] == "US")
+
+    def test_with_asn_filter(self, test_data_path: Path):
+        df = iqb_parquet_read(test_data_path, asn=101)
+        assert len(df) == 2
+        assert len(df.columns) == 7
+        assert all(df["asn"] == 101)
+
+    def test_with_subdivision1_filter(self, test_data_path: Path):
+        df = iqb_parquet_read(test_data_path, subdivision1="California")
+        assert len(df) == 2
+        assert len(df.columns) == 7
+        assert all(df["subdivision1_name"] == "California")
+
+    def test_with_city_filter(self, test_data_path: Path):
+        df = iqb_parquet_read(test_data_path, city="New York City")
         assert len(df) == 1
-        assert len(df.columns) == 29
+        assert len(df.columns) == 7
+        assert all(df["city"] == "New York City")
 
-    def test_country_dataset_with_column_filter(self):
-        fullpath = _country_dataset()
+    def test_with_multiple_filters(self, test_data_path: Path):
+        df = iqb_parquet_read(test_data_path, country_code="US", subdivision1="California")
+        assert len(df) == 2
+        assert len(df.columns) == 7
+        assert all(df["country_code"] == "US")
+        assert all(df["subdivision1_name"] == "California")
+
+    def test_with_column_filter(self, test_data_path: Path):
         df = iqb_parquet_read(
-            fullpath,
+            test_data_path,
             columns=[
                 "country_code",
                 "sample_count",
                 "download_p95",
-                "loss_p95",
             ],
         )
-        assert len(df) == 236
-        assert len(df.columns) == 4
+        assert len(df) == 5
+        assert len(df.columns) == 3
+        assert list(df.columns) == ["country_code", "sample_count", "download_p95"]
 
     def test_nonexisting_file_throws(self, tmp_path):
         with pytest.raises(FileNotFoundError):
             _ = iqb_parquet_read(tmp_path / "data.parquet")
 
-    def test_nonexisting_column_throws(self):
+    def test_nonexisting_column_throws(self, test_data_path: Path):
         with pytest.raises(ValueError):
-            _ = iqb_parquet_read(_country_dataset(), columns=["antani", "mascetti"])
-
-    def test_asn_filter_with_country_dataset_throws(self):
-        with pytest.raises(ValueError):
-            _ = iqb_parquet_read(_country_dataset(), asn=137)
-
-    def test_city_filter_with_country_dataset_throws(self):
-        with pytest.raises(ValueError):
-            _ = iqb_parquet_read(_country_dataset(), city="Boston")
+            _ = iqb_parquet_read(test_data_path, columns=["antani", "mascetti"])

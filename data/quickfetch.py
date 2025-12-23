@@ -15,7 +15,7 @@ from iqb import (
     iqb_dataset_name_for_mlab,
 )
 from iqb.ghremote import IQBGitHubRemoteCache, iqb_github_load_manifest
-from iqb.pipeline.dataset import PipelineDatasetMLabTable  # XXX
+from iqb.pipeline.dataset import IQBDatasetMLabTable  # XXX
 
 if sys.stderr.isatty():
     LOG_COLORS = {
@@ -45,7 +45,7 @@ def sync_mlab(
     end_date: str,
     granularity: IQBDatasetGranularity,
 ):
-    for table in (PipelineDatasetMLabTable.DOWNLOAD, PipelineDatasetMLabTable.UPLOAD):
+    for table in (IQBDatasetMLabTable.DOWNLOAD, IQBDatasetMLabTable.UPLOAD):
         entry = pipeline.get_cache_entry(
             dataset_name=iqb_dataset_name_for_mlab(
                 granularity=granularity,

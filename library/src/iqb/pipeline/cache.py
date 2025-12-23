@@ -66,7 +66,15 @@ class PipelineCacheEntry:
         return self.stats_json_file_path().exists() and self.data_parquet_file_path().exists()
 
     def sync(self) -> None:
-        """Unconditionally sync the entry using all the configured syncers."""
+        """
+        Sync the entry using all the configured syncers.
+
+        If one syncer succeeds, the entry is considered synced and this
+        method returns. If syncers are present and all fail, raise a
+        PipelineEntrySyncError. If there are no syncers configured, this
+        method only succeeds when the entry files already exist on disk;
+        otherwise it raises FileNotFoundError.
+        """
         if self.syncers:
             if not any(sync(self) for sync in self.syncers):
                 raise PipelineEntrySyncError(f"Cannot sync {self}: see above logs")

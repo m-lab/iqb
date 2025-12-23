@@ -167,12 +167,6 @@ class TestIQBGitHubRemoteCacheSync:
         entry = self._create_mock_entry(tmp_path)
 
         # Manifest only has JSON, not parquet
-        manifest = Manifest(
-            v=0,
-            files={
-                "stats.json": FileEntry(sha256="abc123", url="https://example.com/stats.json"),
-            },
-        )
         _write_manifest(
             tmp_path,
             {
@@ -199,12 +193,6 @@ class TestIQBGitHubRemoteCacheSync:
         entry = self._create_mock_entry(tmp_path)
 
         # Manifest only has parquet, not JSON
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(sha256="abc123", url="https://example.com/data.parquet"),
-            },
-        )
         _write_manifest(
             tmp_path,
             {

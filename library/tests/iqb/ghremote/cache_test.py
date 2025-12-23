@@ -13,7 +13,6 @@ from iqb.ghremote.cache import (
     FileEntry,
     IQBGitHubRemoteCache,
     Manifest,
-    iqb_github_load_manifest,
 )
 
 
@@ -22,37 +21,50 @@ def _compute_test_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+def _manifest_path_for_data_dir(data_dir):
+    return data_dir / "state" / "ghremote" / "manifest.json"
+
+
+def _write_manifest(data_dir, manifest_data):
+    manifest_path = _manifest_path_for_data_dir(data_dir)
+    manifest_path.parent.mkdir(parents=True, exist_ok=True)
+    manifest_path.write_text(json.dumps(manifest_data))
+    return manifest_path
+
+
 class TestIQBGitHubLoadManifest:
-    """Tests for loading the iqb_github_load_manifest function."""
+    """Tests for loading the GitHub remote manifest."""
 
     def test_load_invalid_json_string(self, tmp_path):
         """Verify we get JSONDecodeError when loading an invalid JSON string."""
-        manifest_file = tmp_path / "manifest.json"
+        manifest_file = _manifest_path_for_data_dir(tmp_path)
+        manifest_file.parent.mkdir(parents=True, exist_ok=True)
         manifest_file.write_text("{ invalid json }")
 
         with pytest.raises(json.JSONDecodeError):
-            iqb_github_load_manifest(manifest_file)
+            IQBGitHubRemoteCache(data_dir=tmp_path)
 
     def test_load_invalid_json_fields_types(self, tmp_path):
         """Verify that dacite throws if the fields have invalid types."""
-        manifest_file = tmp_path / "manifest.json"
+        manifest_file = _manifest_path_for_data_dir(tmp_path)
+        manifest_file.parent.mkdir(parents=True, exist_ok=True)
         # v should be int, not string
         manifest_file.write_text('{"v": "not an int", "files": {}}')
 
         with pytest.raises((WrongTypeError, ValueError, TypeError)):
-            iqb_github_load_manifest(manifest_file)
+            IQBGitHubRemoteCache(data_dir=tmp_path)
 
     def test_load_invalid_version_number(self, tmp_path):
         """Verify that there is a ValueError when the version number is invalid."""
-        manifest_file = tmp_path / "manifest.json"
+        manifest_file = _manifest_path_for_data_dir(tmp_path)
+        manifest_file.parent.mkdir(parents=True, exist_ok=True)
         manifest_file.write_text('{"v": 1, "files": {}}')
 
         with pytest.raises(ValueError, match="Unsupported manifest version"):
-            iqb_github_load_manifest(manifest_file)
+            IQBGitHubRemoteCache(data_dir=tmp_path)
 
     def test_load_success_with_file(self, tmp_path):
         """Verify that we can correctly load a manifest when backed by an existing file."""
-        manifest_file = tmp_path / "manifest.json"
         manifest_data = {
             "v": 0,
             "files": {
@@ -62,9 +74,9 @@ class TestIQBGitHubLoadManifest:
                 }
             },
         }
-        manifest_file.write_text(json.dumps(manifest_data))
-
-        manifest = iqb_github_load_manifest(manifest_file)
+        _write_manifest(tmp_path, manifest_data)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        manifest = cache.manifest
 
         assert manifest.v == 0
         assert len(manifest.files) == 1
@@ -75,9 +87,8 @@ class TestIQBGitHubLoadManifest:
 
     def test_load_success_without_file(self, tmp_path):
         """Verify that we return a default manifest when the file is missing."""
-        manifest_file = tmp_path / "nonexistent.json"
-
-        manifest = iqb_github_load_manifest(manifest_file)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        manifest = cache.manifest
 
         assert manifest.v == 0
         assert len(manifest.files) == 0
@@ -156,13 +167,19 @@ class TestIQBGitHubRemoteCacheSync:
         entry = self._create_mock_entry(tmp_path)
 
         # Manifest only has JSON, not parquet
-        manifest = Manifest(
-            v=0,
-            files={
-                "stats.json": FileEntry(sha256="abc123", url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "stats.json": {
+                        "sha256": "abc123",
+                        "url": "https://example.com/stats.json",
+                    }
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         with caplog.at_level(logging.WARNING):
             result = cache.sync(entry)
@@ -176,13 +193,19 @@ class TestIQBGitHubRemoteCacheSync:
         entry = self._create_mock_entry(tmp_path)
 
         # Manifest only has parquet, not JSON
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(sha256="abc123", url="https://example.com/data.parquet"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": "abc123",
+                        "url": "https://example.com/data.parquet",
+                    }
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         with caplog.at_level(logging.WARNING):
             result = cache.sync(entry)
@@ -200,16 +223,23 @@ class TestIQBGitHubRemoteCacheSync:
 
         entry = self._create_mock_entry(tmp_path)
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(
-                    sha256=parquet_sha256, url="https://example.com/data.parquet"
-                ),
-                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": parquet_sha256,
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "stats.json": {
+                        "sha256": json_sha256,
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -236,16 +266,23 @@ class TestIQBGitHubRemoteCacheSync:
         entry.stats_json_file_path().write_bytes(json_content)
         entry.data_parquet_file_path().write_bytes(parquet_content)
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(
-                    sha256=parquet_sha256, url="https://example.com/data.parquet"
-                ),
-                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": parquet_sha256,
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "stats.json": {
+                        "sha256": json_sha256,
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         # Mock urlopen - it should NOT be called
         mock_urlopen = Mock(side_effect=AssertionError("Should not download!"))
@@ -271,16 +308,23 @@ class TestIQBGitHubRemoteCacheSync:
         entry.stats_json_file_path().write_bytes(b"wrong content")
         entry.data_parquet_file_path().write_bytes(b"wrong parquet")
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(
-                    sha256=parquet_sha256, url="https://example.com/data.parquet"
-                ),
-                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": parquet_sha256,
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "stats.json": {
+                        "sha256": json_sha256,
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -301,16 +345,23 @@ class TestIQBGitHubRemoteCacheSync:
 
         entry = self._create_mock_entry(tmp_path)
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(
-                    sha256=parquet_sha256, url="https://example.com/data.parquet"
-                ),
-                "stats.json": FileEntry(sha256=json_sha256, url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": parquet_sha256,
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "stats.json": {
+                        "sha256": json_sha256,
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -333,14 +384,23 @@ class TestIQBGitHubRemoteCacheSync:
         """Ensure that we return False when download fails (network error, 404, etc)."""
         entry = self._create_mock_entry(tmp_path)
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(sha256="abc123", url="https://example.com/data.parquet"),
-                "stats.json": FileEntry(sha256="def456", url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": "abc123",
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "stats.json": {
+                        "sha256": "def456",
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         # Mock urlopen to raise URLError
         with (
@@ -361,16 +421,23 @@ class TestIQBGitHubRemoteCacheSync:
 
         entry = self._create_mock_entry(tmp_path)
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "data.parquet": FileEntry(
-                    sha256=wrong_sha256, url="https://example.com/data.parquet"
-                ),
-                "stats.json": FileEntry(sha256=wrong_sha256, url="https://example.com/stats.json"),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "data.parquet": {
+                        "sha256": wrong_sha256,
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "stats.json": {
+                        "sha256": wrong_sha256,
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -399,18 +466,23 @@ class TestIQBGitHubRemoteCacheSync:
         entry.data_parquet_file_path.return_value = tmp_path / "nested" / "dir" / "data.parquet"
         entry.stats_json_file_path.return_value = tmp_path / "nested" / "dir" / "stats.json"
 
-        manifest = Manifest(
-            v=0,
-            files={
-                "nested/dir/data.parquet": FileEntry(
-                    sha256=parquet_sha256, url="https://example.com/data.parquet"
-                ),
-                "nested/dir/stats.json": FileEntry(
-                    sha256=json_sha256, url="https://example.com/stats.json"
-                ),
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    "nested/dir/data.parquet": {
+                        "sha256": parquet_sha256,
+                        "url": "https://example.com/data.parquet",
+                    },
+                    "nested/dir/stats.json": {
+                        "sha256": json_sha256,
+                        "url": "https://example.com/stats.json",
+                    },
+                },
             },
         )
-        cache = IQBGitHubRemoteCache(manifest)
+        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 

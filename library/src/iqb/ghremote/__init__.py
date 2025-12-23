@@ -15,14 +15,16 @@ Manifest format:
     }
   }
 }
+
+The manifest is expected at:
+
+    $datadir/state/ghremote/manifest.json
+
+Where $datadir defaults to `.iqb` in the current working directory.
 """
 
-from .cache import (
-    IQBGitHubRemoteCache,
-    iqb_github_load_manifest,
-)
+from .cache import IQBGitHubRemoteCache
 
 __all__ = [
     "IQBGitHubRemoteCache",
-    "iqb_github_load_manifest",
 ]

@@ -14,7 +14,7 @@ from urllib.request import urlopen
 from dacite import from_dict
 from tqdm import tqdm
 
-from ..pipeline.cache import PipelineCacheEntry
+from ..pipeline.cache import PipelineCacheEntry, data_dir_or_default
 
 log = logging.getLogger("ghremote/cache")
 
@@ -54,7 +54,7 @@ class Manifest:
             raise KeyError(f"no remotely-cached file for {key}") from exc
 
 
-def iqb_github_load_manifest(manifest_file: Path) -> Manifest:
+def _load_manifest(manifest_file: Path) -> Manifest:
     """Load manifest from the given file, or return empty manifest if not found."""
     if not manifest_file.exists():
         return Manifest(v=0, files={})
@@ -65,15 +65,29 @@ def iqb_github_load_manifest(manifest_file: Path) -> Manifest:
     return from_dict(Manifest, data)
 
 
+def _manifest_path_for_data_dir(data_dir: Path) -> Path:
+    """Return the manifest path under the given data directory."""
+    return data_dir / "state" / "ghremote" / "manifest.json"
+
+
 class IQBGitHubRemoteCache:
     """
     Remote cache for query results using GitHub releases.
 
     This class implements the pipeline.RemoteCache protocol.
+
+    The manifest is loaded from $datadir/state/ghremote/manifest.json,
+    where $datadir defaults to .iqb in the current working directory.
     """
 
-    def __init__(self, manifest: Manifest) -> None:
-        self.manifest = manifest
+    def __init__(
+        self,
+        *,
+        data_dir: str | Path | None = None,
+    ) -> None:
+        self.data_dir = data_dir_or_default(data_dir)
+        manifest_path = _manifest_path_for_data_dir(self.data_dir)
+        self.manifest = _load_manifest(manifest_path)
 
     def sync(self, entry: PipelineCacheEntry) -> bool:
         """

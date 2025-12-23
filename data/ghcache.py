@@ -43,7 +43,7 @@ import urllib.request
 from pathlib import Path
 
 
-MANIFEST_PATH = Path("state/ghremote/manifest.json")
+MANIFEST_PATH = Path("state") / "ghremote" / "manifest.json"
 CACHE_DIR = Path("cache/v1")
 SHA256_PREFIX_LENGTH = 12
 

@@ -11,9 +11,8 @@ import colorlog
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
-from iqb.ghremote.cache import iqb_github_load_manifest
+from iqb import IQBGitHubRemoteCache, iqb_github_load_manifest
 from iqb.pipeline import IQBPipeline
-from iqb.ghremote import IQBGitHubRemoteCache
 
 if sys.stderr.isatty():
     LOG_COLORS = {

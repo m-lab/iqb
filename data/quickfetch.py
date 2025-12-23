@@ -11,11 +11,12 @@ import colorlog
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 from iqb import (
     IQBDatasetGranularity,
+    IQBDatasetMLabTable,
+    IQBGitHubRemoteCache,
     IQBPipeline,
     iqb_dataset_name_for_mlab,
+    iqb_github_load_manifest,
 )
-from iqb.ghremote import IQBGitHubRemoteCache, iqb_github_load_manifest
-from iqb.pipeline.dataset import IQBDatasetMLabTable  # XXX
 
 if sys.stderr.isatty():
     LOG_COLORS = {

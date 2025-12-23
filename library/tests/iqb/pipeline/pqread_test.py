@@ -9,8 +9,17 @@ from iqb.pipeline.pqread import iqb_parquet_read
 
 @pytest.fixture
 def test_data_path() -> Path:
-    """Fixture that returns the path to the test_data.parquet file."""
-    return Path(__file__).parent.parent.parent / "fixtures" / "test_data.parquet"
+    """Fixture that returns the path to the test cache parquet file."""
+    return (
+        Path(__file__).parent.parent.parent
+        / "fixtures"
+        / "cache"
+        / "v1"
+        / "20241001T000000Z"
+        / "20241101T000000Z"
+        / "downloads_by_country_city"
+        / "data.parquet"
+    )
 
 
 class TestIQBParquetRead:

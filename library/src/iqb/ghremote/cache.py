@@ -115,18 +115,17 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
     # Determine whether we need to download again
     exists = dest_path.exists()
     if not exists or entry.sha256 != _compute_sha256(dest_path):
-        # If old file exists, remove it
-        if exists:
-            # TODO(bassosimone): keep old file until the new one is ready (os.replace).
-            os.unlink(dest_path)
-
-        # Operate inside a temporary directory such that the directory is always
-        # removed with or without the temporary file inside it
-        with TemporaryDirectory() as tmp_dir:
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+        # Operate inside a temporary directory in the destination directory so
+        # `os.replace()` is atomic and we avoid cross-filesystem moves.
+        with TemporaryDirectory(dir=dest_path.parent) as tmp_dir:
             tmp_file = Path(tmp_dir) / dest_path.name
             _sync_file_entry_tmp(entry, tmp_file)
-            dest_path.parent.mkdir(parents=True, exist_ok=True)
-            shutil.move(tmp_file, dest_path)
+            # On Windows, Arrow opens files without FILE_SHARE_DELETE, which
+            # can block replace while readers hold the file open. YAGNI: if
+            # this becomes an issue, add a retry/backoff loop or a different
+            # synchronization mechanism.
+            os.replace(tmp_file, dest_path)
 
 
 def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):

@@ -81,10 +81,9 @@ class PipelineBQPQQueryResult:
             ) as pbar,
         ):
             first_batch = next(batches, None)
+            schema = first_batch.schema if first_batch is not None else pa.schema([])
             if first_batch is not None:
                 pbar.update(first_batch.num_rows)
-
-            schema = first_batch.schema if first_batch is not None else pa.schema([])
 
             # Write the possibly-empty parquet file
             # Use a temporary directory, which is always removed regardless

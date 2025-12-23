@@ -78,6 +78,7 @@ class TestPipelineBQPQClient:
         mock_storage_client = Mock()
         mock_storage.return_value = mock_storage_client
 
+        # Create the client
         client = PipelineBQPQClient(project="test-project")
         paths_provider = FakePathsProvider(tmp_path)
 

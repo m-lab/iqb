@@ -158,6 +158,7 @@ class MLabCacheEntry:
         country_code: str | None = None,
         asn: int | None = None,
         city: str | None = None,
+        subdivision1: str | None = None,
         columns: list[str] | None = None,
     ) -> pd.DataFrame:
         """
@@ -169,16 +170,25 @@ class MLabCacheEntry:
           country_code: either None or the desired country code (e.g., "IT")
           asn: either None or the desired ASN (e.g., 137)
           city: either None or the desired city (e.g., "Boston")
+          subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
           columns: either None (all columns) or list of column names to read
+
+        Raises:
+          XXX in case of failure ???
 
         Return:
           A pandas DataFrame.
         """
+        # 1. make sure the files exist
+        self.download.sync()
+
+        # 2. efficiently load from the parquet
         return iqb_parquet_read(
             self.download_data,
             country_code=country_code,
             asn=asn,
             city=city,
+            subdivision1=subdivision1,
             columns=columns,
         )
 
@@ -188,6 +198,7 @@ class MLabCacheEntry:
         country_code: str | None = None,
         asn: int | None = None,
         city: str | None = None,
+        subdivision1: str | None = None,
         columns: list[str] | None = None,
     ) -> pd.DataFrame:
         """
@@ -199,16 +210,25 @@ class MLabCacheEntry:
           country_code: either None or the desired country code (e.g., "IT")
           asn: either None or the desired ASN (e.g., 137)
           city: either None or the desired city (e.g., "Boston")
+          subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
           columns: either None (all columns) or list of column names to read
+
+        Raises:
+          XXX in case of failure ???
 
         Return:
           A pandas DataFrame.
         """
+        # 1. make sure the files exist
+        self.upload.sync()
+
+        # 2. efficiently load from the parquet
         return iqb_parquet_read(
             self.upload_data,
             country_code=country_code,
             asn=asn,
             city=city,
+            subdivision1=subdivision1,
             columns=columns,
         )
 
@@ -218,6 +238,7 @@ class MLabCacheEntry:
         country_code: str,
         city: str | None = None,
         asn: int | None = None,
+        subdivision1: str | None = None,
     ) -> MLabDataFramePair:
         """
         High-level API: Get filtered download/upload data for specific parameters.
@@ -230,6 +251,7 @@ class MLabCacheEntry:
             country_code: ISO 2-letter country code (e.g., "US", "DE")
             city: Optional city name (required for "country_city" and "country_city_asn" granularity)
             asn: Optional ASN number (required for "country_city_asn" granularity)
+            subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
 
         Returns:
             DataFramePair containing filtered download and upload DataFrames
@@ -245,34 +267,23 @@ class MLabCacheEntry:
             >>> data_p95 = pair.to_dict(percentile=95)
             >>> data_p50 = pair.to_dict(percentile=50)
         """
-        # 1. Validate granularity compatibility
-        if city is not None and "city" not in self.granularity:
-            raise ValueError(
-                f"Cannot filter by city with granularity '{self.granularity}'. "
-                f"Use granularity containing 'city' (e.g., 'country_city')."
-            )
-
-        if asn is not None and "asn" not in self.granularity:
-            raise ValueError(
-                f"Cannot filter by ASN with granularity '{self.granularity}'. "
-                f"Use granularity containing 'asn' (e.g., 'country_asn')."
-            )
-
-        # 2. Read download data with filtering (all columns for flexibility)
+        # 1. Read download data with filtering (all columns for flexibility)
         download_df = self.read_download_data_frame(
             country_code=country_code,
             city=city,
             asn=asn,
+            subdivision1=subdivision1,
         )
 
-        # 3. Read upload data with filtering (all columns for flexibility)
+        # 2. Read upload data with filtering (all columns for flexibility)
         upload_df = self.read_upload_data_frame(
             country_code=country_code,
             city=city,
             asn=asn,
+            subdivision1=subdivision1,
         )
 
-        # 4. Make and return the pair
+        # 3. Make and return the pair
         return MLabDataFramePair(
             download=download_df,
             upload=upload_df,
@@ -341,14 +352,7 @@ class MLabCacheReader:
             end_date=end_date,
         )
 
-        # 3. bail if entries are missing
-        if not download_entry.exists() or not upload_entry.exists():
-            raise FileNotFoundError(
-                f"Cache entry not found for {download_dataset_name} {upload_dataset_name}"
-                f" ({start_date} to {end_date})"
-            )
-
-        # 4. return the actual cache entry
+        # 3. return the cache entry
         return MLabCacheEntry(
             granularity=granularity,
             start_date=start_date,

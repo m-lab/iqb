@@ -11,6 +11,7 @@ def iqb_parquet_read(
     *,
     country_code: str | None = None,
     asn: int | None = None,
+    subdivision1: str | None = None,
     city: str | None = None,
     columns: list[str] | None = None,
 ) -> pd.DataFrame:
@@ -24,6 +25,7 @@ def iqb_parquet_read(
         filepath: path to the parquet file
         country_code: optionally filter for equality with the given country code.
         asn: optionally filter for equality with the given ASN.
+        subdivision1: optionally filter for equality with the given subdivision1 name.
         city: optionally filter for equality with the given city name.
         columns: optionally retain only the selected columns.
 
@@ -44,6 +46,8 @@ def iqb_parquet_read(
         filters.append(("city", "=", city))
     if country_code is not None:
         filters.append(("country_code", "=", country_code))
+    if subdivision1 is not None:
+        filters.append(("subdivision1_name", "=", subdivision1))
 
     # 2. load in memory using the filters and potentially cutting the columns
     # Note: PyArrow requires filters=None (not []) when there are no filters

@@ -145,6 +145,7 @@ from .dataset import (
 )
 from .pipeline import IQBPipeline
 from .pqread import iqb_parquet_read
+from .cache import parse_date
 
 __all__ = [
     "IQBDatasetGranularity",
@@ -152,4 +153,5 @@ __all__ = [
     "IQBPipeline",
     "iqb_dataset_name_for_mlab",
     "iqb_parquet_read",
+    "parse_date",
 ]

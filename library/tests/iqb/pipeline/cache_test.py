@@ -12,8 +12,8 @@ from iqb.pipeline.cache import (
     PipelineCacheManager,
     PipelineEntrySyncError,
     _parse_both_dates,
-    _parse_date,
     data_dir_or_default,
+    parse_date,
 )
 
 
@@ -40,22 +40,22 @@ class TestDataDirOrDefault:
 
 
 class TestParseDate:
-    """Test for _parse_date function."""
+    """Test for parse_date function."""
 
     def test_parse_date_valid(self):
         """Test parsing valid date string."""
-        result = _parse_date("2024-10-01")
+        result = parse_date("2024-10-01")
         assert result == datetime(2024, 10, 1)
 
     def test_parse_date_invalid_format(self):
         """Test error on invalid date format."""
         with pytest.raises(ValueError, match="Invalid date format"):
-            _parse_date("2024/10/01")
+            parse_date("2024/10/01")
 
     def test_parse_date_invalid_date(self):
         """Test error on invalid date values."""
         with pytest.raises(ValueError, match="Invalid date format"):
-            _parse_date("2024-13-01")
+            parse_date("2024-13-01")
 
 
 class TestParseBothDates:
@@ -68,14 +68,13 @@ class TestParseBothDates:
         assert end == datetime(2024, 11, 1)
 
     def test_parse_equal_dates(self):
-        """Test parsing when start equals end (valid for zero-duration queries)."""
-        start, end = _parse_both_dates("2024-10-01", "2024-10-01")
-        assert start == datetime(2024, 10, 1)
-        assert end == datetime(2024, 10, 1)
+        """Test error when start_date == end_date."""
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
+            _parse_both_dates("2024-10-01", "2024-10-01")
 
     def test_parse_reversed_dates_error(self):
         """Test error when start_date > end_date."""
-        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
             _parse_both_dates("2024-11-01", "2024-10-01")
 
     def test_parse_invalid_start_date(self):

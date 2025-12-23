@@ -174,15 +174,15 @@ def data_dir_or_default(data_dir: str | Path | None) -> Path:
 
 
 def _parse_both_dates(start_date: str, end_date: str) -> tuple[datetime, datetime]:
-    """Parses both dates and ensures start_date <= end_date."""
-    start_time = _parse_date(start_date)
-    end_time = _parse_date(end_date)
-    if start_time > end_time:
-        raise ValueError(f"start_date must be <= end_date, got: {start_date} > {end_date}")
+    """Parses both dates and ensures start_date < end_date."""
+    start_time = parse_date(start_date)
+    end_time = parse_date(end_date)
+    if start_time >= end_time:
+        raise ValueError(f"start_date must be < end_date, got: {start_date} >= {end_date}")
     return start_time, end_time
 
 
-def _parse_date(value: str) -> datetime:
+def parse_date(value: str) -> datetime:
     """Ensure that a single date is consistent with the format and return it parsed."""
     try:
         return datetime.strptime(value, "%Y-%m-%d")

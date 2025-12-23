@@ -303,8 +303,8 @@ class TestPipelineCacheEntry:
         entry.stats_json_file_path().touch()
         assert entry.exists()
 
-    def test_sync_raises_when_no_syncers(self, tmp_path):
-        """Verify sync() raises PipelineEntrySyncError when syncers is empty."""
+    def test_sync_raises_when_no_syncers_and_missing_files(self, tmp_path):
+        """Verify sync() raises FileNotFoundError when syncers is empty."""
         entry = PipelineCacheEntry(
             data_dir=tmp_path,
             dataset_name="test",
@@ -312,8 +312,22 @@ class TestPipelineCacheEntry:
             end_time=datetime(2024, 2, 1),
             syncers=[],
         )
-        with pytest.raises(PipelineEntrySyncError, match="Cannot sync"):
+        with pytest.raises(FileNotFoundError, match="Cache entry not found"):
             entry.sync()
+
+    def test_sync_noop_when_no_syncers_and_files_exist(self, tmp_path):
+        """Verify sync() returns when files exist and there are no syncers."""
+        entry = PipelineCacheEntry(
+            data_dir=tmp_path,
+            dataset_name="test",
+            start_time=datetime(2024, 1, 1),
+            end_time=datetime(2024, 2, 1),
+            syncers=[],
+        )
+        entry.data_parquet_file_path().parent.mkdir(parents=True, exist_ok=True)
+        entry.data_parquet_file_path().touch()
+        entry.stats_json_file_path().touch()
+        entry.sync()
 
     def test_sync_calls_first_successful_syncer(self, tmp_path):
         """Verify sync() uses any() short-circuit (stops after first success)."""

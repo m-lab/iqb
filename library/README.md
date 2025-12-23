@@ -56,7 +56,7 @@ Then login with:
 gcloud auth application-default login
 ```
 
-The billing project name should be set to `measurement-lab`\
+The billing project name should be set to `measurement-lab`
 as illustrated in the example below:
 
 ```python

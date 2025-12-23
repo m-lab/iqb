@@ -9,3 +9,4 @@
 - Tests: `library/tests`
 - Cached fixtures: `library/tests/fixtures`
 - See `README.md` for architecture and usage details
+- See `library/README.md` for testing workflows and examples

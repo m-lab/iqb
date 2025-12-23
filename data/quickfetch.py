@@ -79,8 +79,8 @@ def main():
     sync_mlab(pipeline, "2025-03-01", "2025-04-01", IQBDatasetGranularity.COUNTRY)
 
     # TODO in 2025-12-24
-    # sync_mlab(pipeline, "2025-04-01", "2025-05-01", IQBDatasetGranularity.COUNTRY)
-    # sync_mlab(pipeline, "2025-05-01", "2025-06-01", IQBDatasetGranularity.COUNTRY)
+    sync_mlab(pipeline, "2025-04-01", "2025-05-01", IQBDatasetGranularity.COUNTRY)
+    sync_mlab(pipeline, "2025-05-01", "2025-06-01", IQBDatasetGranularity.COUNTRY)
     # sync_mlab(pipeline, "2025-06-01", "2025-07-01", IQBDatasetGranularity.COUNTRY)
 
     # TODO in 2025-12-25

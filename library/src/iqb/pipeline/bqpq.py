@@ -1,6 +1,7 @@
 """Module for streaming BigQuery (bq) queries into parquet (pq) files."""
 
 import json
+import logging
 import shutil
 import time
 from dataclasses import dataclass
@@ -12,9 +13,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from google.cloud import bigquery, bigquery_storage_v1
 from google.cloud.bigquery import job, table
-import concurrent.futures
 from tqdm import tqdm
 from tqdm.contrib.logging import logging_redirect_tqdm
+
+log = logging.getLogger("pipeline/bqpq")
 
 
 @runtime_checkable
@@ -69,11 +71,12 @@ class PipelineBQPQQueryResult:
         # Access the first batch to obtain the schema
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
 
+        log.info("BigQuery download... start")
         with (
             logging_redirect_tqdm(),
             tqdm(
                 total=self.rows.total_rows,
-                desc="BQ dload",
+                desc="BigQuery download",
                 unit="rows",
             ) as pbar,
         ):
@@ -96,6 +99,7 @@ class PipelineBQPQQueryResult:
                         pbar.update(batch.num_rows)
                 shutil.move(tmp_file, parquet_path)
 
+        log.info("BigQuery download... ok")
         return parquet_path
 
     def save_stats_json(self) -> Path:
@@ -191,25 +195,33 @@ class PipelineBQPQClient:
         job = self.client.query(query)
 
         # 2. wait for job to finish with a progress bar
+        log.info("BigQuery query... start")
         with (
             logging_redirect_tqdm(),
             tqdm(
-                desc="BQ job ",  # space to align with `BQ dload`
-                unit="it",
-                bar_format="{l_bar}{bar}| {n_fmt}{unit} [{elapsed}] {postfix}",
+                desc="BigQuery query",
+                total=10,
+                bar_format="{l_bar}{bar}| [{elapsed}] {postfix}",
             ) as pbar,
         ):
             while job.state != "DONE":
                 time.sleep(1)
+                if pbar.n / pbar.total >= 0.8:
+                    pbar.total *= 2
                 job.reload()
                 pbar.update(1)
-                if job.total_bytes_processed is not None:
-                    pbar.set_postfix_str(
-                        f"{job.total_bytes_processed / 1e9:.3f} GB processed",
-                        refresh=True,
-                    )
 
-        # 3. obtain rows and return
+            pbar.n = pbar.total
+
+        # 3. log about the total number of bytes processed
+        bytes_processed_str = (
+            f" ({job.total_bytes_processed / 1e9:.3f} GB processed)"
+            if job.total_bytes_processed is not None
+            else ""
+        )
+        log.info("BigQuery query... ok%s", bytes_processed_str)
+
+        # 4. obtain rows and return
         rows = job.result()
         return PipelineBQPQQueryResult(
             bq_read_client=self.bq_read_clnt,

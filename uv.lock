@@ -1458,7 +1458,6 @@ wheels = [
 
 [[package]]
 name = "mlab-iqb"
-version = "0.1.0"
 source = { editable = "library" }
 dependencies = [
     { name = "dacite" },

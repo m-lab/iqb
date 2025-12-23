@@ -15,6 +15,11 @@ from .pipeline import (
     iqb_dataset_name_for_mlab,
 )
 
+try:
+    from ._version import __version__
+except ImportError:  # pragma: no cover - build-time generated
+    __version__ = "0.0.0"
+
 # Backward compatibility alias
 IQB = IQBCalculator
 
@@ -29,5 +34,5 @@ __all__ = [
     "IQBDatasetMLabTable",
     "iqb_github_load_manifest",
     "iqb_dataset_name_for_mlab",
+    "__version__",
 ]
-__version__ = "0.4.0"

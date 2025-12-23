@@ -1,6 +1,5 @@
 [project]
 name = "mlab-iqb"
-version = "0.1.0"
 description = "Internet Quality Barometer (IQB) library for calculating composite quality scores"
 readme = "README.md"
 requires-python = ">=3.13"
@@ -9,6 +8,7 @@ authors = [
     {name = "Measurement Lab", email = "support@measurementlab.net"}
 ]
 keywords = ["internet", "quality", "measurement", "network", "performance"]
+dynamic = ["version"]
 
 dependencies = [
     "google-cloud-bigquery>=3.0.0",
@@ -28,7 +28,7 @@ Repository = "https://github.com/m-lab/iqb"
 Documentation = "https://github.com/m-lab/iqb/tree/main/library"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -36,6 +36,18 @@ packages = ["src/iqb"]
 
 [tool.hatch.build.targets.wheel.force-include]
 "src/iqb/queries" = "iqb/queries"
+
+[tool.hatch.version]
+source = "vcs"
+fallback-version = "0.0.0"
+tag-pattern = "v(?P<version>.*)"
+
+[tool.hatch.version.raw-options]
+root = ".."
+relative_to = "pyproject.toml"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/iqb/_version.py"
 
 [dependency-groups]
 dev = [

@@ -15,7 +15,6 @@ from iqb import (
     IQBGitHubRemoteCache,
     IQBPipeline,
     iqb_dataset_name_for_mlab,
-    iqb_github_load_manifest,
 )
 
 if sys.stderr.isatty():
@@ -63,8 +62,7 @@ def sync_mlab(
 def main():
     # Data directory is ./iqb/data (where this script lives)
     datadir = Path(__file__).parent
-    manifest = iqb_github_load_manifest(datadir / "ghcache.json")
-    rcache = IQBGitHubRemoteCache(manifest)
+    rcache = IQBGitHubRemoteCache(data_dir=datadir)
 
     pipeline = IQBPipeline(
         project="measurement-lab",

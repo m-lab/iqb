@@ -30,6 +30,8 @@ constraints, we use GitHub releases to distribute pre-generated cache files.
 The `generate_data.py` script automatically syncs cached files to avoid running
 potentially expensive BigQuery queries.
 
+The GitHub release manifest lives at `state/ghremote/manifest.json`.
+
 ### For Maintainers (Publishing New Cache)
 
 When you generate new cache files locally:
@@ -43,11 +45,11 @@ This:
 1. Scans `cache/v1/` for git-ignored files
 2. Computes SHA256 hashes
 3. Copies files to `data/` with mangled names (ready for upload)
-4. Updates `ghcache.json` manifest
+4. Updates `state/ghremote/manifest.json` manifest
 
 Then manually:
 1. Upload mangled files to GitHub release (e.g., v0.1.0)
-2. Commit updated `ghcache.json` to repository
+2. Commit updated `state/ghremote/manifest.json` to repository
 
 ## How This Data Was Generated
 

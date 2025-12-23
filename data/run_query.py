@@ -11,7 +11,7 @@ import colorlog
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
-from iqb import IQBGitHubRemoteCache, iqb_github_load_manifest
+from iqb import IQBGitHubRemoteCache
 from iqb.pipeline import IQBPipeline
 
 if sys.stderr.isatty():
@@ -110,8 +110,7 @@ def run_bq_query(
     data_dir = Path(__file__).parent
 
     # Create GitHub remote cache
-    manifest = iqb_github_load_manifest(data_dir / "ghcache.json")
-    ghcache = IQBGitHubRemoteCache(manifest)
+    ghcache = IQBGitHubRemoteCache(data_dir=data_dir)
 
     # Create and sync cache entry (idempotent)
     # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/

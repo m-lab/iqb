@@ -16,7 +16,7 @@ Subcommands:
 The 'scan' command copies files to the current directory with mangled names,
 ready for manual upload to GitHub releases.
 
-Manifest format (ghcache.json):
+Manifest format (state/ghremote/manifest.json):
 {
   "v": 0,
   "files": {
@@ -43,7 +43,7 @@ import urllib.request
 from pathlib import Path
 
 
-MANIFEST_FILE = "ghcache.json"
+MANIFEST_PATH = Path("state/ghremote/manifest.json")
 CACHE_DIR = Path("cache/v1")
 SHA256_PREFIX_LENGTH = 12
 
@@ -118,18 +118,18 @@ def mangle_path(local_path: str, sha256: str) -> str:
 
 
 def load_manifest() -> dict:
-    """Load manifest from ghcache.json, or return empty manifest if not found."""
-    manifest_path = Path(MANIFEST_FILE)
-    if not manifest_path.exists():
+    """Load manifest from state/ghremote/manifest.json, or return empty if not found."""
+    if not MANIFEST_PATH.exists():
         return {"v": 0, "files": {}}
 
-    with open(manifest_path, "r") as f:
+    with open(MANIFEST_PATH, "r") as f:
         return json.load(f)
 
 
 def save_manifest(manifest: dict) -> None:
-    """Save manifest to ghcache.json."""
-    with open(MANIFEST_FILE, "w") as f:
+    """Save manifest to state/ghremote/manifest.json."""
+    MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(MANIFEST_PATH, "w") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
         f.write("\n")  # Trailing newline
 
@@ -237,7 +237,7 @@ def cmd_scan(args) -> int:
 
     # Save updated manifest
     save_manifest(manifest)
-    print(f"\nManifest updated: {MANIFEST_FILE}")
+    print(f"\nManifest updated: {MANIFEST_PATH}")
 
     if files_to_upload:
         print(f"\nFiles ready for upload ({len(files_to_upload)}):")
@@ -245,8 +245,8 @@ def cmd_scan(args) -> int:
             print(f"  {f}")
         print("\nNext steps:")
         print("1. Upload mangled files to GitHub release v0.1.0")
-        print("2. Update URLs in ghcache.json if needed")
-        print("3. Commit updated ghcache.json to repository")
+        print("2. Update URLs in state/ghremote/manifest.json if needed")
+        print("3. Commit updated state/ghremote/manifest.json to repository")
 
     return 0
 

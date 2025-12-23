@@ -119,8 +119,10 @@ class IQBPipeline:
 
     def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
         """Internal method to get the entry files using a BigQuery query."""
+        if entry.exists():
+            log.info("querying for %s... skipped (cached)", entry)
+            return True
         try:
-            # TODO(bassosimone): consider skipping the query when entry.exists() is True.
             log.info("querying for %s... start", entry)
             result = self._execute_query_template(entry)
             result.save_data_parquet()

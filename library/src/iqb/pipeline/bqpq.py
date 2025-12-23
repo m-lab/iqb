@@ -81,10 +81,9 @@ class PipelineBQPQQueryResult:
             ) as pbar,
         ):
             first_batch = next(batches, None)
+            schema = first_batch.schema if first_batch is not None else pa.schema([])
             if first_batch is not None:
                 pbar.update(first_batch.num_rows)
-
-            schema = first_batch.schema if first_batch is not None else pa.schema([])
 
             # Write the possibly-empty parquet file
             # Use a temporary directory, which is always removed regardless
@@ -179,6 +178,7 @@ class PipelineBQPQClient:
         template_hash: str,
         query: str,
         paths_provider: PipelineBQPQPathsProvider,
+        _sleep_secs: int | float = 1,  # used for shorter testing
     ) -> PipelineBQPQQueryResult:
         """
         Execute the given BigQuery query.
@@ -205,9 +205,9 @@ class PipelineBQPQClient:
             ) as pbar,
         ):
             while job.state != "DONE":
-                time.sleep(1)
-                if pbar.n / pbar.total >= 0.8:
-                    pbar.total *= 2
+                time.sleep(_sleep_secs)
+                factor = 2 if (pbar.n / pbar.total) >= 0.8 else 1
+                pbar.total *= factor
                 job.reload()
                 pbar.update(1)
 

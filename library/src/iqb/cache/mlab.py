@@ -122,6 +122,9 @@ class MLabCacheEntry:
     """
     M-Lab entry inside the data cache.
 
+    Reading from this entry may trigger a sync from the configured cache
+    providers, guarded by an entry-level lock to avoid multiple writers.
+
     Attributes:
         granularity: granularity used by this dataset
         start_date: the start date used by this dataset (YYYY-MM-DD; included)
@@ -164,7 +167,8 @@ class MLabCacheEntry:
         """
         Load the download dataset as a dataframe.
 
-        The arguments allow to select a subset of the entire dataset.
+        The arguments allow to select a subset of the entire dataset. Reading
+        triggers a sync (if needed) under an entry-level lock.
 
         Arguments:
           country_code: either None or the desired country code (e.g., "IT")
@@ -174,13 +178,16 @@ class MLabCacheEntry:
           columns: either None (all columns) or list of column names to read
 
         Raises:
-          XXX in case of failure ???
+          PipelineEntrySyncError: if syncing the cache entry fails.
+          FileNotFoundError: if the parquet file does not exist.
+          ValueError: if one or more of the requested columns do not exist.
 
         Return:
           A pandas DataFrame.
         """
         # 1. make sure the files exist
-        self.download.sync()
+        with self.download.lock():
+            self.download.sync()
 
         # 2. efficiently load from the parquet
         return iqb_parquet_read(
@@ -204,7 +211,8 @@ class MLabCacheEntry:
         """
         Load the upload dataset as a dataframe.
 
-        The arguments allow to select a subset of the entire dataset.
+        The arguments allow to select a subset of the entire dataset. Reading
+        triggers a sync (if needed) under an entry-level lock.
 
         Arguments:
           country_code: either None or the desired country code (e.g., "IT")
@@ -214,13 +222,16 @@ class MLabCacheEntry:
           columns: either None (all columns) or list of column names to read
 
         Raises:
-          XXX in case of failure ???
+          PipelineEntrySyncError: if syncing the cache entry fails.
+          FileNotFoundError: if the parquet file does not exist.
+          ValueError: if one or more of the requested columns do not exist.
 
         Return:
           A pandas DataFrame.
         """
         # 1. make sure the files exist
-        self.upload.sync()
+        with self.upload.lock():
+            self.upload.sync()
 
         # 2. efficiently load from the parquet
         return iqb_parquet_read(
@@ -254,8 +265,8 @@ class MLabCacheEntry:
             subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
 
         Returns:
-            DataFramePair containing filtered download and upload DataFrames
-            with all the original percentile columns
+           DataFramePair containing filtered download and upload DataFrames
+           with all the original percentile columns (sync may occur under an entry-level lock).
 
         Raises:
             ValueError: If the requested granularity is incompatible with the
@@ -312,7 +323,8 @@ class MLabCacheManager:
         """
         Get cache entry associated with given dates and granularity.
 
-        The returned CacheEntry allows you to read raw data as DataFrame.
+        The returned CacheEntry is lazy: reading data frames may trigger
+        a sync/fetch from cache providers under an entry-level lock.
 
         Arguments:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
@@ -375,6 +387,8 @@ class MLabCacheManager:
         """
         Fetch M-Lab measurement data for IQB calculation.
 
+        This method may trigger cache sync under an entry-level lock.
+
         Args:
             granularity: The granularity to use.
             country_code: ISO 2-letter country code (e.g., "US").
@@ -419,6 +433,8 @@ class MLabCacheManager:
     ) -> dict[str, float]:
         """
         Fetch M-Lab measurement data for IQB calculation.
+
+        This method may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.

@@ -117,6 +117,7 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
     if not exists or entry.sha256 != _compute_sha256(dest_path):
         # If old file exists, remove it
         if exists:
+            # TODO(bassosimone): keep old file until the new one is ready (os.replace).
             os.unlink(dest_path)
 
         # Operate inside a temporary directory such that the directory is always

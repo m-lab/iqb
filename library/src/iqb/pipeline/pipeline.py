@@ -93,7 +93,8 @@ class IQBPipeline:
         """
         Get or create a cache entry for the given query template.
 
-        Use `PipelineCacheEntry.sync` to fetch the files.
+        Use `PipelineCacheEntry.sync` to fetch the files. The entry is lazy
+        and may not exist on disk until you sync it.
 
         Args:
             dataset_name: Name for the dataset (e.g., "downloads_by_country")
@@ -119,6 +120,7 @@ class IQBPipeline:
     def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
         """Internal method to get the entry files using a BigQuery query."""
         try:
+            # TODO(bassosimone): consider skipping the query when entry.exists() is True.
             log.info("querying for %s... start", entry)
             result = self._execute_query_template(entry)
             result.save_data_parquet()

@@ -72,7 +72,8 @@ class IQBCache:
         """
         Get cache entry associated with given dates and granularity.
 
-        The returned CacheEntry allows you to read raw data as DataFrame.
+        The returned CacheEntry is lazy: reading data frames may trigger
+        a sync/fetch from cache providers under an entry-level lock.
 
         Arguments:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
@@ -120,6 +121,8 @@ class IQBCache:
     ) -> IQBData:
         """
         Fetch measurement data for IQB calculation.
+
+        This method is lazy and may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.

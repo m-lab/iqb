@@ -67,8 +67,17 @@ class PipelineCacheEntry:
 
     def sync(self) -> None:
         """Unconditionally sync the entry using all the configured syncers."""
-        if not any(sync(self) for sync in self.syncers):
-            raise PipelineEntrySyncError(f"Cannot sync {self}: see above logs")
+        if self.syncers:
+            if not any(sync(self) for sync in self.syncers):
+                raise PipelineEntrySyncError(f"Cannot sync {self}: see above logs")
+            return
+
+        if not self.exists():
+            start_date = self.start_time.date().isoformat()
+            end_date = self.end_time.date().isoformat()
+            raise FileNotFoundError(
+                f"Cache entry not found for {self.dataset_name} ({start_date} to {end_date})"
+            )
 
 
 class PipelineRemoteCache(Protocol):
@@ -113,7 +122,8 @@ class PipelineCacheManager:
         """
         Get cache entry for the given query template.
 
-        Use `PipelineCacheEntry.sync` to fetch the files.
+        Use `PipelineCacheEntry.sync` to fetch the files. The entry is lazy
+        and may not exist on disk until you sync it.
 
         Args:
             dataset_name: Name of the dataset (e.g., "downloads_by_country")

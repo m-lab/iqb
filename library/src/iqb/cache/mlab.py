@@ -122,6 +122,9 @@ class MLabCacheEntry:
     """
     M-Lab entry inside the data cache.
 
+    Reading from this entry may trigger a sync from the configured cache
+    providers, guarded by an entry-level lock to avoid multiple writers.
+
     Attributes:
         granularity: granularity used by this dataset
         start_date: the start date used by this dataset (YYYY-MM-DD; included)
@@ -164,7 +167,8 @@ class MLabCacheEntry:
         """
         Load the download dataset as a dataframe.
 
-        The arguments allow to select a subset of the entire dataset.
+        The arguments allow to select a subset of the entire dataset. Reading
+        triggers a sync (if needed) under an entry-level lock.
 
         Arguments:
           country_code: either None or the desired country code (e.g., "IT")
@@ -173,9 +177,19 @@ class MLabCacheEntry:
           subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
           columns: either None (all columns) or list of column names to read
 
+        Raises:
+          PipelineEntrySyncError: if syncing the cache entry fails.
+          FileNotFoundError: if the parquet file does not exist.
+          ValueError: if one or more of the requested columns do not exist.
+
         Return:
           A pandas DataFrame.
         """
+        # 1. make sure the files exist
+        with self.download.lock():
+            self.download.sync()
+
+        # 2. efficiently load from the parquet
         return iqb_parquet_read(
             self.download_data,
             country_code=country_code,
@@ -197,7 +211,8 @@ class MLabCacheEntry:
         """
         Load the upload dataset as a dataframe.
 
-        The arguments allow to select a subset of the entire dataset.
+        The arguments allow to select a subset of the entire dataset. Reading
+        triggers a sync (if needed) under an entry-level lock.
 
         Arguments:
           country_code: either None or the desired country code (e.g., "IT")
@@ -206,9 +221,19 @@ class MLabCacheEntry:
           subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
           columns: either None (all columns) or list of column names to read
 
+        Raises:
+          PipelineEntrySyncError: if syncing the cache entry fails.
+          FileNotFoundError: if the parquet file does not exist.
+          ValueError: if one or more of the requested columns do not exist.
+
         Return:
           A pandas DataFrame.
         """
+        # 1. make sure the files exist
+        with self.upload.lock():
+            self.upload.sync()
+
+        # 2. efficiently load from the parquet
         return iqb_parquet_read(
             self.upload_data,
             country_code=country_code,
@@ -242,6 +267,7 @@ class MLabCacheEntry:
         Returns:
             DataFramePair containing filtered download and upload DataFrames
             with all the original percentile columns
+            (sync may occur under an entry-level lock)
 
         Raises:
             ValueError: If the requested granularity is incompatible with the
@@ -253,20 +279,7 @@ class MLabCacheEntry:
             >>> data_p95 = pair.to_dict(percentile=95)
             >>> data_p50 = pair.to_dict(percentile=50)
         """
-        # 1. Validate granularity compatibility
-        if city is not None and "city" not in self.granularity:
-            raise ValueError(
-                f"Cannot filter by city with granularity '{self.granularity}'. "
-                f"Use granularity containing 'city' (e.g., 'country_city')."
-            )
-
-        if asn is not None and "asn" not in self.granularity:
-            raise ValueError(
-                f"Cannot filter by ASN with granularity '{self.granularity}'. "
-                f"Use granularity containing 'asn' (e.g., 'country_asn')."
-            )
-
-        # 2. Read download data with filtering (all columns for flexibility)
+        # 1. Read download data with filtering (all columns for flexibility)
         download_df = self.read_download_data_frame(
             country_code=country_code,
             city=city,
@@ -274,7 +287,7 @@ class MLabCacheEntry:
             subdivision1=subdivision1,
         )
 
-        # 3. Read upload data with filtering (all columns for flexibility)
+        # 2. Read upload data with filtering (all columns for flexibility)
         upload_df = self.read_upload_data_frame(
             country_code=country_code,
             city=city,
@@ -282,7 +295,7 @@ class MLabCacheEntry:
             subdivision1=subdivision1,
         )
 
-        # 4. Make and return the pair
+        # 3. Make and return the pair
         return MLabDataFramePair(
             download=download_df,
             upload=upload_df,
@@ -311,7 +324,8 @@ class MLabCacheManager:
         """
         Get cache entry associated with given dates and granularity.
 
-        The returned CacheEntry allows you to read raw data as DataFrame.
+        The returned CacheEntry is lazy: reading data frames may trigger
+        a sync/fetch from cache providers under an entry-level lock.
 
         Arguments:
             start_date: start measurement date expressed as YYYY-MM-DD (included)
@@ -351,14 +365,7 @@ class MLabCacheManager:
             end_date=end_date,
         )
 
-        # 3. bail if entries are missing
-        if not download_entry.exists() or not upload_entry.exists():
-            raise FileNotFoundError(
-                f"Cache entry not found for {download_dataset_name} {upload_dataset_name}"
-                f" ({start_date} to {end_date})"
-            )
-
-        # 4. return the actual cache entry
+        # 3. return the cache entry
         return MLabCacheEntry(
             granularity=granularity,
             start_date=start_date,
@@ -380,6 +387,8 @@ class MLabCacheManager:
     ) -> IQBDataMLab:
         """
         Fetch M-Lab measurement data for IQB calculation.
+
+        This method is lazy and may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.
@@ -425,6 +434,8 @@ class MLabCacheManager:
     ) -> dict[str, float]:
         """
         Fetch M-Lab measurement data for IQB calculation.
+
+        This method is lazy and may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.

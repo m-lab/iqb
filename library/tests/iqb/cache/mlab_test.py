@@ -258,8 +258,9 @@ class TestMLabCacheManagerIntegration:
 
     def test_get_cache_entry_with_missing_on_disk_data(self, tmp_path):
         manager = _create_manager(tmp_path)
+        entry = _get_country_cache_entry_2024_10(manager)
         with pytest.raises(FileNotFoundError):
-            _ = _get_country_cache_entry_2024_10(manager)
+            _ = entry.read_data_frame_pair(country_code="US")
 
     def test_get_data_successful(self, data_dir):
         manager = _create_manager(data_dir)

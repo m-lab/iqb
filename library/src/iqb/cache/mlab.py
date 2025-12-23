@@ -279,8 +279,8 @@ class MLabCacheEntry:
         )
 
 
-class MLabCacheReader:
-    """Component for reading the M-Lab cache."""
+class MLabCacheManager:
+    """Component for managing the M-Lab cache."""
 
     def __init__(self, manager: PipelineCacheManager):
         """

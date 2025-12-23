@@ -17,6 +17,8 @@ from .cache import (
     PipelineRemoteCache,
 )
 
+log = logging.getLogger("pipeline/bq")
+
 
 class IQBPipeline:
     """Component for populating the IQB-measurement-data cache."""
@@ -117,14 +119,14 @@ class IQBPipeline:
     def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
         """Internal method to get the entry files using a BigQuery query."""
         try:
-            logging.info(f"bq: querying for {entry}... start")
+            log.info("querying for %s... start", entry)
             result = self._execute_query_template(entry)
             result.save_data_parquet()
             result.save_stats_json()
-            logging.info(f"bq: querying for {entry}... ok")
+            log.info("querying for %s... ok", entry)
             return True
         except Exception as exc:
-            logging.info(f"bq: querying for {entry}... failure: {exc}")
+            log.warning("querying for %s... failure: %s", entry, exc)
             return False
 
     def execute_query_template(

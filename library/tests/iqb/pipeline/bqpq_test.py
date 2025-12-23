@@ -62,6 +62,10 @@ class TestPipelineBQPQClient:
         mock_rows = Mock()
         mock_client_instance = Mock()
         mock_client_instance.query.return_value = mock_job
+        mock_job.total_bytes_processed = 123456789
+        mock_job.state = "DONE"
+        state_values = iter(["" * 1000])
+        type(mock_job).state = property(lambda _: next(state_values, "DONE"))
         mock_job.result.return_value = mock_rows
         mock_client.return_value = mock_client_instance
         mock_storage_client = Mock()
@@ -77,6 +81,7 @@ class TestPipelineBQPQClient:
             paths_provider=paths_provider,
             template_hash="hash123",
             query="SELECT * FROM TABLE COUNT 1;",
+            _sleep_secs=0.001,
         )
 
         # Verify client.query was called
@@ -103,9 +108,11 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
         # Mock Arrow batches
         mock_batch = MagicMock()
         mock_batch.schema = MagicMock()
+        mock_batch.num_rows = 1
 
         mock_rows = Mock()
         mock_rows.to_arrow_iterable.return_value = iter([mock_batch])
+        mock_rows.total_rows = 1
 
         # Mock ParquetWriter
         with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
@@ -148,6 +155,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
         # Mock empty iterator
         mock_rows = Mock()
         mock_rows.to_arrow_iterable.return_value = iter([])
+        mock_rows.total_rows = 0
 
         # Mock ParquetWriter to verify it's called with empty schema
         with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
@@ -202,11 +210,15 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
         # Mock multiple batches
         mock_batch1 = MagicMock()
         mock_batch1.schema = MagicMock()
+        mock_batch1.num_rows = 1
         mock_batch2 = MagicMock()
+        mock_batch2.num_rows = 1
         mock_batch3 = MagicMock()
+        mock_batch3.num_rows = 1
 
         mock_rows = Mock()
         mock_rows.to_arrow_iterable.return_value = iter([mock_batch1, mock_batch2, mock_batch3])
+        mock_rows.total_rows = 3
 
         with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()
@@ -245,9 +257,11 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
 
         mock_batch = MagicMock()
         mock_batch.schema = MagicMock()
+        mock_batch.num_rows = 1
 
         mock_rows = Mock()
         mock_rows.to_arrow_iterable.return_value = iter([mock_batch])
+        mock_rows.total_rows = 1
 
         with patch("iqb.pipeline.bqpq.pq.ParquetWriter") as mock_writer:
             mock_writer_instance = MagicMock()

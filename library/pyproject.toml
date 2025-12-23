@@ -19,6 +19,7 @@ dependencies = [
     "python-dateutil>=2.9.0.post0",
     "dacite>=1.9.2",
     "filelock>=3.20.1",
+    "tqdm>=4.67.1",
 ]
 
 [project.urls]

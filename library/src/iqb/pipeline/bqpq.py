@@ -1,7 +1,9 @@
 """Module for streaming BigQuery (bq) queries into parquet (pq) files."""
 
 import json
+import logging
 import shutil
+import time
 from dataclasses import dataclass
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -11,6 +13,10 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from google.cloud import bigquery, bigquery_storage_v1
 from google.cloud.bigquery import job, table
+from tqdm import tqdm
+from tqdm.contrib.logging import logging_redirect_tqdm
+
+log = logging.getLogger("pipeline/bqpq")
 
 
 @runtime_checkable
@@ -64,21 +70,36 @@ class PipelineBQPQQueryResult:
 
         # Access the first batch to obtain the schema
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
-        first_batch = next(batches, None)
-        schema = first_batch.schema if first_batch is not None else pa.schema([])
 
-        # Write the possibly-empty parquet file
-        # Use a temporary directory, which is always removed regardless
-        # of whether there's still a temporary file inside it
-        with TemporaryDirectory() as tmp_dir:
-            tmp_file = Path(tmp_dir) / parquet_path.name
-            with pq.ParquetWriter(tmp_file, schema) as writer:
-                if first_batch is not None:
-                    writer.write_batch(first_batch)
-                for batch in batches:
-                    writer.write_batch(batch)
-            shutil.move(tmp_file, parquet_path)
+        log.info("BigQuery download... start")
+        with (
+            logging_redirect_tqdm(),
+            tqdm(
+                total=self.rows.total_rows,
+                desc="BigQuery download",
+                unit="rows",
+            ) as pbar,
+        ):
+            first_batch = next(batches, None)
+            if first_batch is not None:
+                pbar.update(first_batch.num_rows)
 
+            schema = first_batch.schema if first_batch is not None else pa.schema([])
+
+            # Write the possibly-empty parquet file
+            # Use a temporary directory, which is always removed regardless
+            # of whether there's still a temporary file inside it
+            with TemporaryDirectory() as tmp_dir:
+                tmp_file = Path(tmp_dir) / parquet_path.name
+                with pq.ParquetWriter(tmp_file, schema) as writer:
+                    if first_batch is not None:
+                        writer.write_batch(first_batch)
+                    for batch in batches:
+                        writer.write_batch(batch)
+                        pbar.update(batch.num_rows)
+                shutil.move(tmp_file, parquet_path)
+
+        log.info("BigQuery download... ok")
         return parquet_path
 
     def save_stats_json(self) -> Path:
@@ -158,6 +179,7 @@ class PipelineBQPQClient:
         template_hash: str,
         query: str,
         paths_provider: PipelineBQPQPathsProvider,
+        _sleep_secs: int | float = 1,  # used for shorter testing
     ) -> PipelineBQPQQueryResult:
         """
         Execute the given BigQuery query.
@@ -170,11 +192,38 @@ class PipelineBQPQClient:
         Returns:
             A PipelineBQPQQueryResult instance.
         """
-        # 1. execute the query and get job and iterable rows
+        # 1. execute the query and get job
         job = self.client.query(query)
-        rows = job.result()
 
-        # 2. return the result object
+        # 2. wait for job to finish with a progress bar
+        log.info("BigQuery query... start")
+        with (
+            logging_redirect_tqdm(),
+            tqdm(
+                desc="BigQuery query",
+                total=10,
+                bar_format="{l_bar}{bar}| [{elapsed}] {postfix}",
+            ) as pbar,
+        ):
+            while job.state != "DONE":
+                time.sleep(_sleep_secs)
+                factor = 2 if (pbar.n / pbar.total) >= 0.8 else 1
+                pbar.total *= factor
+                job.reload()
+                pbar.update(1)
+
+            pbar.n = pbar.total
+
+        # 3. log about the total number of bytes processed
+        bytes_processed_str = (
+            f" ({job.total_bytes_processed / 1e9:.3f} GB processed)"
+            if job.total_bytes_processed is not None
+            else ""
+        )
+        log.info("BigQuery query... ok%s", bytes_processed_str)
+
+        # 4. obtain rows and return
+        rows = job.result()
         return PipelineBQPQQueryResult(
             bq_read_client=self.bq_read_clnt,
             job=job,

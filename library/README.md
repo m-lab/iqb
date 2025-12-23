@@ -41,7 +41,8 @@ iqb.print_config()
 ## GCloud Configuration
 
 To run BigQuery queries, you need to be logged in using the
-user account subscribed to the `discuss@` mailing list.
+user account subscribed to the [Measurement Lab mailing list](
+https://www.measurementlab.net/data/docs/bq/quickstart/).
 
 To install `gcloud` (on Ubuntu):
 
@@ -55,10 +56,18 @@ Then login with:
 gcloud auth application-default login
 ```
 
-You should then be able to run queries within the (small) quota.
+The billing project name should be set to `measurement-lab`
+as illustrated in the example below:
 
-The billing project should be `measurement-lab`.
+```python
+from iqb import IQBPipeline
+pipeline = IQBPipeline(
+  project="measurement-lab",
+  data_dir=None,
+)
+```
 
+You can then use `pipeline` to run queries up to a daily quota.
 
 ## Running Tests
 

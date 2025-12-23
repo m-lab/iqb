@@ -9,6 +9,7 @@ from .calculator import IQBCalculator
 from .config import IQB_CONFIG
 from .pipeline import (
     IQBDatasetGranularity,
+    IQBDatasetMLabTable,
     IQBPipeline,
     iqb_dataset_name_for_mlab,
 )
@@ -23,6 +24,7 @@ __all__ = [
     "IQB_CONFIG",
     "IQBPipeline",
     "IQBDatasetGranularity",
+    "IQBDatasetMLabTable",
     "iqb_dataset_name_for_mlab",
 ]
 __version__ = "0.4.0"

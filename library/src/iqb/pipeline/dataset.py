@@ -3,7 +3,7 @@
 from enum import Enum
 
 
-class PipelineDatasetMLabTable(str, Enum):
+class IQBDatasetMLabTable(str, Enum):
     """Enumerate available parquet tables in the m-lab dataset."""
 
     DOWNLOAD = "downloads"
@@ -24,7 +24,7 @@ class IQBDatasetGranularity(str, Enum):
 def iqb_dataset_name_for_mlab(
     *,
     granularity: IQBDatasetGranularity,
-    table: PipelineDatasetMLabTable,
+    table: IQBDatasetMLabTable,
 ) -> str:
     """
     Construct the name of an m-lab dataset.

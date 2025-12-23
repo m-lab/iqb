@@ -39,7 +39,7 @@ if sys.stderr.isatty():
     )
 
 
-def doboth(
+def sync_mlab(
     pipeline: IQBPipeline,
     start_date: str,
     end_date: str,
@@ -73,24 +73,25 @@ def main():
 
     # COUNTRY
     # 2025-12-23 quota allows to query this:
-    doboth(pipeline, "2025-01-01", "2025-02-01", IQBDatasetGranularity.COUNTRY)
-    doboth(pipeline, "2025-02-01", "2025-03-01", IQBDatasetGranularity.COUNTRY)
-    doboth(pipeline, "2025-03-01", "2025-04-01", IQBDatasetGranularity.COUNTRY)
+    # TODO(bassosimone): ensure we upload these files
+    sync_mlab(pipeline, "2025-01-01", "2025-02-01", IQBDatasetGranularity.COUNTRY)
+    sync_mlab(pipeline, "2025-02-01", "2025-03-01", IQBDatasetGranularity.COUNTRY)
+    sync_mlab(pipeline, "2025-03-01", "2025-04-01", IQBDatasetGranularity.COUNTRY)
 
     # TODO in 2025-12-24
-    # doboth(pipeline, "2025-04-01", "2025-05-01", IQBDatasetGranularity.COUNTRY)
-    # doboth(pipeline, "2025-05-01", "2025-06-01", IQBDatasetGranularity.COUNTRY)
-    # doboth(pipeline, "2025-06-01", "2025-07-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-04-01", "2025-05-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-05-01", "2025-06-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-06-01", "2025-07-01", IQBDatasetGranularity.COUNTRY)
 
     # TODO in 2025-12-25
-    # doboth(pipeline, "2025-07-01", "2025-08-01", IQBDatasetGranularity.COUNTRY)
-    # doboth(pipeline, "2025-08-01", "2025-09-01", IQBDatasetGranularity.COUNTRY)
-    # doboth(pipeline, "2025-09-01", "2025-10-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-07-01", "2025-08-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-08-01", "2025-09-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-09-01", "2025-10-01", IQBDatasetGranularity.COUNTRY)
 
     # TODO in 2025-12-26
-    # doboth(pipeline, "2025-10-01", "2025-11-01", IQBDatasetGranularity.COUNTRY)
-    # doboth(pipeline, "2025-11-01", "2025-12-01", IQBDatasetGranularity.COUNTRY)
-    # doboth(pipeline, "2025-12-01", "2026-01-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-10-01", "2025-11-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-11-01", "2025-12-01", IQBDatasetGranularity.COUNTRY)
+    # sync_mlab(pipeline, "2025-12-01", "2026-01-01", IQBDatasetGranularity.COUNTRY)
 
 
 if __name__ == "__main__":

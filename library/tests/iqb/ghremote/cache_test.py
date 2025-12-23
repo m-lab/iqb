@@ -143,6 +143,8 @@ class TestIQBGitHubRemoteCacheSync:
             # Create mock response with explicit context manager support
             response = Mock()
             response.read = Mock(side_effect=[content, b""])
+            response.headers = Mock()
+            response.headers.get.return_value = str(len(content))
             response.__enter__ = Mock(return_value=response)
             response.__exit__ = Mock(return_value=False)
             return response

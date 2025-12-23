@@ -158,6 +158,7 @@ class MLabCacheEntry:
         country_code: str | None = None,
         asn: int | None = None,
         city: str | None = None,
+        subdivision1: str | None = None,
         columns: list[str] | None = None,
     ) -> pd.DataFrame:
         """
@@ -169,6 +170,7 @@ class MLabCacheEntry:
           country_code: either None or the desired country code (e.g., "IT")
           asn: either None or the desired ASN (e.g., 137)
           city: either None or the desired city (e.g., "Boston")
+          subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
           columns: either None (all columns) or list of column names to read
 
         Return:
@@ -179,6 +181,7 @@ class MLabCacheEntry:
             country_code=country_code,
             asn=asn,
             city=city,
+            subdivision1=subdivision1,
             columns=columns,
         )
 
@@ -188,6 +191,7 @@ class MLabCacheEntry:
         country_code: str | None = None,
         asn: int | None = None,
         city: str | None = None,
+        subdivision1: str | None = None,
         columns: list[str] | None = None,
     ) -> pd.DataFrame:
         """
@@ -199,6 +203,7 @@ class MLabCacheEntry:
           country_code: either None or the desired country code (e.g., "IT")
           asn: either None or the desired ASN (e.g., 137)
           city: either None or the desired city (e.g., "Boston")
+          subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
           columns: either None (all columns) or list of column names to read
 
         Return:
@@ -209,6 +214,7 @@ class MLabCacheEntry:
             country_code=country_code,
             asn=asn,
             city=city,
+            subdivision1=subdivision1,
             columns=columns,
         )
 
@@ -218,6 +224,7 @@ class MLabCacheEntry:
         country_code: str,
         city: str | None = None,
         asn: int | None = None,
+        subdivision1: str | None = None,
     ) -> MLabDataFramePair:
         """
         High-level API: Get filtered download/upload data for specific parameters.
@@ -230,6 +237,7 @@ class MLabCacheEntry:
             country_code: ISO 2-letter country code (e.g., "US", "DE")
             city: Optional city name (required for "country_city" and "country_city_asn" granularity)
             asn: Optional ASN number (required for "country_city_asn" granularity)
+            subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
 
         Returns:
             DataFramePair containing filtered download and upload DataFrames
@@ -263,6 +271,7 @@ class MLabCacheEntry:
             country_code=country_code,
             city=city,
             asn=asn,
+            subdivision1=subdivision1,
         )
 
         # 3. Read upload data with filtering (all columns for flexibility)
@@ -270,6 +279,7 @@ class MLabCacheEntry:
             country_code=country_code,
             city=city,
             asn=asn,
+            subdivision1=subdivision1,
         )
 
         # 4. Make and return the pair

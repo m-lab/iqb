@@ -1,5 +1,7 @@
 """Tests for the iqb.cache.mlab module."""
 
+from pathlib import Path
+
 import pandas as pd
 import pytest
 
@@ -23,6 +25,20 @@ def _get_country_cache_entry_2024_10(manager: MLabCacheManager) -> MLabCacheEntr
         end_date="2024-11-01",
         granularity=IQBDatasetGranularity.COUNTRY,
     )
+
+
+def _get_country_city_cache_entry_2024_10(manager: MLabCacheManager) -> MLabCacheEntry:
+    return manager.get_cache_entry(
+        start_date="2024-10-01",
+        end_date="2024-11-01",
+        granularity=IQBDatasetGranularity.COUNTRY_CITY,
+    )
+
+
+@pytest.fixture
+def cache_fixture_dir() -> Path:
+    """Return path to the test cache fixture directory."""
+    return Path(__file__).parent.parent.parent / "fixtures"
 
 
 class TestMLabCacheManagerIntegration:
@@ -73,6 +89,36 @@ class TestMLabCacheManagerIntegration:
         assert us_upload_df.iloc[0]["country_code"] == "US"
         assert us_upload_df.iloc[0]["sample_count"] == 24288961
         assert us_upload_df.iloc[0]["upload_p95"] == 370.487725107692
+
+    def test_filter_by_subdivision1(self, cache_fixture_dir):
+        manager = _create_manager(cache_fixture_dir)
+        entry = _get_country_city_cache_entry_2024_10(manager)
+
+        ak_download_df = entry.read_download_data_frame(
+            country_code="US",
+            subdivision1="California",
+            city="Los Angeles",
+        )
+
+        assert len(ak_download_df) == 1
+        assert ak_download_df.iloc[0]["country_code"] == "US"
+        assert ak_download_df.iloc[0]["subdivision1_name"] == "California"
+        assert ak_download_df.iloc[0]["city"] == "Los Angeles"
+        assert ak_download_df.iloc[0]["sample_count"] == 100
+        assert ak_download_df.iloc[0]["download_p95"] == 120.5
+        assert ak_download_df.iloc[0]["loss_p95"] == 0.10
+
+        ak_upload_df = entry.read_upload_data_frame(
+            country_code="US",
+            subdivision1="California",
+            city="Los Angeles",
+        )
+        assert len(ak_upload_df) == 1
+        assert ak_upload_df.iloc[0]["country_code"] == "US"
+        assert ak_upload_df.iloc[0]["subdivision1_name"] == "California"
+        assert ak_upload_df.iloc[0]["city"] == "Los Angeles"
+        assert ak_upload_df.iloc[0]["sample_count"] == 100
+        assert ak_upload_df.iloc[0]["upload_p95"] == 60.25
 
     def test_column_projection(self, data_dir):
         manager = _create_manager(data_dir)
@@ -125,6 +171,23 @@ class TestMLabCacheManagerIntegration:
         assert "download_p50" in pair.download.columns
         assert "upload_p95" in pair.upload.columns
         assert "upload_p50" in pair.upload.columns
+
+    def test_read_data_frame_pair_with_subdivision1(self, cache_fixture_dir):
+        manager = _create_manager(cache_fixture_dir)
+        entry = _get_country_city_cache_entry_2024_10(manager)
+
+        pair = entry.read_data_frame_pair(
+            country_code="US",
+            city="Los Angeles",
+            subdivision1="California",
+        )
+
+        assert len(pair.download) == 1
+        assert len(pair.upload) == 1
+        assert pair.download.iloc[0]["subdivision1_name"] == "California"
+        assert pair.upload.iloc[0]["subdivision1_name"] == "California"
+        assert pair.download.iloc[0]["download_p95"] == 120.5
+        assert pair.upload.iloc[0]["upload_p95"] == 60.25
 
     def test_convert_to_dict_p95(self, data_dir):
         manager = _create_manager(data_dir)

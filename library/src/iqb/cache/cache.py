@@ -8,8 +8,8 @@ from pathlib import Path
 from dateutil.relativedelta import relativedelta
 
 from ..pipeline.dataset import IQBDatasetGranularity
-from ..pipeline.pipeline import PipelineCacheManager
-from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheReader
+from ..pipeline.pipeline import PipelineCacheManager, PipelineRemoteCache
+from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheManager
 
 
 @dataclass(frozen=True)
@@ -41,16 +41,21 @@ class IQBData:
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""
 
-    def __init__(self, data_dir: str | Path | None = None):
+    def __init__(
+        self,
+        data_dir: str | Path | None = None,
+        remote_cache: PipelineRemoteCache | None = None,
+    ):
         """
         Initialize cache with data directory path.
 
         Parameters:
             data_dir: Path to directory containing cached data files.
                 If None, defaults to .iqb/ in current working directory.
+            remote_cache: Optional remote cache for fetching cached query results.
         """
-        self.manager = PipelineCacheManager(data_dir)
-        self.mlab = MLabCacheReader(self.manager)
+        self.manager = PipelineCacheManager(data_dir, remote_cache=remote_cache)
+        self.mlab = MLabCacheManager(self.manager)
 
     @property
     def data_dir(self) -> Path:

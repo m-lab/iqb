@@ -6,32 +6,32 @@ import pytest
 from iqb import IQBDatasetGranularity
 from iqb.cache.mlab import (
     MLabCacheEntry,
-    MLabCacheReader,
+    MLabCacheManager,
     MLabDataFramePair,
 )
 from iqb.pipeline.cache import PipelineCacheManager
 
 
-def _create_reader(data_dir: str) -> MLabCacheReader:
+def _create_manager(data_dir: str) -> MLabCacheManager:
     manager = PipelineCacheManager(data_dir=data_dir)
-    return MLabCacheReader(manager)
+    return MLabCacheManager(manager)
 
 
-def _get_country_cache_entry_2024_10(reader: MLabCacheReader) -> MLabCacheEntry:
-    return reader.get_cache_entry(
+def _get_country_cache_entry_2024_10(manager: MLabCacheManager) -> MLabCacheEntry:
+    return manager.get_cache_entry(
         start_date="2024-10-01",
         end_date="2024-11-01",
         granularity=IQBDatasetGranularity.COUNTRY,
     )
 
 
-class TestMLabCacheReaderIntegration:
-    """Integration tests for MLabCacheReader class."""
+class TestMLabCacheManagerIntegration:
+    """Integration tests for MLabCacheManager class."""
 
     def test_read_download_dataframe(self, data_dir):
         """Test that IQBCache uses .iqb/ directory by default."""
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         download_df = entry.read_download_data_frame()
 
@@ -44,8 +44,8 @@ class TestMLabCacheReaderIntegration:
         assert len(download_df) == 236
 
     def test_read_upload_dataframe(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         upload_df = entry.read_upload_data_frame()
 
@@ -56,8 +56,8 @@ class TestMLabCacheReaderIntegration:
         assert len(upload_df) == 237
 
     def test_filter_by_country_code(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         us_download_df = entry.read_download_data_frame(country_code="US")
 
@@ -75,8 +75,8 @@ class TestMLabCacheReaderIntegration:
         assert us_upload_df.iloc[0]["upload_p95"] == 370.487725107692
 
     def test_column_projection(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         limited_download_df = entry.read_download_data_frame(
             country_code="US",
@@ -94,8 +94,8 @@ class TestMLabCacheReaderIntegration:
         assert "loss_p95" not in limited_download_df.columns  # Not requested
 
     def test_read_multiple_countries(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         countries = ("US", "DE", "BR", "IT", "FR", "IN", "DE")
         for country_code in countries:
@@ -112,8 +112,8 @@ class TestMLabCacheReaderIntegration:
             assert udf.iloc[0]["upload_p95"] > 0
 
     def test_read_data_frame_pair(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
 
@@ -127,8 +127,8 @@ class TestMLabCacheReaderIntegration:
         assert "upload_p50" in pair.upload.columns
 
     def test_convert_to_dict_p95(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
 
@@ -151,8 +151,8 @@ class TestMLabCacheReaderIntegration:
         assert data_p95["packet_loss"] == 0.0
 
     def test_convert_to_dict_default_percentile(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
 
@@ -162,8 +162,8 @@ class TestMLabCacheReaderIntegration:
         assert data_default == data_p95
 
     def test_convert_to_dict_multiple_percentiles(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
 
@@ -180,27 +180,27 @@ class TestMLabCacheReaderIntegration:
         )
 
     def test_read_data_frame_pair_granularity_error_city(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         with pytest.raises(ValueError):
             _ = entry.read_data_frame_pair(country_code="US", city="Boston")
 
     def test_read_data_frame_pair_granularity_error_asn(self, data_dir):
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         with pytest.raises(ValueError):
             _ = entry.read_data_frame_pair(country_code="US", asn=137)
 
     def test_get_cache_entry_with_missing_on_disk_data(self, tmp_path):
-        reader = _create_reader(tmp_path)
+        manager = _create_manager(tmp_path)
         with pytest.raises(FileNotFoundError):
-            _ = _get_country_cache_entry_2024_10(reader)
+            _ = _get_country_cache_entry_2024_10(manager)
 
     def test_get_data_successful(self, data_dir):
-        reader = _create_reader(data_dir)
-        data = reader.get_data(
+        manager = _create_manager(data_dir)
+        data = manager.get_data(
             granularity=IQBDatasetGranularity.COUNTRY,
             country_code="US",
             start_date="2024-10-01",
@@ -216,8 +216,8 @@ class TestMLabCacheReaderIntegration:
 
     def test_download_stats_property(self, data_dir):
         """Test backward compatibility property download_stats."""
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         # Use the backward compatibility property
         stats_path = entry.download_stats
@@ -229,8 +229,8 @@ class TestMLabCacheReaderIntegration:
 
     def test_upload_stats_property(self, data_dir):
         """Test backward compatibility property upload_stats."""
-        reader = _create_reader(data_dir)
-        entry = _get_country_cache_entry_2024_10(reader)
+        manager = _create_manager(data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
 
         # Use the backward compatibility property
         stats_path = entry.upload_stats

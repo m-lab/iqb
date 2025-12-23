@@ -7,6 +7,7 @@ network measurement data, weight matrices, and quality thresholds.
 from .cache import IQBCache
 from .calculator import IQBCalculator
 from .config import IQB_CONFIG
+from .ghremote import IQBGitHubRemoteCache, iqb_github_load_manifest
 from .pipeline import (
     IQBDatasetGranularity,
     IQBDatasetMLabTable,
@@ -22,9 +23,11 @@ __all__ = [
     "IQBCalculator",
     "IQBCache",
     "IQB_CONFIG",
+    "IQBGitHubRemoteCache",
     "IQBPipeline",
     "IQBDatasetGranularity",
     "IQBDatasetMLabTable",
+    "iqb_github_load_manifest",
     "iqb_dataset_name_for_mlab",
 ]
 __version__ = "0.4.0"

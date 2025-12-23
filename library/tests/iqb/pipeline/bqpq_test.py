@@ -87,6 +87,9 @@ class TestPipelineBQPQClient:
         # Verify client.query was called
         mock_client_instance.query.assert_called_once()
 
+        # Verify that job.reload was called
+        mock_job.reload.assert_called()
+
         # Verify job.result was called
         mock_job.result.assert_called_once()
 

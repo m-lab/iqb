@@ -122,7 +122,7 @@ class IQBCache:
         """
         Fetch measurement data for IQB calculation.
 
-        This method is lazy and may trigger cache sync under an entry-level lock.
+        This method may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.

@@ -265,9 +265,8 @@ class MLabCacheEntry:
             subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
 
         Returns:
-            DataFramePair containing filtered download and upload DataFrames
-            with all the original percentile columns
-            (sync may occur under an entry-level lock)
+           DataFramePair containing filtered download and upload DataFrames
+           with all the original percentile columns (sync may occur under an entry-level lock).
 
         Raises:
             ValueError: If the requested granularity is incompatible with the
@@ -388,7 +387,7 @@ class MLabCacheManager:
         """
         Fetch M-Lab measurement data for IQB calculation.
 
-        This method is lazy and may trigger cache sync under an entry-level lock.
+        This method may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.
@@ -435,7 +434,7 @@ class MLabCacheManager:
         """
         Fetch M-Lab measurement data for IQB calculation.
 
-        This method is lazy and may trigger cache sync under an entry-level lock.
+        This method may trigger cache sync under an entry-level lock.
 
         Args:
             granularity: The granularity to use.

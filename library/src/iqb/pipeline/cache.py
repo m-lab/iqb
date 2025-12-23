@@ -21,7 +21,7 @@ class PipelineEntrySyncError(RuntimeError):
     """Error emitted when we cannot sync the entry."""
 
 
-@dataclass
+@dataclass(kw_only=True)
 class PipelineCacheEntry:
     """
     Reference to a cache entry containing query results and metadata.

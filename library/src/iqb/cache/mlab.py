@@ -15,7 +15,7 @@ from ..pipeline.dataset import IQBDatasetMLabTable
 from ..pipeline.pipeline import PipelineCacheManager
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class IQBDataMLab:
     """
     Contains M-Lab data for computing the IQB score.
@@ -42,7 +42,7 @@ class IQBDataMLab:
         }
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class MLabDataFramePair:
     """
     Pair of DataFrames containing M-Lab measurement data.
@@ -117,7 +117,7 @@ class MLabDataFramePair:
         )
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class MLabCacheEntry:
     """
     M-Lab entry inside the data cache.

@@ -25,6 +25,7 @@ class IQBPipeline:
 
     def __init__(
         self,
+        *,
         project: str,
         data_dir: str | Path | None = None,
         remote_cache: PipelineRemoteCache | None = None,

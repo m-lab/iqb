@@ -12,7 +12,7 @@ from ..pipeline.pipeline import PipelineCacheManager, PipelineRemoteCache
 from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheManager
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class CacheEntry:
     """
     Cached data for computing IQB scores.
@@ -26,7 +26,7 @@ class CacheEntry:
     mlab: MLabCacheEntry
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=True, kw_only=True)
 class IQBData:
     """
     Data for computing the IQB score.
@@ -43,6 +43,7 @@ class IQBCache:
 
     def __init__(
         self,
+        *,
         data_dir: str | Path | None = None,
         remote_cache: PipelineRemoteCache | None = None,
     ):

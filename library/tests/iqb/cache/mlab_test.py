@@ -1,6 +1,5 @@
 """Tests for the iqb.cache.mlab module."""
 
-
 import pandas as pd
 import pytest
 

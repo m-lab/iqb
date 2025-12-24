@@ -39,7 +39,6 @@ import re
 import shutil
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
 
 
@@ -149,15 +148,6 @@ def is_git_ignored(file_path: Path) -> bool:
         return False
 
 
-def cmd_sync(args) -> int:
-    """
-    Sync command: A relic from the past, now replaced by a message.
-    """
-    print("The sync subcommand is no longer required. We integrated its")
-    print("functionality directly into the pipeline package")
-    return 0
-
-
 def cmd_scan(args) -> int:
     """
     Scan command: Scan local files and prepare for upload.
@@ -171,6 +161,7 @@ def cmd_scan(args) -> int:
        - Update manifest
     4. Save manifest
     """
+    _ = args
     manifest = load_manifest()
     files_dict = manifest.setdefault("files", {})
 
@@ -264,15 +255,10 @@ def main() -> int:
     # Scan subcommand
     subparsers.add_parser("scan", help="Scan local files and prepare for upload")
 
-    # Sync subcommand
-    subparsers.add_parser("sync", help="Download files from GitHub based on manifest")
-
     args = parser.parse_args()
 
     if args.command == "scan":
         return cmd_scan(args)
-    elif args.command == "sync":
-        return cmd_sync(args)
     else:
         parser.print_help()
         return 1

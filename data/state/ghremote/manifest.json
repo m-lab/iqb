@@ -80,6 +80,86 @@
       "sha256": "adbb8a8779ed8c1b787c12f7f6098b3d5617fa658abfad1011700d84ac74376a",
       "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/adbb8a8779ed__cache__v1__20241001T000000Z__20241101T000000Z__uploads_by_country_subdivision1_asn__stats.json"
     },
+    "cache/v1/20250101T000000Z/20250201T000000Z/downloads_by_country/data.parquet": {
+      "sha256": "816308ebf118586d9aa2404523a114fd78a5dacf95f4de67457e3c80310b43c1",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/816308ebf118__cache__v1__20250101T000000Z__20250201T000000Z__downloads_by_country__data.parquet"
+    },
+    "cache/v1/20250101T000000Z/20250201T000000Z/downloads_by_country/stats.json": {
+      "sha256": "1975ad29357a85f3ee28ca9905347dec55523fbaa27f7b4a65f135e88a586368",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/1975ad29357a__cache__v1__20250101T000000Z__20250201T000000Z__downloads_by_country__stats.json"
+    },
+    "cache/v1/20250101T000000Z/20250201T000000Z/uploads_by_country/data.parquet": {
+      "sha256": "8739817ac89171774bd5f4d331330ed08e5488f42e1970b965ef348d5affa4ad",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/8739817ac891__cache__v1__20250101T000000Z__20250201T000000Z__uploads_by_country__data.parquet"
+    },
+    "cache/v1/20250101T000000Z/20250201T000000Z/uploads_by_country/stats.json": {
+      "sha256": "f6bcbb7fb6ff71b28e9bfc774e7b13803c784d93a550d0a2d2538f28cd22ba55",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/f6bcbb7fb6ff__cache__v1__20250101T000000Z__20250201T000000Z__uploads_by_country__stats.json"
+    },
+    "cache/v1/20250201T000000Z/20250301T000000Z/downloads_by_country/data.parquet": {
+      "sha256": "c8dd5c6dc29959027175af366b61f0b716e68d8e7288ddaf8c8ae97e8bcc1d1c",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/c8dd5c6dc299__cache__v1__20250201T000000Z__20250301T000000Z__downloads_by_country__data.parquet"
+    },
+    "cache/v1/20250201T000000Z/20250301T000000Z/downloads_by_country/stats.json": {
+      "sha256": "e1220e839d19c0381dd46f7d2350e86e93e09dff5d0d66d2e61d8ac34ca05f12",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/e1220e839d19__cache__v1__20250201T000000Z__20250301T000000Z__downloads_by_country__stats.json"
+    },
+    "cache/v1/20250201T000000Z/20250301T000000Z/uploads_by_country/data.parquet": {
+      "sha256": "ab089a5f303fffc0e75d6b22fd4eea3be749f23b0617c842249acf28d17e37c8",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/ab089a5f303f__cache__v1__20250201T000000Z__20250301T000000Z__uploads_by_country__data.parquet"
+    },
+    "cache/v1/20250201T000000Z/20250301T000000Z/uploads_by_country/stats.json": {
+      "sha256": "7674aaf78d4afa35f19b6b1f31267ff27d5bc3488d82f81b6daa4d07ce35199b",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/7674aaf78d4a__cache__v1__20250201T000000Z__20250301T000000Z__uploads_by_country__stats.json"
+    },
+    "cache/v1/20250301T000000Z/20250401T000000Z/downloads_by_country/data.parquet": {
+      "sha256": "f347f0c2e27c23fc4e0aba4eb942e7a62a3665a054c69eae1ad2073ccf68d0ae",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/f347f0c2e27c__cache__v1__20250301T000000Z__20250401T000000Z__downloads_by_country__data.parquet"
+    },
+    "cache/v1/20250301T000000Z/20250401T000000Z/downloads_by_country/stats.json": {
+      "sha256": "88259fd4c6b3bb174285c67c2b21a39aa143776552e675a0dcc5ff79a9b04995",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/88259fd4c6b3__cache__v1__20250301T000000Z__20250401T000000Z__downloads_by_country__stats.json"
+    },
+    "cache/v1/20250301T000000Z/20250401T000000Z/uploads_by_country/data.parquet": {
+      "sha256": "b48774990d56069b6f53dc94a89b24dba5efff47fee7e140515d276b44408d88",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/b48774990d56__cache__v1__20250301T000000Z__20250401T000000Z__uploads_by_country__data.parquet"
+    },
+    "cache/v1/20250301T000000Z/20250401T000000Z/uploads_by_country/stats.json": {
+      "sha256": "5c093f044bdce8efa963a150b21f9e0a17db62c367d8362ec1ec2048e4e304b9",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/5c093f044bdc__cache__v1__20250301T000000Z__20250401T000000Z__uploads_by_country__stats.json"
+    },
+    "cache/v1/20250401T000000Z/20250501T000000Z/downloads_by_country/data.parquet": {
+      "sha256": "7895ec4346e1d89de2ec68cb17e9b62775e150ab513ff9d44f8204099dff698b",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/7895ec4346e1__cache__v1__20250401T000000Z__20250501T000000Z__downloads_by_country__data.parquet"
+    },
+    "cache/v1/20250401T000000Z/20250501T000000Z/downloads_by_country/stats.json": {
+      "sha256": "6faf65749c05fd90a0980c9f4ae50ea202affce0cd3af8eb86c41d1db196e1ab",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/6faf65749c05__cache__v1__20250401T000000Z__20250501T000000Z__downloads_by_country__stats.json"
+    },
+    "cache/v1/20250401T000000Z/20250501T000000Z/uploads_by_country/data.parquet": {
+      "sha256": "03d703faffb560d61a7b7da8f57c6211fd9f388f72824e3a4c4fb67440d51338",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/03d703faffb5__cache__v1__20250401T000000Z__20250501T000000Z__uploads_by_country__data.parquet"
+    },
+    "cache/v1/20250401T000000Z/20250501T000000Z/uploads_by_country/stats.json": {
+      "sha256": "502a133d3ad931d7eb8e6fe0cd51a36de31367c51b9428f3819e125cfcb2f7c3",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/502a133d3ad9__cache__v1__20250401T000000Z__20250501T000000Z__uploads_by_country__stats.json"
+    },
+    "cache/v1/20250501T000000Z/20250601T000000Z/downloads_by_country/data.parquet": {
+      "sha256": "af8d5e2ee67a2da581b297df2b2e01ebfe8c1b48886a028133a186fe667dde6b",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/af8d5e2ee67a__cache__v1__20250501T000000Z__20250601T000000Z__downloads_by_country__data.parquet"
+    },
+    "cache/v1/20250501T000000Z/20250601T000000Z/downloads_by_country/stats.json": {
+      "sha256": "11a9f5fcc81620e22e5aa4039c6687d65dcf115abf30c840f51e9c509d44ce3c",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/11a9f5fcc816__cache__v1__20250501T000000Z__20250601T000000Z__downloads_by_country__stats.json"
+    },
+    "cache/v1/20250501T000000Z/20250601T000000Z/uploads_by_country/data.parquet": {
+      "sha256": "0f8bca23c22ad4b059eb8eaa33a636b879aa6ed64caae6204008c64e83477391",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/0f8bca23c22a__cache__v1__20250501T000000Z__20250601T000000Z__uploads_by_country__data.parquet"
+    },
+    "cache/v1/20250501T000000Z/20250601T000000Z/uploads_by_country/stats.json": {
+      "sha256": "ea66589daf6aad93371d828094c88401bc111616ba9452c71784cc1537645a3e",
+      "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/ea66589daf6a__cache__v1__20250501T000000Z__20250601T000000Z__uploads_by_country__stats.json"
+    },
     "cache/v1/20251001T000000Z/20251101T000000Z/downloads_by_country_asn/data.parquet": {
       "sha256": "4900bb6b7eea84086d65afc8f593b759862d893bdeb694430178dca87217f1e3",
       "url": "https://github.com/m-lab/iqb/releases/download/v0.1.0/4900bb6b7eea__cache__v1__20251001T000000Z__20251101T000000Z__downloads_by_country_asn__data.parquet"

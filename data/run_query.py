@@ -8,11 +8,10 @@ from pathlib import Path
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
-from iqb import IQBGitHubRemoteCache
-from iqb.cli import logger
-from iqb.pipeline import IQBPipeline
 
-logger.configure_logging(verbose=True)
+from iqb.scripting import iqb_logging, iqb_pipeline
+
+iqb_logging.configure(verbose=True)
 
 
 def validate_date(date_str: str) -> str:
@@ -38,23 +37,13 @@ def validate_date(date_str: str) -> str:
 
 
 def run_bq_query(
-    query_name: str,
+    granularity: str,
     project_id: str,
     start_date: str,
     end_date: str,
 ) -> None:
     """
     Execute a BigQuery query and save to v1 Parquet cache.
-
-    This uses IQBPipeline internally to execute the query and save to
-    ./data/cache/v1/{start}/{end}/{query_name}/ with:
-    - data.parquet: Query results
-    - stats.json: Query metadata (timing, bytes processed, template hash)
-
-    To inspect results, use: pandas.read_parquet('path/to/data.parquet')
-
-    Query templates should contain {START_DATE} and {END_DATE} placeholders
-    which will be replaced with the provided date values.
 
     Date ranges follow Python slice convention [start, end):
     - start_date is inclusive
@@ -82,35 +71,11 @@ def run_bq_query(
             f"start_date must be <= end_date, got: {start_date} > {end_date}"
         )
 
-    print(f"Running query: {query_name}", file=sys.stderr)
-    print(f"  Date range: {start_date} to {end_date}", file=sys.stderr)
-
     # Data directory is ./iqb/data (where this script lives)
     data_dir = Path(__file__).parent
 
-    # Create GitHub remote cache
-    ghcache = IQBGitHubRemoteCache(data_dir=data_dir)
-
-    # Create and sync cache entry (idempotent)
-    # This creates: ./iqb/data/cache/v1/{start}/{end}/{query_name}/
-    #   - data.parquet: query results (empty file if no results)
-    #   - stats.json: query metadata
-    pipeline = IQBPipeline(project=project_id, data_dir=data_dir, remote_cache=ghcache)
-    entry = pipeline.get_cache_entry(
-        dataset_name=query_name,
-        start_date=start_date,
-        end_date=end_date,
-    )
-    with entry.lock():
-        if not entry.exists():
-            entry.sync()
-    data_path = entry.data_parquet_file_path()
-    assert data_path.exists()
-    stats_path = entry.stats_json_file_path()
-    assert stats_path.exists()
-    print("✓ Cache entry info:", file=sys.stderr)
-    print(f"  Data: {data_path}", file=sys.stderr)
-    print(f"  Stats: {stats_path}", file=sys.stderr)
+    pipeline = iqb_pipeline.create(data_dir=data_dir, project=project_id)
+    pipeline.sync_mlab(granularity, start_date=start_date, end_date=end_date)
 
 
 def main():
@@ -120,8 +85,8 @@ def main():
         description="Execute BigQuery query template and save results to v1 Parquet cache"
     )
     parser.add_argument(
-        "query_name",
-        help="Name of SQL query template (e.g., 'downloads_by_country', 'uploads_by_country')",
+        "--granularity",
+        help="Geographical granularity (e.g., 'country', 'subdivision1', 'city')",
     )
     parser.add_argument(
         "--start-date",
@@ -142,7 +107,7 @@ def main():
     args = parser.parse_args()
 
     run_bq_query(
-        args.query_name,
+        args.granularity,
         args.project_id,
         args.start_date,
         args.end_date,

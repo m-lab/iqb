@@ -44,33 +44,29 @@ def generate_for_period(
     print(f"Date range: [{start_date}, {end_date})")
     print(f"{'#' * 60}")
 
-    datasets = (
+    granularities = (
         "country",
         "country_asn",
-        "country_city",
-        "country_city_asn",
-        "country_subdivision1",
-        "country_subdivision1_asn",
+        "city",
+        "city_asn",
+        "subdivision1",
+        "subdivision1_asn",
     )
 
-    directions = ("downloads", "uploads")
-
-    for dataset in datasets:
-        for direction in directions:
-            full_dataset = f"{direction}_by_{dataset}"
-            run_command(
-                [
-                    "python3",
-                    str(data_dir / "run_query.py"),
-                    full_dataset,
-                    "--start-date",
-                    start_date,
-                    "--end-date",
-                    end_date,
-                    # No -o argument: skips JSON conversion, only creates v1 Parquet cache
-                ],
-                f"Querying {full_dataset} metrics for {period_str}",
-            )
+    for granularity in granularities:
+        run_command(
+            [
+                "python3",
+                str(data_dir / "run_query.py"),
+                "--granularity",
+                granularity,
+                "--start-date",
+                start_date,
+                "--end-date",
+                end_date,
+            ],
+            f"Querying {granularity} metrics for {period_str}",
+        )
 
 
 def main():

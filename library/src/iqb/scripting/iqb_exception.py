@@ -31,3 +31,12 @@ class Interceptor:
             log.error("operation failed: %s", exc_value)
             _ = traceback
             self.failed = True
+        return True  # suppress the exception
+
+    def exitcode(self) -> int:
+        """
+        Return the exitcode to pass to sys.exit.
+
+        Zero on success, 1 on failure.
+        """
+        return int(self.failed)

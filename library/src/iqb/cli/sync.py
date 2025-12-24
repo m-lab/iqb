@@ -1,7 +1,6 @@
 """The sync subcommand."""
 
 import getopt
-import logging
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -14,6 +13,7 @@ from iqb import (
     iqb_dataset_name_for_mlab,
 )
 from iqb.pipeline import parse_date
+from . import logger
 
 brief_help_message = "hint: try `iqb sync --help` for more help.\n"
 
@@ -102,12 +102,6 @@ Exit Code
 """
 
 
-def configure_logging(verbose: bool) -> None:
-    level = logging.DEBUG if verbose else logging.INFO
-    fmt = "[%(asctime)s] <%(name)s> %(levelname)s: %(message)s"
-    logging.basicConfig(level=level, format=fmt, datefmt="%Y-%m-%d %H:%M:%S")
-
-
 @dataclass
 class Command:
     """Model the sync command."""
@@ -137,7 +131,7 @@ class Command:
             return 2
 
         # init logger
-        configure_logging(self.verbose)
+        logger.configure_logging(self.verbose)
 
         # init github cache
         ghcache = IQBGitHubRemoteCache(data_dir=self.data_dir)

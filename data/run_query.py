@@ -3,37 +3,15 @@
 
 import argparse
 import sys
-import logging
 from datetime import datetime
 from pathlib import Path
-
-import colorlog
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 from iqb import IQBGitHubRemoteCache
+from iqb.cli import logger
 from iqb.pipeline import IQBPipeline
-
-if sys.stderr.isatty():
-    LOG_COLORS = {
-        "DEBUG": "bold_cyan",
-        "INFO": "bold_green",
-        "WARNING": "bold_yellow",
-        "ERROR": "bold_red",
-        "CRITICAL": "bold_red,bg_white",
-    }
-    handler = logging.StreamHandler()
-    handler.setFormatter(
-        colorlog.ColoredFormatter(
-            fmt="%(log_color)s[%(asctime)s] <%(name)s> %(levelname)s:%(reset)s %(message)s",
-            log_colors=LOG_COLORS,
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-    )
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[handler],
-    )
+logger.configure_logging(verbose=True)
 
 
 def validate_date(date_str: str) -> str:

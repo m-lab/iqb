@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import getopt
-import sys
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime
 
 from .. import (
@@ -89,9 +87,7 @@ class IQBEasyPipelineJob:
                 end_date=self.end_date,
                 granularity=granularity,
             )
-            if start_date is not None
-            and granularity is not None
-            and end_date is not None
+            if start_date is not None and granularity is not None and end_date is not None
             else None
         )
 

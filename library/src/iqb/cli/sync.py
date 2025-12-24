@@ -210,9 +210,7 @@ class Command:
         return valids[self.granularity]
 
     def _parse_start_date_flag(self) -> None:
-        self.start_time = self._parse_date_flag(
-            name="start-date", value=self.start_date
-        )
+        self.start_time = self._parse_date_flag(name="start-date", value=self.start_date)
 
     def _parse_date_flag(self, *, name: str, value: str | None) -> datetime | None:
         if not value:

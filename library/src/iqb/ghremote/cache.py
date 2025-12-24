@@ -45,9 +45,7 @@ class Manifest:
 
     def __post_init__(self):
         if self.v != 0:
-            raise ValueError(
-                f"Unsupported manifest version: {self.v} (only v=0 supported)"
-            )
+            raise ValueError(f"Unsupported manifest version: {self.v} (only v=0 supported)")
 
     def get_file_entry(self, *, full_path: Path, data_dir: Path) -> FileEntry:
         """

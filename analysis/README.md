@@ -29,6 +29,12 @@ Template demonstrating basic IQB usage:
 
 Use this as a starting point for custom analysis.
 
+## Local Cache for Notebook Tests
+
+The test suite seeds `analysis/.iqb` with a small cache snapshot to avoid
+network downloads when executing notebooks in CI. If you need to refresh
+or replace the cached month, update `analysis/.iqb` accordingly.
+
 ## Running Notebooks
 
 ### In VSCode

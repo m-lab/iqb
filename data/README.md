@@ -1,8 +1,25 @@
-# IQB Static Data Files
+# IQB Data Workspace
 
-This directory contains static reference data used by the IQB prototype.
+This directory is a workspace for data curation scripts, release manifests,
+and local cache artifacts produced during generation.
 
-## Data Format
+## What Lives Here
+
+- `generate_data.py`: Orchestrates BigQuery extraction and writes cache files
+  under `./cache/v1/` for local use.
+- `run_query.py`: Legacy single-query helper (kept for now, but not the
+  preferred workflow).
+- `ghcache.py`: Helper for publishing cache files to GitHub releases.
+- `state/ghremote/manifest.json`: Release manifest used by the GitHub remote
+  cache implementation.
+
+Static cache fixtures used by tests and notebooks are stored elsewhere:
+
+- Real data fixtures: `library/tests/fixtures/real-data`
+- Fake data fixtures: `library/tests/fixtures/fake-data`
+- Notebook cache: `analysis/.iqb` (seeded to avoid network downloads in tests)
+
+## Cache Format
 
 Raw query results stored efficiently for flexible analysis:
 
@@ -14,8 +31,6 @@ Raw query results stored efficiently for flexible analysis:
 
 ## GitHub Cache Synchronization (Interim Solution)
 
-**IMPORTANT**: This is a throwaway interim solution that will be replaced by GCS.
-
 Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
 constraints, we use GitHub releases to distribute pre-generated cache files.
 
@@ -26,7 +41,7 @@ The GitHub release manifest lives at `state/ghremote/manifest.json`.
 
 ### For Maintainers (Publishing New Cache)
 
-When you generate new cache files locally:
+When you generate new cache files locally (under `./cache/v1`):
 
 ```bash
 uv run ./data/ghcache.py scan
@@ -79,7 +94,7 @@ uv run python run_query.py --granularity country \
   --start-date 2024-10-01 --end-date 2024-11-01
 
 # Inspect results with pandas
-python3 << 'EOF'
+uv run python << 'EOF'
 import pandas as pd
 df = pd.read_parquet('cache/v1/2024-10-01/2024-11-01/downloads_by_country/data.parquet')
 print(df.head())

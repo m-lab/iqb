@@ -4,8 +4,7 @@
 GitHub cache synchronization tool for IQB data files.
 
 **INTERIM SOLUTION**: This is a throwaway script for the initial phase of the
-project. It will eventually be replaced by a proper GCS-based solution. The
-script assumes Unix file paths and will not work on Windows.
+project. It will eventually be replaced by a proper GCS-based solution.
 
 This tool manages caching of large parquet/JSON files using GitHub releases
 as a distribution mechanism, with local SHA256 verification.
@@ -17,7 +16,7 @@ Subcommands:
 The 'scan' command copies files to the current directory with mangled names,
 ready for manual upload to GitHub releases.
 
-Manifest format (ghcache.json):
+Manifest format (state/ghremote/manifest.json):
 {
   "v": 0,
   "files": {
@@ -36,16 +35,14 @@ import argparse
 import hashlib
 import json
 import os
-import platform
 import re
 import shutil
 import subprocess
 import sys
-import urllib.request
 from pathlib import Path
 
 
-MANIFEST_FILE = "ghcache.json"
+MANIFEST_PATH = Path("state") / "ghremote" / "manifest.json"
 CACHE_DIR = Path("cache/v1")
 SHA256_PREFIX_LENGTH = 12
 
@@ -119,48 +116,19 @@ def mangle_path(local_path: str, sha256: str) -> str:
     return f"{sha_prefix}__{mangled}"
 
 
-def demangle_path(mangled_name: str) -> str | None:
-    """
-    Convert mangled filename back to local path.
-
-    Returns None if the format is invalid.
-
-    Example:
-      Input:  3a421c62179a__cache__v1__20241001T000000Z__20241101T000000Z__downloads_by_country__data.parquet
-      Output: cache/v1/20241001T000000Z/20241101T000000Z/downloads_by_country/data.parquet
-    """
-    # Expected format: {12-char-hex}__cache__v1__...
-    if not re.match(r"^[a-f0-9]{12}__", mangled_name):
-        return None
-
-    # Remove SHA256 prefix
-    parts = mangled_name.split("__", 1)
-    if len(parts) != 2:
-        return None
-
-    # Convert __ back to /
-    local_path = parts[1].replace("__", "/")
-
-    # Validate the demangled path
-    if not validate_cache_path(local_path):
-        return None
-
-    return local_path
-
-
 def load_manifest() -> dict:
-    """Load manifest from ghcache.json, or return empty manifest if not found."""
-    manifest_path = Path(MANIFEST_FILE)
-    if not manifest_path.exists():
+    """Load manifest from state/ghremote/manifest.json, or return empty if not found."""
+    if not MANIFEST_PATH.exists():
         return {"v": 0, "files": {}}
 
-    with open(manifest_path, "r") as f:
+    with open(MANIFEST_PATH, "r") as f:
         return json.load(f)
 
 
 def save_manifest(manifest: dict) -> None:
-    """Save manifest to ghcache.json."""
-    with open(MANIFEST_FILE, "w") as f:
+    """Save manifest to state/ghremote/manifest.json."""
+    MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(MANIFEST_PATH, "w") as f:
         json.dump(manifest, f, indent=2, sort_keys=True)
         f.write("\n")  # Trailing newline
 
@@ -180,60 +148,6 @@ def is_git_ignored(file_path: Path) -> bool:
         return False
 
 
-def download_file(url: str, dest_path: Path) -> None:
-    """Download a file from URL to destination path."""
-    print(f"  Downloading from {url}")
-    dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-    with urllib.request.urlopen(url) as response:
-        with open(dest_path, "wb") as f:
-            while chunk := response.read(8192):
-                f.write(chunk)
-
-
-def cmd_sync(args) -> int:
-    """
-    Sync command: Download files from GitHub based on manifest.
-
-    For each entry in the manifest:
-    1. Check if local file exists
-    2. If exists, verify SHA256
-    3. If missing or SHA256 mismatch, download from URL
-    """
-    manifest = load_manifest()
-
-    if not manifest.get("files"):
-        print("No files in manifest.")
-        return 0
-
-    print(f"Checking {len(manifest['files'])} files from manifest...")
-
-    for local_path, file_info in manifest["files"].items():
-        expected_sha256 = file_info["sha256"]
-        url = file_info["url"]
-
-        file_path = Path(local_path)
-
-        # Check if file exists
-        if not file_path.exists():
-            print(f"Missing: {local_path}")
-            download_file(url, file_path)
-            continue
-
-        # Verify SHA256
-        actual_sha256 = compute_sha256(file_path)
-        if actual_sha256 != expected_sha256:
-            print(f"SHA256 mismatch: {local_path}")
-            print(f"  Expected: {expected_sha256}")
-            print(f"  Actual:   {actual_sha256}")
-            print("  Re-downloading...")
-            download_file(url, file_path)
-        else:
-            print(f"OK: {local_path}")
-
-    return 0
-
-
 def cmd_scan(args) -> int:
     """
     Scan command: Scan local files and prepare for upload.
@@ -247,6 +161,7 @@ def cmd_scan(args) -> int:
        - Update manifest
     4. Save manifest
     """
+    _ = args
     manifest = load_manifest()
     files_dict = manifest.setdefault("files", {})
 
@@ -272,8 +187,8 @@ def cmd_scan(args) -> int:
     files_to_upload = []
 
     for file_path in ignored_files:
-        # Convert to relative path string (already relative since we chdir'd)
-        rel_path = str(file_path)
+        # Convert to relative path string with forward slashes for cross-platform compatibility
+        rel_path = file_path.as_posix()
 
         # Validate path format
         if not validate_cache_path(rel_path):
@@ -313,7 +228,7 @@ def cmd_scan(args) -> int:
 
     # Save updated manifest
     save_manifest(manifest)
-    print(f"\nManifest updated: {MANIFEST_FILE}")
+    print(f"\nManifest updated: {MANIFEST_PATH}")
 
     if files_to_upload:
         print(f"\nFiles ready for upload ({len(files_to_upload)}):")
@@ -321,23 +236,13 @@ def cmd_scan(args) -> int:
             print(f"  {f}")
         print("\nNext steps:")
         print("1. Upload mangled files to GitHub release v0.1.0")
-        print("2. Update URLs in ghcache.json if needed")
-        print("3. Commit updated ghcache.json to repository")
+        print("2. Update URLs in state/ghremote/manifest.json if needed")
+        print("3. Commit updated state/ghremote/manifest.json to repository")
 
     return 0
 
 
 def main() -> int:
-    # Reject Windows - this script assumes Unix file paths
-    if platform.system() == "Windows":
-        print("ERROR: This script does not support Windows.", file=sys.stderr)
-        print("Reason: Assumes Unix file path conventions.", file=sys.stderr)
-        print(
-            "Note: This is an interim solution that will be replaced by GCS.",
-            file=sys.stderr,
-        )
-        return 1
-
     # Change to script's directory (./data) so all paths are relative to it
     script_dir = Path(__file__).resolve().parent
     os.chdir(script_dir)
@@ -350,15 +255,10 @@ def main() -> int:
     # Scan subcommand
     subparsers.add_parser("scan", help="Scan local files and prepare for upload")
 
-    # Sync subcommand
-    subparsers.add_parser("sync", help="Download files from GitHub based on manifest")
-
     args = parser.parse_args()
 
     if args.command == "scan":
         return cmd_scan(args)
-    elif args.command == "sync":
-        return cmd_sync(args)
     else:
         parser.print_help()
         return 1

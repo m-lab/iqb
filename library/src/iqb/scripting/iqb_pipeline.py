@@ -28,7 +28,7 @@ class Pipeline:
         *,
         end_date: str,
         start_date: str,
-    ) -> bool:
+    ) -> None:
         """
         Helper function to synchronize mlab data to the local cache.
 
@@ -72,7 +72,11 @@ class Pipeline:
         )
 
 
-def create(data_dir: str | Path | None = None) -> Pipeline:
+def create(
+    data_dir: str | Path | None = None,
+    *,
+    project: str = "measurement-lab",
+) -> Pipeline:
     """
     Helper function to create a Pipeline instance.
 
@@ -80,13 +84,14 @@ def create(data_dir: str | Path | None = None) -> Pipeline:
 
     Arguments:
        data_dir: the data directory to use or None, in which case we use `.iqb`.
+       project: the BigQuery project to use for billing.
 
     Returns:
        A fully configured Pipeline ready to use.
     """
     return Pipeline(
         pipeline=IQBPipeline(
-            project="measurement-lab",
+            project=project,
             data_dir=data_dir,
             remote_cache=IQBGitHubRemoteCache(data_dir=data_dir),
         )

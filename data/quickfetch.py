@@ -2,28 +2,12 @@
 """Quick and dirty script to fetch more data."""
 
 import sys
-import logging
 from pathlib import Path
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 
-from iqb import IQBPipeline
 from iqb.scripting import iqb_logging, iqb_pipeline
-
-
-def sync_mlab(
-    pipeline: IQBPipeline,
-    start_date: str,
-    end_date: str,
-    granularity: str,
-):
-    iqb_pipeline.sync_mlab(
-        start_date=start_date,
-        end_date=end_date,
-        granularity=granularity,
-        pipeline=pipeline,
-    )
 
 
 def main():

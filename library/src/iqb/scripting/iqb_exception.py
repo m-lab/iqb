@@ -1,4 +1,4 @@
-"""Optional scripting extensions to route exceptions to errors."""
+"""Optional scripting helpers to log exceptions and convert them to exit codes."""
 
 from __future__ import annotations
 
@@ -7,7 +7,7 @@ from .iqb_logging import log
 
 class Interceptor:
     """
-    Utility class to intercept exceptions.
+    Context manager to intercept exceptions.
 
     Use as a context manager:
 
@@ -17,11 +17,11 @@ class Interceptor:
         print(interceptor.failed)
         sys.exit(interceptor.exitcode())
 
-    Exceptions are logged and otherwise ignored. The failed
-    field tells you whether there were any exeptions.
+    Exceptions are logged and suppressed. The failed field
+    tells you whether there were any exceptions.
 
-    Use interceptor.exitcode() to get the suitable exit
-    code to pass to the sys.exit() function.
+    Use interceptor.exitcode() to get the suitable exit code
+    to pass to the sys.exit() function.
     """
 
     def __init__(self):

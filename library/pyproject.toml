@@ -21,6 +21,7 @@ dependencies = [
     "filelock>=3.20.1",
     "tqdm>=4.67.1",
     "colorlog>=6.10.1",
+    "rich>=14.2.0",
 ]
 
 [project.urls]

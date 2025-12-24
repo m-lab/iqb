@@ -9,6 +9,7 @@ import colorlog
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
+
 from iqb import (
     IQBDatasetGranularity,
     IQBDatasetMLabTable,
@@ -17,26 +18,7 @@ from iqb import (
     iqb_dataset_name_for_mlab,
 )
 
-if sys.stderr.isatty():
-    LOG_COLORS = {
-        "DEBUG": "bold_cyan",
-        "INFO": "bold_green",
-        "WARNING": "bold_yellow",
-        "ERROR": "bold_red",
-        "CRITICAL": "bold_red,bg_white",
-    }
-    handler = logging.StreamHandler()
-    handler.setFormatter(
-        colorlog.ColoredFormatter(
-            fmt="%(log_color)s[%(asctime)s] <%(name)s> %(levelname)s:%(reset)s %(message)s",
-            log_colors=LOG_COLORS,
-            datefmt="%Y-%m-%d %H:%M:%S",
-        )
-    )
-    logging.basicConfig(
-        level=logging.DEBUG,
-        handlers=[handler],
-    )
+from iqb.scripting import iqb_logging
 
 
 def sync_mlab(
@@ -60,6 +42,8 @@ def sync_mlab(
 
 
 def main():
+    iqb_logging.configure(verbose=True)
+
     # Data directory is ./iqb/data (where this script lives)
     datadir = Path(__file__).parent
     rcache = IQBGitHubRemoteCache(data_dir=datadir)
@@ -69,6 +53,8 @@ def main():
         data_dir=datadir,
         remote_cache=rcache,
     )
+
+    logging.info("checking which entries to sync... start")
 
     # COUNTRY
     # 2025-12-23 quota allows to query this:
@@ -91,6 +77,8 @@ def main():
     # sync_mlab(pipeline, "2025-10-01", "2025-11-01", IQBDatasetGranularity.COUNTRY)
     # sync_mlab(pipeline, "2025-11-01", "2025-12-01", IQBDatasetGranularity.COUNTRY)
     # sync_mlab(pipeline, "2025-12-01", "2026-01-01", IQBDatasetGranularity.COUNTRY)
+
+    logging.info("checking which entries to sync... ok")
 
 
 if __name__ == "__main__":

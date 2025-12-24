@@ -12,7 +12,7 @@ from .. import (
     IQBPipeline,
     iqb_dataset_name_for_mlab,
 )
-from ..pipeline import parse_date
+from ..pipeline.cache import _parse_date  # XXX
 from ..scripting import iqb_logging
 
 brief_help_message = "hint: try `iqb sync --help` for more help.\n"
@@ -217,7 +217,7 @@ class Command:
             self._errors.append(f"missing `--{name}` flag")
             return None
         try:
-            return parse_date(value)
+            return _parse_date(value)
         except ValueError:
             self._errors.append(f"invalid --{name} value: {value}")
             return None

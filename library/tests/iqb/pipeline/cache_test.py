@@ -12,8 +12,8 @@ from iqb.pipeline.cache import (
     PipelineCacheManager,
     PipelineEntrySyncError,
     _parse_both_dates,
+    _parse_date,
     data_dir_or_default,
-    parse_date,
 )
 
 
@@ -40,22 +40,22 @@ class TestDataDirOrDefault:
 
 
 class TestParseDate:
-    """Test for parse_date function."""
+    """Test for _parse_date function."""
 
     def test_parse_date_valid(self):
         """Test parsing valid date string."""
-        result = parse_date("2024-10-01")
+        result = _parse_date("2024-10-01")
         assert result == datetime(2024, 10, 1)
 
     def test_parse_date_invalid_format(self):
         """Test error on invalid date format."""
         with pytest.raises(ValueError, match="Invalid date format"):
-            parse_date("2024/10/01")
+            _parse_date("2024/10/01")
 
     def test_parse_date_invalid_date(self):
         """Test error on invalid date values."""
         with pytest.raises(ValueError, match="Invalid date format"):
-            parse_date("2024-13-01")
+            _parse_date("2024-13-01")
 
 
 class TestParseBothDates:

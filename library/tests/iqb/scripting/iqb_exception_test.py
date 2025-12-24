@@ -11,9 +11,8 @@ class TestInterceptor:
     def test_no_exception(self) -> None:
         interceptor = iqb_exception.Interceptor()
 
-        with patch("iqb.scripting.iqb_exception.log") as log:
-            with interceptor:
-                pass
+        with patch("iqb.scripting.iqb_exception.log") as log, interceptor:
+            pass
 
         assert interceptor.failed is False
         assert interceptor.exitcode() == 0
@@ -22,9 +21,8 @@ class TestInterceptor:
     def test_exception_sets_failed_and_logs(self) -> None:
         interceptor = iqb_exception.Interceptor()
 
-        with patch("iqb.scripting.iqb_exception.log") as log:
-            with interceptor:
-                raise ValueError("boom")
+        with patch("iqb.scripting.iqb_exception.log") as log, interceptor:
+            raise ValueError("boom")
 
         assert interceptor.failed is True
         assert interceptor.exitcode() == 1

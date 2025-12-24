@@ -13,7 +13,7 @@ from .. import (
     iqb_dataset_name_for_mlab,
 )
 from ..pipeline import parse_date
-from . import logger
+from ..scripting import iqb_logging
 
 brief_help_message = "hint: try `iqb sync --help` for more help.\n"
 
@@ -131,7 +131,7 @@ class Command:
             return 2
 
         # init logger
-        logger.configure_logging(self.verbose)
+        iqb_logging.configure(self.verbose)
 
         # init github cache
         ghcache = IQBGitHubRemoteCache(data_dir=self.data_dir)
@@ -210,7 +210,9 @@ class Command:
         return valids[self.granularity]
 
     def _parse_start_date_flag(self) -> None:
-        self.start_time = self._parse_date_flag(name="start-date", value=self.start_date)
+        self.start_time = self._parse_date_flag(
+            name="start-date", value=self.start_date
+        )
 
     def _parse_date_flag(self, *, name: str, value: str | None) -> datetime | None:
         if not value:

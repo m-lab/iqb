@@ -10,10 +10,10 @@ from iqb import IQBCache, IQBCalculator, IQBDatasetGranularity
 class TestIntegration:
     """Integration test for the IQB library."""
 
-    def test_with_us_data_october_2024(self, data_dir):
+    def test_with_us_data_october_2024(self, real_data_dir):
         """Test that IQBCache uses .iqb/ directory by default."""
         # Instantiate the cache with the global cache dir
-        cache = IQBCache(data_dir=data_dir)
+        cache = IQBCache(data_dir=real_data_dir)
 
         # Read the data from the cache
         data = cache.get_data("US", start_date=datetime.strptime("2024-10-01", "%Y-%m-%d"))
@@ -29,10 +29,10 @@ class TestIntegration:
         # scores may reach 1.0 as we're checking "top ~5% performance"
         assert score >= 0 and score <= 1
 
-    def test_cache_entry_read_dataframes(self, data_dir):
+    def test_cache_entry_read_dataframes(self, real_data_dir):
         """Test reading parquet files from v1 cache using get_cache_entry()."""
         # Instantiate the cache with the data directory
-        cache = IQBCache(data_dir=data_dir)
+        cache = IQBCache(data_dir=real_data_dir)
 
         # Get cache entry for October 2024 country-level data
         entry = cache.get_cache_entry(
@@ -92,10 +92,10 @@ class TestIntegration:
             assert df.iloc[0]["sample_count"] > 0
             assert df.iloc[0]["download_p95"] > 0
 
-    def test_data_frame_pair_to_dict(self, data_dir):
+    def test_data_frame_pair_to_dict(self, real_data_dir):
         """Test the high-level API: get_data_frame_pair() and to_dict()."""
         # Instantiate the cache with the data directory
-        cache = IQBCache(data_dir=data_dir)
+        cache = IQBCache(data_dir=real_data_dir)
 
         # Get cache entry for October 2024 country-level data
         entry = cache.get_cache_entry(

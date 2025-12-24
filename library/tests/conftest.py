@@ -6,7 +6,12 @@ import pytest
 
 
 @pytest.fixture
-def data_dir():
-    """Return path to the repository's data/ directory."""
-    # tests/conftest.py -> tests/ -> library/ -> repo root -> data/
-    return Path(__file__).parent.parent.parent / "data"
+def real_data_dir() -> Path:
+    """Return path to the real-data cache fixtures directory."""
+    return Path(__file__).parent / "fixtures" / "real-data"
+
+
+@pytest.fixture
+def fake_data_dir() -> Path:
+    """Return path to the fake-data cache fixtures directory."""
+    return Path(__file__).parent / "fixtures" / "fake-data"

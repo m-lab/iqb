@@ -12,7 +12,7 @@ _mapper = {
 }
 
 
-def parse(v: IQBDatasetGranularity | str) -> IQBDatasetGranularity:
+def parse(v: str) -> IQBDatasetGranularity:
     """
     Parse a granularity string into a valid granularity enum.
 
@@ -29,7 +29,7 @@ def parse(v: IQBDatasetGranularity | str) -> IQBDatasetGranularity:
         ValueError if the value is invalid.
     """
     try:
-        return _mapper[v] if isinstance(v, str) else v
+        return _mapper[v]
     except KeyError as exc:
         valid = ", ".join(sorted(_mapper.keys()))
         raise ValueError(f"invalid granularity value {v}; valid values: {valid}") from exc

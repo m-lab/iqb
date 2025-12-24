@@ -6,7 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .. import (
-    IQBDatasetGranularity,
     IQBDatasetMLabTable,
     IQBGitHubRemoteCache,
     IQBPipeline,
@@ -24,7 +23,7 @@ class Pipeline:
 
     def sync_mlab(
         self,
-        granularity: IQBDatasetGranularity | str,
+        granularity: str,
         *,
         end_date: str,
         start_date: str,
@@ -37,12 +36,14 @@ class Pipeline:
 
         Arguments:
             end_date: exclusive end date as a YYYY-MM-DD string.
-            granularity: granularity to use as an enum or as a string.
+            granularity: geographical granularity to use.
             start_date: incluive start date as a YYYY-MM-DD string.
 
         Raises:
             Exceptions in case of failure.
         """
+        granularity = iqb_granularity.parse(granularity)
+
         log.info(
             "sync mlab with start_date=%s end_date=%s granularity=%s... start",
             start_date,
@@ -50,7 +51,6 @@ class Pipeline:
             granularity,
         )
 
-        granularity = iqb_granularity.parse(granularity)
         for table in (IQBDatasetMLabTable.DOWNLOAD, IQBDatasetMLabTable.UPLOAD):
             entry = self.pipeline.get_cache_entry(
                 dataset_name=iqb_dataset_name_for_mlab(

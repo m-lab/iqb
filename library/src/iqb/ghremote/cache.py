@@ -12,7 +12,16 @@ from tempfile import TemporaryDirectory
 from urllib.request import urlopen
 
 from dacite import from_dict
-from tqdm import tqdm
+from rich.progress import (
+    BarColumn,
+    DownloadColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+    TransferSpeedColumn,
+)
 
 from ..pipeline.cache import PipelineCacheEntry, data_dir_or_default
 
@@ -149,20 +158,25 @@ def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
         total = response.headers.get("Content-Length")
         total = int(total) if total is not None else None
 
-        with tqdm(
-            total=total,
-            unit="B",
-            unit_scale=True,
-            unit_divisor=1024,
-            desc=tmp_file.name,
-            leave=True,
-        ) as pbar:
+        columns = [SpinnerColumn(), TextColumn("{task.description}")]
+        if total is not None:
+            columns.extend(
+                [
+                    BarColumn(),
+                    DownloadColumn(),
+                    TransferSpeedColumn(),
+                    TimeRemainingColumn(),
+                ]
+            )
+        columns.append(TimeElapsedColumn())
+        with Progress(*columns, transient=False) as progress:
+            task = progress.add_task(tmp_file.name, total=total)
             while True:
                 chunk = response.read(8192)
                 if not chunk:
                     break
                 filep.write(chunk)
-                pbar.update(len(chunk))
+                progress.update(task, advance=len(chunk))
 
     log.info("fetching %s... ok", entry)
 

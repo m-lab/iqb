@@ -13,10 +13,34 @@ import pyarrow as pa
 import pyarrow.parquet as pq
 from google.cloud import bigquery, bigquery_storage_v1
 from google.cloud.bigquery import job, table
-from tqdm import tqdm
-from tqdm.contrib.logging import logging_redirect_tqdm
+from rich.progress import (
+    BarColumn,
+    MofNCompleteColumn,
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    TimeElapsedColumn,
+    TimeRemainingColumn,
+)
 
 log = logging.getLogger("pipeline/bqpq")
+
+
+def _rows_progress_columns(total_rows: int | None):
+    cols = [
+        SpinnerColumn(),
+        TextColumn("{task.description}"),
+        TimeElapsedColumn(),
+    ]
+    if total_rows is not None:
+        cols = [
+            TextColumn("{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+        ]
+    return cols
 
 
 @runtime_checkable
@@ -72,18 +96,13 @@ class PipelineBQPQQueryResult:
         batches = self.rows.to_arrow_iterable(bqstorage_client=self.bq_read_client)
 
         log.info("BigQuery download... start")
-        with (
-            logging_redirect_tqdm(),
-            tqdm(
-                total=self.rows.total_rows,
-                desc="BigQuery download",
-                unit="rows",
-            ) as pbar,
-        ):
+        total_rows = self.rows.total_rows
+        with Progress(*_rows_progress_columns(total_rows), transient=False) as progress:
+            task = progress.add_task("BigQuery download", total=total_rows)
             first_batch = next(batches, None)
             schema = first_batch.schema if first_batch is not None else pa.schema([])
             if first_batch is not None:
-                pbar.update(first_batch.num_rows)
+                progress.update(task, advance=first_batch.num_rows)
 
             # Write the possibly-empty parquet file
             # Use a temporary directory, which is always removed regardless
@@ -95,7 +114,7 @@ class PipelineBQPQQueryResult:
                         writer.write_batch(first_batch)
                     for batch in batches:
                         writer.write_batch(batch)
-                        pbar.update(batch.num_rows)
+                        progress.update(task, advance=batch.num_rows)
                 # On Windows, readers may block replace due to missing
                 # FILE_SHARE_DELETE. YAGNI: add retry/backoff if it arises.
                 os.replace(tmp_file, parquet_path)
@@ -182,7 +201,7 @@ class PipelineBQPQClient:
         template_hash: str,
         query: str,
         paths_provider: PipelineBQPQPathsProvider,
-        _sleep_secs: int | float = 1,  # used for shorter testing
+        _sleep_secs: int | float = 2,  # used for shorter testing
     ) -> PipelineBQPQQueryResult:
         """
         Execute the given BigQuery query.
@@ -200,22 +219,17 @@ class PipelineBQPQClient:
 
         # 2. wait for job to finish with a progress bar
         log.info("BigQuery query... start")
-        with (
-            logging_redirect_tqdm(),
-            tqdm(
-                desc="BigQuery query",
-                total=10,
-                bar_format="{l_bar}{bar}| [{elapsed}] {postfix}",
-            ) as pbar,
-        ):
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("{task.description}"),
+            TimeElapsedColumn(),
+            transient=False,
+        ) as progress:
+            task = progress.add_task("BigQuery query", total=None)
             while job.state != "DONE":
                 time.sleep(_sleep_secs)
-                factor = 2 if (pbar.n / pbar.total) >= 0.8 else 1
-                pbar.total *= factor
                 job.reload()
-                pbar.update(1)
-
-            pbar.n = pbar.total
+                progress.advance(task)
 
         # 3. log about the total number of bytes processed
         bytes_processed_str = (

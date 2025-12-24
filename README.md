@@ -59,7 +59,7 @@ See [analysis/README.md](analysis/README.md) for more information.
 
 ### **`data/`**
 
-Sample datasets used in the IQB app prototype and notebooks.
+Workspace for data curation scripts, release manifests, and local cache artifacts.
 
 See [data/README.md](data/README.md) for details.
 

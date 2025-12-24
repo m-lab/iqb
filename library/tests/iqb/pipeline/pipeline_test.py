@@ -126,7 +126,7 @@ class TestIQBPipelineExecuteQuery:
         mock_client.assert_called_once_with(project="test-project")
 
         # Ensure we get the expected exception
-        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
             pipeline.execute_query_template(
                 dataset_name="downloads_by_country",
                 start_date="2024-11-01",
@@ -348,7 +348,7 @@ class TestIQBPipelineGetCacheEntry:
             )
 
         # Invalid date range should fail immediately
-        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
             pipeline.get_cache_entry(
                 dataset_name="downloads_by_country",
                 start_date="2024-11-01",

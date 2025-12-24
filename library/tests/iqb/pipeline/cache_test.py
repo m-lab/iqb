@@ -202,7 +202,7 @@ class TestPipelineCacheManager:
         """Test that get_cache_entry validates date range."""
         manager = PipelineCacheManager(data_dir=tmp_path)
 
-        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
             manager.get_cache_entry(
                 dataset_name="downloads_by_country",
                 start_date="2024-11-01",

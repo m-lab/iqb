@@ -27,15 +27,20 @@ log = logging.getLogger("pipeline/bqpq")
 
 
 def _rows_progress_columns(total_rows: int | None):
-    if total_rows is None:
-        return [SpinnerColumn(), TextColumn("{task.description}"), TimeElapsedColumn()]
-    return [
+    cols = [
+        SpinnerColumn(),
         TextColumn("{task.description}"),
-        BarColumn(),
-        MofNCompleteColumn(),
         TimeElapsedColumn(),
-        TimeRemainingColumn(),
     ]
+    if total_rows is not None:
+        cols = [
+            TextColumn("{task.description}"),
+            BarColumn(),
+            MofNCompleteColumn(),
+            TimeElapsedColumn(),
+            TimeRemainingColumn(),
+        ]
+    return cols
 
 
 @runtime_checkable

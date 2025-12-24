@@ -31,4 +31,5 @@ def parse(v: IQBDatasetGranularity | str) -> IQBDatasetGranularity:
     try:
         return _mapper[v] if isinstance(v, str) else v
     except KeyError as exc:
-        raise ValueError(f"invalid granularity value {v}") from exc
+        valid = ", ".join(sorted(_mapper.keys()))
+        raise ValueError(f"invalid granularity value {v}; valid values: {valid}") from exc

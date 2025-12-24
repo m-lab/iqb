@@ -1,7 +1,5 @@
 """Tests for the iqb.cache.mlab module."""
 
-from pathlib import Path
-
 import pandas as pd
 import pytest
 
@@ -35,18 +33,12 @@ def _get_country_city_cache_entry_2024_10(manager: MLabCacheManager) -> MLabCach
     )
 
 
-@pytest.fixture
-def cache_fixture_dir() -> Path:
-    """Return path to the test cache fixture directory."""
-    return Path(__file__).parent.parent.parent / "fixtures"
-
-
 class TestMLabCacheManagerIntegration:
     """Integration tests for MLabCacheManager class."""
 
-    def test_read_download_dataframe(self, data_dir):
+    def test_read_download_dataframe(self, real_data_dir):
         """Test that IQBCache uses .iqb/ directory by default."""
-        manager = _create_manager(data_dir)
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         download_df = entry.read_download_data_frame()
@@ -59,8 +51,8 @@ class TestMLabCacheManagerIntegration:
         assert "loss_p95" in download_df.columns
         assert len(download_df) == 236
 
-    def test_read_upload_dataframe(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_read_upload_dataframe(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         upload_df = entry.read_upload_data_frame()
@@ -71,8 +63,8 @@ class TestMLabCacheManagerIntegration:
         assert "upload_p95" in upload_df.columns
         assert len(upload_df) == 237
 
-    def test_filter_by_country_code(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_filter_by_country_code(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         us_download_df = entry.read_download_data_frame(country_code="US")
@@ -90,8 +82,8 @@ class TestMLabCacheManagerIntegration:
         assert us_upload_df.iloc[0]["sample_count"] == 24288961
         assert us_upload_df.iloc[0]["upload_p95"] == 370.487725107692
 
-    def test_filter_by_subdivision1(self, cache_fixture_dir):
-        manager = _create_manager(cache_fixture_dir)
+    def test_filter_by_subdivision1(self, fake_data_dir):
+        manager = _create_manager(fake_data_dir)
         entry = _get_country_city_cache_entry_2024_10(manager)
 
         ak_download_df = entry.read_download_data_frame(
@@ -120,8 +112,8 @@ class TestMLabCacheManagerIntegration:
         assert ak_upload_df.iloc[0]["sample_count"] == 100
         assert ak_upload_df.iloc[0]["upload_p95"] == 60.25
 
-    def test_column_projection(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_column_projection(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         limited_download_df = entry.read_download_data_frame(
@@ -139,8 +131,8 @@ class TestMLabCacheManagerIntegration:
         assert "latency_p50" in limited_download_df.columns
         assert "loss_p95" not in limited_download_df.columns  # Not requested
 
-    def test_read_multiple_countries(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_read_multiple_countries(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         countries = ("US", "DE", "BR", "IT", "FR", "IN", "DE")
@@ -157,8 +149,8 @@ class TestMLabCacheManagerIntegration:
             assert udf.iloc[0]["sample_count"] > 0
             assert udf.iloc[0]["upload_p95"] > 0
 
-    def test_read_data_frame_pair(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_read_data_frame_pair(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
@@ -172,8 +164,8 @@ class TestMLabCacheManagerIntegration:
         assert "upload_p95" in pair.upload.columns
         assert "upload_p50" in pair.upload.columns
 
-    def test_read_data_frame_pair_with_subdivision1(self, cache_fixture_dir):
-        manager = _create_manager(cache_fixture_dir)
+    def test_read_data_frame_pair_with_subdivision1(self, fake_data_dir):
+        manager = _create_manager(fake_data_dir)
         entry = _get_country_city_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(
@@ -189,8 +181,8 @@ class TestMLabCacheManagerIntegration:
         assert pair.download.iloc[0]["download_p95"] == 120.5
         assert pair.upload.iloc[0]["upload_p95"] == 60.25
 
-    def test_convert_to_dict_p95(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_convert_to_dict_p95(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
@@ -213,8 +205,8 @@ class TestMLabCacheManagerIntegration:
         assert data_p95["latency_ms"] == 0.806
         assert data_p95["packet_loss"] == 0.0
 
-    def test_convert_to_dict_default_percentile(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_convert_to_dict_default_percentile(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
@@ -224,8 +216,8 @@ class TestMLabCacheManagerIntegration:
         data_default = pair.to_iqb_data().to_dict()
         assert data_default == data_p95
 
-    def test_convert_to_dict_multiple_percentiles(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_convert_to_dict_multiple_percentiles(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         pair = entry.read_data_frame_pair(country_code="US")
@@ -242,15 +234,15 @@ class TestMLabCacheManagerIntegration:
             or data_p95["packet_loss"] != data_p50["packet_loss"]
         )
 
-    def test_read_data_frame_pair_granularity_error_city(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_read_data_frame_pair_granularity_error_city(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         with pytest.raises(ValueError):
             _ = entry.read_data_frame_pair(country_code="US", city="Boston")
 
-    def test_read_data_frame_pair_granularity_error_asn(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_read_data_frame_pair_granularity_error_asn(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         with pytest.raises(ValueError):
@@ -262,8 +254,8 @@ class TestMLabCacheManagerIntegration:
         with pytest.raises(FileNotFoundError):
             _ = entry.read_data_frame_pair(country_code="US")
 
-    def test_get_data_successful(self, data_dir):
-        manager = _create_manager(data_dir)
+    def test_get_data_successful(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
         data = manager.get_data(
             granularity=IQBDatasetGranularity.COUNTRY,
             country_code="US",
@@ -278,9 +270,9 @@ class TestMLabCacheManagerIntegration:
         assert data["latency_ms"] == 0.806
         assert data["packet_loss"] == 0.0
 
-    def test_download_stats_property(self, data_dir):
+    def test_download_stats_property(self, real_data_dir):
         """Test backward compatibility property download_stats."""
-        manager = _create_manager(data_dir)
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         # Use the backward compatibility property
@@ -291,9 +283,9 @@ class TestMLabCacheManagerIntegration:
         assert stats_path.exists()
         assert stats_path.name == "stats.json"
 
-    def test_upload_stats_property(self, data_dir):
+    def test_upload_stats_property(self, real_data_dir):
         """Test backward compatibility property upload_stats."""
-        manager = _create_manager(data_dir)
+        manager = _create_manager(real_data_dir)
         entry = _get_country_cache_entry_2024_10(manager)
 
         # Use the backward compatibility property

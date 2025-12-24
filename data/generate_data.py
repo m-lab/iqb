@@ -7,43 +7,36 @@ This script:
 2. Saves results to v1 Parquet cache
 """
 
-import subprocess
 import sys
 from pathlib import Path
 
+# Add library to path so we can import iqb modules
+sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 
-def run_command(cmd: list[str], description: str) -> None:
-    """Run a command and handle errors."""
-    print(f"\n{'=' * 60}")
-    print(f"{description}")
-    print(f"{'=' * 60}")
+from rich import get_console
+from rich.panel import Panel
 
-    result = subprocess.run(cmd, capture_output=False)
-
-    if result.returncode != 0:
-        print(f"\n✗ Failed: {description}", file=sys.stderr)
-        sys.exit(1)
-
-    print(f"✓ Completed: {description}")
+from iqb.scripting import iqb_exception, iqb_logging, iqb_pipeline
 
 
-def generate_for_period(
-    data_dir: Path, start_date: str, end_date: str, period_str: str
-) -> None:
-    """
-    Generate data for a specific time period.
+def main():
+    # Ensure we're in the data directory
+    data_dir = Path(__file__).parent
+    console = get_console()
 
-    Args:
-        data_dir: Directory containing scripts and output files
-        start_date: Start date in YYYY-MM-DD format (inclusive)
-        end_date: End date in YYYY-MM-DD format (exclusive, Python slice convention)
-        period_str: Period identifier for filenames (e.g., "2024_10")
-    """
-    print(f"\n{'#' * 60}")
-    print(f"Generating data for period: {period_str}")
-    print(f"Date range: [{start_date}, {end_date})")
-    print(f"{'#' * 60}")
+    # Ensure we see debug messages
+    iqb_logging.configure(verbose=True)
 
+    # Create the pipeline
+    pipeline = iqb_pipeline.create(data_dir)
+
+    # Define the time periods
+    time_periods = [
+        ("2024-10-01", "2024-11-01"),
+        ("2025-10-01", "2025-11-01"),
+    ]
+
+    # Define the granularities
     granularities = (
         "country",
         "country_asn",
@@ -53,38 +46,26 @@ def generate_for_period(
         "subdivision1_asn",
     )
 
+    # Prepare for intercepting exceptions
+    interceptor = iqb_exception.Interceptor()
+
+    # Generate all data
     for granularity in granularities:
-        run_command(
-            [
-                "python3",
-                str(data_dir / "run_query.py"),
-                "--granularity",
-                granularity,
-                "--start-date",
-                start_date,
-                "--end-date",
-                end_date,
-            ],
-            f"Querying {granularity} metrics for {period_str}",
-        )
+        for start_date, end_date in time_periods:
+            with interceptor:
+                console.print(
+                    Panel(
+                        f"Syncing {granularity} data for {start_date} \u2192 {end_date}"
+                    )
+                )
+                pipeline.sync_mlab(
+                    granularity,
+                    start_date=start_date,
+                    end_date=end_date,
+                )
 
-
-def main():
-    # Ensure we're in the data directory
-    data_dir = Path(__file__).parent
-
-    print("IQB Data Generation Pipeline")
-    print("=" * 60)
-
-    # Generate data for October 2024
-    generate_for_period(data_dir, "2024-10-01", "2024-11-01", "2024_10")
-
-    # Generate data for October 2025
-    generate_for_period(data_dir, "2025-10-01", "2025-11-01", "2025_10")
-
-    print("\n" + "=" * 60)
-    print("✓ Pipeline completed successfully!")
-    print("=" * 60)
+    # Invoke exit
+    sys.exit(interceptor.exitcode())
 
 
 if __name__ == "__main__":

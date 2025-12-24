@@ -11,6 +11,7 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 from iqb import IQBGitHubRemoteCache
 from iqb.cli import logger
 from iqb.pipeline import IQBPipeline
+
 logger.configure_logging(verbose=True)
 
 

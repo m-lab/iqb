@@ -5,14 +5,14 @@ import sys
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from iqb import (
+from .. import (
     IQBDatasetGranularity,
     IQBDatasetMLabTable,
     IQBGitHubRemoteCache,
     IQBPipeline,
     iqb_dataset_name_for_mlab,
 )
-from iqb.pipeline import parse_date
+from ..pipeline import parse_date
 from . import logger
 
 brief_help_message = "hint: try `iqb sync --help` for more help.\n"

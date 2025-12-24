@@ -18,11 +18,7 @@ LOG_COLORS = {
 
 
 def _use_color() -> bool:
-    if os.getenv("NO_COLOR") is not None:
-        return False
-    if not sys.stderr.isatty():
-        return False
-    return True
+    return os.getenv("NO_COLOR") is None and sys.stderr.isatty()
 
 
 def configure_logging(verbose: bool) -> None:

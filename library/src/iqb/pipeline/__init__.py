@@ -138,6 +138,7 @@ when needed, e.g., the ASN or city) and skip row groups that do not match, while
 immediately projecting out columns we don't need.
 """
 
+from .cache import parse_date
 from .dataset import (
     IQBDatasetGranularity,
     IQBDatasetMLabTable,
@@ -145,7 +146,6 @@ from .dataset import (
 )
 from .pipeline import IQBPipeline
 from .pqread import iqb_parquet_read
-from .cache import parse_date
 
 __all__ = [
     "IQBDatasetGranularity",

@@ -68,14 +68,13 @@ class TestParseBothDates:
         assert end == datetime(2024, 11, 1)
 
     def test_parse_equal_dates(self):
-        """Test parsing when start equals end (valid for zero-duration queries)."""
-        start, end = _parse_both_dates("2024-10-01", "2024-10-01")
-        assert start == datetime(2024, 10, 1)
-        assert end == datetime(2024, 10, 1)
+        """Test error when start_date == end_date."""
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
+            _parse_both_dates("2024-10-01", "2024-10-01")
 
     def test_parse_reversed_dates_error(self):
         """Test error when start_date > end_date."""
-        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
             _parse_both_dates("2024-11-01", "2024-10-01")
 
     def test_parse_invalid_start_date(self):
@@ -203,7 +202,7 @@ class TestPipelineCacheManager:
         """Test that get_cache_entry validates date range."""
         manager = PipelineCacheManager(data_dir=tmp_path)
 
-        with pytest.raises(ValueError, match="start_date must be <= end_date"):
+        with pytest.raises(ValueError, match="start_date must be < end_date"):
             manager.get_cache_entry(
                 dataset_name="downloads_by_country",
                 start_date="2024-11-01",

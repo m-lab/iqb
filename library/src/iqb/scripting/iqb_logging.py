@@ -1,4 +1,4 @@
-"""Optional extensions to configure logging."""
+"""Optional scripting extensions to configure logging."""
 
 from __future__ import annotations
 
@@ -10,6 +10,8 @@ from rich.logging import RichHandler
 
 
 class LocalTZRichHandler(RichHandler):
+    """Extend the RichHandler to provide timezone aware timestamps."""
+
     def render(self, *, record, traceback, message_renderable):
         path = Path(record.pathname).name
         level = self.get_level_text(record)
@@ -28,6 +30,7 @@ class LocalTZRichHandler(RichHandler):
 
 
 def configure(verbose: bool) -> None:
+    """Configure the logging subsystem to use LocalTZRichHandler."""
     level = logging.DEBUG if verbose else logging.INFO
     handler = LocalTZRichHandler(
         show_time=True,
@@ -41,3 +44,7 @@ def configure(verbose: bool) -> None:
         handlers=[handler],
         force=True,
     )
+
+
+log = logging.getLogger("scripting")
+"""Logger that the scripting package should use."""

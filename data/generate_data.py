@@ -3,7 +3,6 @@
 Orchestrate the data generation pipeline for IQB static data.
 
 This script:
-0. Syncs cached files from GitHub (if available)
 1. Runs BigQuery queries for downloads and uploads for multiple time periods
 2. Saves results to v1 Parquet cache
 """
@@ -45,33 +44,29 @@ def generate_for_period(
     print(f"Date range: [{start_date}, {end_date})")
     print(f"{'#' * 60}")
 
-    datasets = (
+    granularities = (
         "country",
         "country_asn",
-        "country_city",
-        "country_city_asn",
-        "country_subdivision1",
-        "country_subdivision1_asn",
+        "city",
+        "city_asn",
+        "subdivision1",
+        "subdivision1_asn",
     )
 
-    directions = ("downloads", "uploads")
-
-    for dataset in datasets:
-        for direction in directions:
-            full_dataset = f"{direction}_by_{dataset}"
-            run_command(
-                [
-                    "python3",
-                    str(data_dir / "run_query.py"),
-                    full_dataset,
-                    "--start-date",
-                    start_date,
-                    "--end-date",
-                    end_date,
-                    # No -o argument: skips JSON conversion, only creates v1 Parquet cache
-                ],
-                f"Querying {full_dataset} metrics for {period_str}",
-            )
+    for granularity in granularities:
+        run_command(
+            [
+                "python3",
+                str(data_dir / "run_query.py"),
+                "--granularity",
+                granularity,
+                "--start-date",
+                start_date,
+                "--end-date",
+                end_date,
+            ],
+            f"Querying {granularity} metrics for {period_str}",
+        )
 
 
 def main():
@@ -80,16 +75,6 @@ def main():
 
     print("IQB Data Generation Pipeline")
     print("=" * 60)
-
-    # Stage 0: Sync cached files from GitHub (if manifest exists)
-    ghcache_script = data_dir / "ghcache.py"
-    if ghcache_script.exists():
-        run_command(
-            ["python3", str(ghcache_script), "sync"],
-            "Stage 0: Syncing cached files from GitHub",
-        )
-    else:
-        print("\nNote: ghcache.py not found, skipping cache sync")
 
     # Generate data for October 2024
     generate_for_period(data_dir, "2024-10-01", "2024-11-01", "2024_10")

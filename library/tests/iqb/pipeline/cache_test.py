@@ -57,6 +57,11 @@ class TestParseDate:
         with pytest.raises(ValueError, match="Invalid date format"):
             _parse_date("2024-13-01")
 
+    def test_parse_date_invalid_format_with_descr(self):
+        """Test error on invalid date format with description."""
+        with pytest.raises(ValueError, match="Invalid start date format"):
+            _parse_date("2024/10/01", descr="start date")
+
 
 class TestParseBothDates:
     """Test for _parse_both_dates function."""
@@ -79,12 +84,12 @@ class TestParseBothDates:
 
     def test_parse_invalid_start_date(self):
         """Test error on invalid start_date format."""
-        with pytest.raises(ValueError, match="Invalid date format"):
+        with pytest.raises(ValueError, match="Invalid start date format"):
             _parse_both_dates("2024/10/01", "2024-11-01")
 
     def test_parse_invalid_end_date(self):
         """Test error on invalid end_date format."""
-        with pytest.raises(ValueError, match="Invalid date format"):
+        with pytest.raises(ValueError, match="Invalid end date format"):
             _parse_both_dates("2024-10-01", "2024/11/01")
 
     def test_parse_leap_year(self):
@@ -95,7 +100,7 @@ class TestParseBothDates:
 
     def test_parse_invalid_leap_year(self):
         """Test error on invalid leap year date."""
-        with pytest.raises(ValueError, match="Invalid date format"):
+        with pytest.raises(ValueError, match="Invalid start date format"):
             _parse_both_dates("2023-02-29", "2023-03-01")
 
     def test_parse_year_boundary(self):

@@ -15,9 +15,13 @@ class Interceptor:
         with interceptor:
             func()
         print(interceptor.failed)
+        sys.exit(interceptor.exitcode())
 
     Exceptions are logged and otherwise ignored. The failed
     field tells you whether there were any exeptions.
+
+    Use interceptor.exitcode() to get the suitable exit
+    code to pass to the sys.exit() function.
     """
 
     def __init__(self):

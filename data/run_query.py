@@ -10,10 +10,10 @@ sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 
 from iqb.scripting import iqb_exception, iqb_logging, iqb_pipeline
 
+DEFAULT_PROJECT_ID = "measurement-lab"
+
 
 def main():
-    DEFAULT_PROJECT_ID = "measurement-lab"
-
     parser = argparse.ArgumentParser(
         description="Execute BigQuery query template and save results to v1 Parquet cache"
     )
@@ -47,6 +47,7 @@ def main():
         pipeline = iqb_pipeline.create(data_dir=data_dir, project=args.project_id)
         pipeline.sync_mlab(
             args.granularity,
+            enable_bigquery=True,
             start_date=args.start_date,
             end_date=args.end_date,
         )

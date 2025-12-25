@@ -10,10 +10,8 @@ This script:
 import os
 import sys
 from dataclasses import dataclass
+from datetime import date, datetime
 from pathlib import Path
-
-# Add library to path so we can import iqb modules
-sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 
 import click
 import dacite
@@ -48,6 +46,11 @@ class PipelineConfig:
 def load_pipeline_config(config_path):
     """Load pipeline configuration matrix from YAML script."""
 
+    def coerce_str(value):
+        if isinstance(value, (date, datetime)):
+            return value.isoformat()
+        return value
+
     try:
         content = config_path.read_text()
     except FileNotFoundError as exc:
@@ -62,26 +65,24 @@ def load_pipeline_config(config_path):
         raise click.ClickException("Pipeline config must be a mapping.")
 
     try:
-        config = dacite.from_dict(PipelineConfig, data)
+        config = dacite.from_dict(
+            PipelineConfig,
+            data,
+            config=dacite.Config(type_hooks={str: coerce_str}),
+        )
     except dacite.DaciteError as exc:
         raise click.ClickException(f"Invalid pipeline config: {exc}") from exc
 
     if config.version != "v0":
-        raise click.ClickException(
-            f"Unsupported pipeline config version: {config.version}"
-        )
+        raise click.ClickException(f"Unsupported pipeline config version: {config.version}")
 
     time_periods = [(entry.start, entry.end) for entry in config.matrix.dates]
     if not time_periods:
-        raise click.ClickException(
-            "Pipeline config matrix must include non-empty dates."
-        )
+        raise click.ClickException("Pipeline config matrix must include non-empty dates.")
 
     granularities = tuple(grain.strip() for grain in config.matrix.granularities)
     if not granularities or any(not grain for grain in granularities):
-        raise click.ClickException(
-            "Pipeline config matrix must include non-empty granularities."
-        )
+        raise click.ClickException("Pipeline config matrix must include non-empty granularities.")
 
     return time_periods, granularities
 

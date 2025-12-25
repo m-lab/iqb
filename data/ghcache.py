@@ -41,7 +41,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 MANIFEST_PATH = Path("state") / "ghremote" / "manifest.json"
 CACHE_DIR = Path("cache/v1")
 SHA256_PREFIX_LENGTH = 12
@@ -96,10 +95,7 @@ def validate_cache_path(path: str) -> bool:
         return False
 
     # Component 6: data.parquet or stats.json
-    if parts[5] not in ("data.parquet", "stats.json"):
-        return False
-
-    return True
+    return parts[5] in ("data.parquet", "stats.json")
 
 
 def mangle_path(local_path: str, sha256: str) -> str:
@@ -121,7 +117,7 @@ def load_manifest() -> dict:
     if not MANIFEST_PATH.exists():
         return {"v": 0, "files": {}}
 
-    with open(MANIFEST_PATH, "r") as f:
+    with open(MANIFEST_PATH) as f:
         return json.load(f)
 
 
@@ -219,9 +215,7 @@ def cmd_scan(args) -> int:
 
         # Prepare manifest entry (URL will need to be filled in manually or via script)
         # For now, use placeholder URL
-        url_placeholder = (
-            f"https://github.com/m-lab/iqb/releases/download/v0.2.0/{mangled_name}"
-        )
+        url_placeholder = f"https://github.com/m-lab/iqb/releases/download/v0.2.0/{mangled_name}"
 
         files_dict[rel_path] = {"sha256": sha256, "url": url_placeholder}
         files_to_upload.append(mangled_name)

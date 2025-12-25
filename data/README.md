@@ -9,8 +9,6 @@ and local cache artifacts produced during generation.
   under `./cache/v1/` for local use.
 - `pipeline.yaml`: Matrix configuration (dates and granularities) used by the
   data generation script.
-- `run_query.py`: Legacy single-query helper (kept for now, but not the
-  preferred workflow).
 - `ghcache.py`: Helper for publishing cache files to GitHub releases.
 - `state/ghremote/manifest.json`: Release manifest used by the GitHub remote
   cache implementation.

@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from iqb.scripting import iqb_exception
 
 
@@ -29,3 +31,17 @@ class TestInterceptor:
         log.error.assert_called_once()
         assert log.error.call_args[0][0] == "operation failed: %s"
         assert str(log.error.call_args[0][1]) == "boom"
+
+    def test_keyboard_interrupt_not_suppressed(self) -> None:
+        interceptor = iqb_exception.Interceptor()
+
+        with (
+            patch("iqb.scripting.iqb_exception.log") as log,
+            pytest.raises(KeyboardInterrupt),
+            interceptor,
+        ):
+            raise KeyboardInterrupt()
+
+        assert interceptor.failed is False
+        assert interceptor.exitcode() == 0
+        log.error.assert_not_called()

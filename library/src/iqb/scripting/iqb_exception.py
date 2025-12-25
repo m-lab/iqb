@@ -31,6 +31,10 @@ class Interceptor:
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        if exc_type is None:
+            return False
+        if issubclass(exc_type, KeyboardInterrupt):
+            return False
         if exc_type:
             log.error("operation failed: %s", exc_value)
             _ = traceback

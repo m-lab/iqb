@@ -35,11 +35,7 @@ Raw query results stored efficiently for flexible analysis:
 
 Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
 constraints, we use GitHub releases to distribute pre-generated cache files.
-
-The `generate_data.py` script automatically syncs cached files to avoid running
-potentially expensive BigQuery queries.
-
-The GitHub release manifest lives at `state/ghremote/manifest.json`.
+The release manifest lives at `state/ghremote/manifest.json`.
 
 ### For Maintainers (Publishing New Cache)
 
@@ -80,39 +76,8 @@ This orchestrates the complete pipeline:
 
 1. Loads `./data/pipeline.yaml` to determine dates and granularities (edit this
    file to change the matrix)
-
 2. Queries both download and upload metrics for each dataset
-
 3. Saves results to v1 Parquet cache with query metadata
-
-Generated files: v1 Parquet files in `./cache/v1/` with query metadata.
-
-**Individual Pipeline Stages** (for debugging):
-
-```bash
-cd data/
-
-# Run a single query
-uv run python run_query.py --granularity country \
-  --start-date 2024-10-01 --end-date 2024-11-01
-
-# Inspect results with pandas
-uv run python << 'EOF'
-import pandas as pd
-df = pd.read_parquet('cache/v1/2024-10-01/2024-11-01/downloads_by_country/data.parquet')
-print(df.head())
-print(df.info())
-EOF
-```
-
-**Pipeline Scripts**:
-
-- [generate_data.py](generate_data.py) - Orchestrates the complete pipeline
-
-- [run_query.py](run_query.py) - Executes BigQuery queries using IQBPipeline,
-saves v1 Parquet cache only (use pandas to inspect results)
-
-- [ghcache.py](ghcache.py) - Utility to manage the GitHub interim cache.
 
 ## Future Improvements (Phase 2+)
 

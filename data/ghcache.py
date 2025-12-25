@@ -42,7 +42,8 @@ import sys
 from pathlib import Path
 
 MANIFEST_PATH = Path("state") / "ghremote" / "manifest.json"
-CACHE_DIR = Path("cache/v1")
+CACHE_DIR = Path("cache") / "v1"
+TMP_DIR = Path("tmp")
 SHA256_PREFIX_LENGTH = 12
 
 
@@ -153,7 +154,7 @@ def cmd_scan(args) -> int:
     3. For new or changed files:
        - Compute SHA256
        - Create mangled filename
-       - Copy to current directory (ready for manual upload)
+       - Copy to tmp directory (ready for manual upload)
        - Update manifest
     4. Save manifest
     """
@@ -181,6 +182,7 @@ def cmd_scan(args) -> int:
     print(f"Found {len(ignored_files)} git-ignored files.")
 
     files_to_upload = []
+    TMP_DIR.mkdir(parents=True, exist_ok=True)
 
     for file_path in ignored_files:
         # Convert to relative path string with forward slashes for cross-platform compatibility
@@ -208,17 +210,17 @@ def cmd_scan(args) -> int:
         mangled_name = mangle_path(rel_path, sha256)
         print(f"  Mangled: {mangled_name}")
 
-        # Copy to current directory with mangled name (for manual upload)
-        dest_path = Path(mangled_name)
+        # Copy to tmp directory with mangled name (for manual upload)
+        dest_path = TMP_DIR / mangled_name
         shutil.copy2(file_path, dest_path)
-        print(f"  Copied to ./{mangled_name} (ready for upload)")
+        print(f"  Copied to {dest_path} (ready for upload)")
 
         # Prepare manifest entry (URL will need to be filled in manually or via script)
         # For now, use placeholder URL
         url_placeholder = f"https://github.com/m-lab/iqb/releases/download/v0.2.0/{mangled_name}"
 
         files_dict[rel_path] = {"sha256": sha256, "url": url_placeholder}
-        files_to_upload.append(mangled_name)
+        files_to_upload.append(str(dest_path))
 
     # Save updated manifest
     save_manifest(manifest)

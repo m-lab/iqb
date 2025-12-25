@@ -88,6 +88,7 @@ class IQBPipeline:
         self,
         *,
         dataset_name: str,
+        enable_bigquery: bool,
         start_date: str,
         end_date: str,
     ) -> PipelineCacheEntry:
@@ -99,6 +100,7 @@ class IQBPipeline:
 
         Args:
             dataset_name: Name for the dataset (e.g., "downloads_by_country")
+            enable_bigquery: Whether to enabled querying from BigQuery.
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
 
@@ -113,7 +115,8 @@ class IQBPipeline:
         )
 
         # 2. prepare for synching from BigQuery
-        entry.syncers.append(self._bq_syncer)
+        if enable_bigquery:
+            entry.syncers.append(self._bq_syncer)
 
         # 3. return the entry
         return entry

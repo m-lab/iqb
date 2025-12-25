@@ -1499,7 +1499,6 @@ wheels = [
 name = "mlab-iqb"
 source = { editable = "library" }
 dependencies = [
-    { name = "click" },
     { name = "dacite" },
     { name = "db-dtypes" },
     { name = "filelock" },
@@ -1508,7 +1507,6 @@ dependencies = [
     { name = "pandas" },
     { name = "pyarrow" },
     { name = "python-dateutil" },
-    { name = "pyyaml" },
     { name = "rich" },
 ]
 
@@ -1521,7 +1519,6 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "click", specifier = ">=8.3.0" },
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "db-dtypes", specifier = ">=1.0.0" },
     { name = "filelock", specifier = ">=3.20.1" },
@@ -1530,7 +1527,6 @@ requires-dist = [
     { name = "pandas", specifier = ">=2.0.0" },
     { name = "pyarrow", specifier = ">=14.0.0" },
     { name = "python-dateutil", specifier = ">=2.9.0.post0" },
-    { name = "pyyaml", specifier = ">=6.0.0" },
     { name = "rich", specifier = ">=14.2.0" },
 ]
 

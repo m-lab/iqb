@@ -13,26 +13,55 @@ from pathlib import Path
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 
+import click
 from rich import get_console
 from rich.panel import Panel
 
+from iqb import __version__
 from iqb.scripting import iqb_exception, iqb_logging, iqb_pipeline
 
 
-def main():
-    # Ensure we're in the data directory
-    data_dir = Path(__file__).parent
+@click.command(
+    "generate_data",
+    context_settings={"show_default": True},
+)
+@click.option(
+    "-d",
+    "--datadir",
+    default="data",
+    metavar="DIR",
+    help="Set data directory.",
+)
+@click.option(
+    "-B",
+    "--enable-bigquery",
+    is_flag=True,
+    default=False,
+    help="Enable BigQuery.",
+)
+@click.option(
+    "-v",
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Verbose mode.",
+)
+@click.version_option(__version__)
+def main(datadir, enable_bigquery, verbose):
+    """Download IQB parquet data from remote caches and BigQuery."""
+
+    # Grab the global rich console
     console = get_console()
 
     # Ensure we see debug messages
-    iqb_logging.configure(verbose=True)
+    iqb_logging.configure(verbose=verbose)
 
     # Create the pipeline
-    pipeline = iqb_pipeline.create(data_dir)
+    pipeline = iqb_pipeline.create(datadir)
 
     # Define the time periods
     time_periods = [
-        ("2024-10-01", "2024-11-01"),
+        # ("2024-10-01", "2024-11-01"),
         ("2025-01-01", "2025-02-01"),
         ("2025-02-01", "2025-03-01"),
         ("2025-03-01", "2025-04-01"),
@@ -57,18 +86,15 @@ def main():
     interceptor = iqb_exception.Interceptor()
 
     # Generate all data
-    for granularity in granularities:
-        for start_date, end_date in time_periods:
+    for grain in granularities:
+        for start, end in time_periods:
+            console.print(Panel(f"Sync {grain} data for {start} \u2192 {end}"))
             with interceptor:
-                console.print(
-                    Panel(
-                        f"Syncing {granularity} data for {start_date} \u2192 {end_date}"
-                    )
-                )
                 pipeline.sync_mlab(
-                    granularity,
-                    start_date=start_date,
-                    end_date=end_date,
+                    grain,
+                    enable_bigquery=enable_bigquery,
+                    start_date=start,
+                    end_date=end,
                 )
 
     # Invoke exit

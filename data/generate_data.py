@@ -7,29 +7,92 @@ This script:
 2. Saves results to v1 Parquet cache
 """
 
+import os
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 
 # Add library to path so we can import iqb modules
 sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
 
 import click
+import dacite
+import yaml
 from rich import get_console
 from rich.panel import Panel
 
 from iqb import __version__
 from iqb.scripting import iqb_exception, iqb_logging, iqb_pipeline
 
+default_datadir = Path(__file__).parent
 
-@click.command(
-    "generate_data",
-    context_settings={"show_default": True},
-)
+
+@dataclass(frozen=True, kw_only=True)
+class DateRange:
+    start: str
+    end: str
+
+
+@dataclass(frozen=True, kw_only=True)
+class PipelineMatrix:
+    dates: list[DateRange]
+    granularities: list[str]
+
+
+@dataclass(frozen=True, kw_only=True)
+class PipelineConfig:
+    version: str
+    matrix: PipelineMatrix
+
+
+def load_pipeline_config(config_path):
+    """Load pipeline configuration matrix from YAML script."""
+
+    try:
+        content = config_path.read_text()
+    except FileNotFoundError as exc:
+        raise click.ClickException(f"Pipeline config not found: {config_path}") from exc
+
+    try:
+        data = yaml.safe_load(content) or {}
+    except yaml.YAMLError as exc:
+        raise click.ClickException(f"Invalid YAML in {config_path}: {exc}") from exc
+
+    if not isinstance(data, dict):
+        raise click.ClickException("Pipeline config must be a mapping.")
+
+    try:
+        config = dacite.from_dict(PipelineConfig, data)
+    except dacite.DaciteError as exc:
+        raise click.ClickException(f"Invalid pipeline config: {exc}") from exc
+
+    if config.version != "v0":
+        raise click.ClickException(
+            f"Unsupported pipeline config version: {config.version}"
+        )
+
+    time_periods = [(entry.start, entry.end) for entry in config.matrix.dates]
+    if not time_periods:
+        raise click.ClickException(
+            "Pipeline config matrix must include non-empty dates."
+        )
+
+    granularities = tuple(grain.strip() for grain in config.matrix.granularities)
+    if not granularities or any(not grain for grain in granularities):
+        raise click.ClickException(
+            "Pipeline config matrix must include non-empty granularities."
+        )
+
+    return time_periods, granularities
+
+
+@click.command()
 @click.option(
     "-d",
     "--datadir",
-    default="data",
+    default=default_datadir.relative_to(Path(os.getcwd())),
     metavar="DIR",
+    show_default=True,
     help="Set data directory.",
 )
 @click.option(
@@ -59,28 +122,8 @@ def main(datadir, enable_bigquery, verbose):
     # Create the pipeline
     pipeline = iqb_pipeline.create(datadir)
 
-    # Define the time periods
-    time_periods = [
-        # ("2024-10-01", "2024-11-01"),
-        ("2025-01-01", "2025-02-01"),
-        ("2025-02-01", "2025-03-01"),
-        ("2025-03-01", "2025-04-01"),
-        ("2025-04-01", "2025-05-01"),
-        ("2025-05-01", "2025-06-01"),
-        ("2025-06-01", "2025-07-01"),
-        ("2025-07-01", "2025-08-01"),
-        ("2025-10-01", "2025-11-01"),
-    ]
-
-    # Define the granularities
-    granularities = (
-        "country",
-        # "country_asn",
-        # "city",
-        # "city_asn",
-        # "subdivision1",
-        # "subdivision1_asn",
-    )
+    # Read the pipeline config
+    time_periods, granularities = load_pipeline_config(Path(datadir) / "pipeline.yaml")
 
     # Prepare for intercepting exceptions
     interceptor = iqb_exception.Interceptor()

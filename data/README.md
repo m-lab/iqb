@@ -7,6 +7,8 @@ and local cache artifacts produced during generation.
 
 - `generate_data.py`: Orchestrates BigQuery extraction and writes cache files
   under `./cache/v1/` for local use.
+- `pipeline.yaml`: Matrix configuration (dates and granularities) used by the
+  data generation script.
 - `run_query.py`: Legacy single-query helper (kept for now, but not the
   preferred workflow).
 - `ghcache.py`: Helper for publishing cache files to GitHub releases.
@@ -76,7 +78,8 @@ uv run python ./data/generate_data.py
 
 This orchestrates the complete pipeline:
 
-1. Queries BigQuery for multiple geographical granularities (country, country_asn, etc.)
+1. Loads `./data/pipeline.yaml` to determine dates and granularities (edit this
+   file to change the matrix)
 
 2. Queries both download and upload metrics for each dataset
 

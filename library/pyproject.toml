@@ -29,9 +29,6 @@ Homepage = "https://github.com/m-lab/iqb"
 Repository = "https://github.com/m-lab/iqb"
 Documentation = "https://github.com/m-lab/iqb/tree/main/library"
 
-[project.scripts]
-iqb = "iqb.cli.main:main"
-
 [build-system]
 requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"

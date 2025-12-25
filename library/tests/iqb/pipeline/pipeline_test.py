@@ -177,6 +177,7 @@ class TestIQBPipelineGetCacheEntry:
         # Get cache entry (should not execute query)
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
+            enable_bigquery=False,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -233,6 +234,7 @@ class TestIQBPipelineGetCacheEntry:
         # Get cache entry (BigQuery syncer is automatically added)
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
+            enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -258,6 +260,25 @@ class TestIQBPipelineGetCacheEntry:
         assert entry.stats_json_file_path().exists()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    def test_get_cache_entry_without_bigquery_syncer(self, mock_client, tmp_path):
+        """Test that get_cache_entry does not add BigQuery syncer when disabled."""
+        pipeline = IQBPipeline(project="test-project", data_dir=tmp_path)
+
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            enable_bigquery=False,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+
+        assert entry.syncers == []
+
+        with entry.lock(), pytest.raises(FileNotFoundError, match="Cache entry not found"):
+            entry.sync()
+
+        mock_client.return_value.execute_query.assert_not_called()
+
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_bq_syncer_skip_when_exists(self, mock_client, tmp_path):
         """Test that _bq_syncer skips BigQuery when cache files already exist."""
         # Create the pipeline
@@ -280,6 +301,7 @@ class TestIQBPipelineGetCacheEntry:
         # Get cache entry (BigQuery syncer is automatically added)
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
+            enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -310,6 +332,7 @@ class TestIQBPipelineGetCacheEntry:
         # Get cache entry
         entry = pipeline.get_cache_entry(
             dataset_name="downloads_by_country",
+            enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
         )
@@ -343,6 +366,7 @@ class TestIQBPipelineGetCacheEntry:
         with pytest.raises(ValueError, match="Invalid dataset name"):
             pipeline.get_cache_entry(
                 dataset_name="invalid_dataset-name",
+                enable_bigquery=False,
                 start_date="2024-10-01",
                 end_date="2024-11-01",
             )
@@ -351,6 +375,7 @@ class TestIQBPipelineGetCacheEntry:
         with pytest.raises(ValueError, match="start_date must be < end_date"):
             pipeline.get_cache_entry(
                 dataset_name="downloads_by_country",
+                enable_bigquery=False,
                 start_date="2024-11-01",
                 end_date="2024-10-01",
             )

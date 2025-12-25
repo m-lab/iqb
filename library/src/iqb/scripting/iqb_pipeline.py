@@ -17,7 +17,12 @@ from .iqb_logging import log
 
 @dataclass(frozen=True, kw_only=True)
 class Pipeline:
-    """Wrapper for IQBPipeline providing convenience methods for scripting."""
+    """
+    Wrapper for IQBPipeline providing convenience methods for scripting.
+
+    Attributes:
+        pipeline: The IQBPipeline to use.
+    """
 
     pipeline: IQBPipeline
 
@@ -25,6 +30,7 @@ class Pipeline:
         self,
         granularity: str,
         *,
+        enable_bigquery: bool,
         end_date: str,
         start_date: str,
     ) -> None:
@@ -36,6 +42,7 @@ class Pipeline:
 
         Arguments:
             end_date: exclusive end date as a YYYY-MM-DD string.
+            enable_bigquery: whether to enable querying from BigQuery.
             granularity: geographical granularity to use.
             start_date: incluive start date as a YYYY-MM-DD string.
 
@@ -57,6 +64,7 @@ class Pipeline:
                     granularity=granularity,
                     table=table,
                 ),
+                enable_bigquery=enable_bigquery,
                 start_date=start_date,
                 end_date=end_date,
             )

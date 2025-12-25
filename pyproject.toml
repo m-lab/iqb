@@ -8,6 +8,7 @@ testpaths = [
     "library/tests",
     "prototype/tests",
     "analysis/tests",
+    "data/tests",
 ]
 python_files = ["*_test.py", "test_*.py"]
 python_classes = ["Test*"]

@@ -10,3 +10,39 @@ dependencies = [
 
 [tool.uv.sources]
 mlab-iqb = { workspace = true }
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.format]
+indent-style = "space"
+quote-style = "double"
+line-ending = "lf"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "SIM114", # combine if branches - prefer explicit branches for domain clarity
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["iqb"]
+
+[tool.pyright]
+include = ["generate_data.py", "tests"]
+exclude = ["**/__pycache__", ".venv"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false

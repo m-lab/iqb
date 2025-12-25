@@ -35,10 +35,12 @@ class TestInterceptor:
     def test_keyboard_interrupt_not_suppressed(self) -> None:
         interceptor = iqb_exception.Interceptor()
 
-        with patch("iqb.scripting.iqb_exception.log") as log:
-            with pytest.raises(KeyboardInterrupt):
-                with interceptor:
-                    raise KeyboardInterrupt()
+        with (
+            patch("iqb.scripting.iqb_exception.log") as log,
+            pytest.raises(KeyboardInterrupt),
+            interceptor,
+        ):
+            raise KeyboardInterrupt()
 
         assert interceptor.failed is False
         assert interceptor.exitcode() == 0

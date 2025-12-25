@@ -38,7 +38,12 @@ class TestPipelineSyncMlab:
         pipeline.get_cache_entry.side_effect = [entry_download, entry_upload]
 
         wrapper = iqb_pipeline.Pipeline(pipeline=pipeline)
-        wrapper.sync_mlab("country", start_date="2024-01-01", end_date="2024-02-01")
+        wrapper.sync_mlab(
+            "country",
+            enable_bigquery=True,
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+        )
 
         assert entry_download.synced is True
         assert entry_upload.synced is True
@@ -47,11 +52,13 @@ class TestPipelineSyncMlab:
         assert pipeline.get_cache_entry.call_args_list == [
             call(
                 dataset_name="downloads_by_country",
+                enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
             ),
             call(
                 dataset_name="uploads_by_country",
+                enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
             ),
@@ -64,7 +71,12 @@ class TestPipelineSyncMlab:
         pipeline.get_cache_entry.side_effect = [entry_download, entry_upload]
 
         wrapper = iqb_pipeline.Pipeline(pipeline=pipeline)
-        wrapper.sync_mlab("country", start_date="2024-01-01", end_date="2024-02-01")
+        wrapper.sync_mlab(
+            "country",
+            enable_bigquery=False,
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+        )
 
         assert entry_download.synced is False
         assert entry_upload.synced is False
@@ -74,7 +86,12 @@ class TestPipelineSyncMlab:
         wrapper = iqb_pipeline.Pipeline(pipeline=pipeline)
 
         with pytest.raises(ValueError, match="invalid granularity value"):
-            wrapper.sync_mlab("nope", start_date="2024-01-01", end_date="2024-02-01")
+            wrapper.sync_mlab(
+                "nope",
+                enable_bigquery=False,
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+            )
 
         pipeline.get_cache_entry.assert_not_called()
 

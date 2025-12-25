@@ -1,0 +1,12 @@
+[project]
+name = "iqb-data"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "click>=8.3.0",
+    "mlab-iqb",
+    "pyyaml>=6.0.0",
+]
+
+[tool.uv.sources]
+mlab-iqb = { workspace = true }

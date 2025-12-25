@@ -12,9 +12,6 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-# Add library to path so we can import iqb modules
-sys.path.insert(0, str(Path(__file__).parent.parent / "library" / "src"))
-
 import click
 import dacite
 import yaml

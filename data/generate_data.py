@@ -39,7 +39,7 @@ class PipelineMatrix:
 
 @dataclass(frozen=True, kw_only=True)
 class PipelineConfig:
-    version: str
+    version: int
     matrix: PipelineMatrix
 
 
@@ -73,7 +73,7 @@ def load_pipeline_config(config_path):
     except dacite.DaciteError as exc:
         raise click.ClickException(f"Invalid pipeline config: {exc}") from exc
 
-    if config.version != "v0":
+    if config.version != 0:
         raise click.ClickException(f"Unsupported pipeline config version: {config.version}")
 
     time_periods = [(entry.start, entry.end) for entry in config.matrix.dates]

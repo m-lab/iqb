@@ -22,7 +22,7 @@ def test_load_pipeline_config_valid(tmp_path: Path):
     config_path.write_text(
         "\n".join(
             [
-                'version: "v0"',
+                "version: 0",
                 "matrix:",
                 "  dates:",
                 "    - start: 2024-01-01",
@@ -47,7 +47,7 @@ def test_load_pipeline_config_rejects_wrong_version(tmp_path: Path):
     config_path.write_text(
         "\n".join(
             [
-                'version: "v1"',
+                "version: 1",
                 "matrix:",
                 "  dates:",
                 "    - start: 2024-01-01",
@@ -69,7 +69,7 @@ def test_load_pipeline_config_rejects_empty_dates(tmp_path: Path):
     config_path.write_text(
         "\n".join(
             [
-                'version: "v0"',
+                "version: 0",
                 "matrix:",
                 "  dates: []",
                 "  granularities:",
@@ -89,7 +89,7 @@ def test_load_pipeline_config_rejects_blank_granularity(tmp_path: Path):
     config_path.write_text(
         "\n".join(
             [
-                'version: "v0"',
+                "version: 0",
                 "matrix:",
                 "  dates:",
                 "    - start: 2024-01-01",

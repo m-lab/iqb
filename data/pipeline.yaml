@@ -27,3 +27,4 @@ matrix:
       end: "2025-12-01"
   granularities:
     - country
+    - country_asn

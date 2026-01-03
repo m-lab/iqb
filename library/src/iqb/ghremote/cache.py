@@ -25,7 +25,7 @@ from rich.progress import (
 
 from ..pipeline.cache import PipelineCacheEntry, data_dir_or_default
 
-log = logging.getLogger("ghremote/cache")
+log = logging.getLogger("iqb.ghremote.cache")
 
 
 @dataclass(frozen=True, kw_only=True)

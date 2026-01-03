@@ -77,7 +77,7 @@ class PipelineCacheEntry:
         """
         if self.syncers:
             if not any(sync(self) for sync in self.syncers):
-                raise PipelineEntrySyncError(f"Cannot sync {self}: see above logs")
+                raise PipelineEntrySyncError(f"Cannot sync {self}: see above warnings")
             return
 
         if not self.exists():

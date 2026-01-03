@@ -44,7 +44,8 @@ def configure(verbose: bool) -> None:
         handlers=[handler],
         force=True,
     )
+    logging.captureWarnings(True)
 
 
-log = logging.getLogger("scripting")
+log = logging.getLogger("iqb.scripting")
 """Logger that the scripting package should use."""

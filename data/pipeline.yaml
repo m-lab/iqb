@@ -28,3 +28,4 @@ matrix:
   granularities:
     - country
     - country_asn
+    - subdivision1

@@ -30,3 +30,4 @@ matrix:
     - country_asn
     - subdivision1
     - subdivision1_asn
+    - city

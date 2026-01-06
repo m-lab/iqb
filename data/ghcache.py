@@ -217,7 +217,7 @@ def cmd_scan(args) -> int:
 
         # Prepare manifest entry (URL will need to be filled in manually or via script)
         # For now, use placeholder URL
-        url_placeholder = f"https://github.com/m-lab/iqb/releases/download/v0.3.0/{mangled_name}"
+        url_placeholder = f"https://github.com/m-lab/iqb/releases/download/v0.4.0/{mangled_name}"
 
         files_dict[rel_path] = {"sha256": sha256, "url": url_placeholder}
         files_to_upload.append(str(dest_path))
@@ -231,7 +231,7 @@ def cmd_scan(args) -> int:
         for f in files_to_upload:
             print(f"  {f}")
         print("\nNext steps:")
-        print("1. Upload mangled files to GitHub release v0.3.0")
+        print("1. Upload mangled files to GitHub release v0.4.0")
         print("2. Update URLs in state/ghremote/manifest.json if needed")
         print("3. Commit updated state/ghremote/manifest.json to repository")
 

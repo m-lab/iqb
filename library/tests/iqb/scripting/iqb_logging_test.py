@@ -52,4 +52,4 @@ def test_render_uses_local_tz(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_log_is_named_scripting() -> None:
-    assert iqb_logging.log.name == "scripting"
+    assert iqb_logging.log.name == "iqb.scripting"

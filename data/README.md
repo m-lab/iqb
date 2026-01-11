@@ -64,18 +64,21 @@ Then manually:
 
 - Python 3.13 using `uv` as documented in the toplevel [README.md](../README.md)
 
-**Complete Pipeline** (recommended):
+**Complete Pipeline**:
 
 ```bash
-uv run python ./data/generate_data.py
+uv run python ./data/generate_data.py -B
 ```
 
 This orchestrates the complete pipeline:
 
 1. Loads `./data/pipeline.yaml` to determine dates and granularities (edit this
    file to change the matrix)
-2. Queries both download and upload metrics for each dataset
-3. Saves results to v1 Parquet cache with query metadata
+2. Attempts to fetch from the GitHub cache first
+3. Otherwise, if `-B` is present, queries both download and upload metrics for each dataset
+4. Saves results to v1 Parquet cache with query metadata
+
+Omit the `-B` flag to avoid querying BigQuery.
 
 ## Future Improvements (Phase 2+)
 

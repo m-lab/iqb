@@ -23,7 +23,7 @@ from rich.progress import (
     TimeRemainingColumn,
 )
 
-log = logging.getLogger("pipeline/bqpq")
+log = logging.getLogger("iqb.pipeline.bqpq")
 
 
 def _rows_progress_columns(total_rows: int | None):

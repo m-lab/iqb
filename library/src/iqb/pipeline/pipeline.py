@@ -17,7 +17,7 @@ from .cache import (
     PipelineRemoteCache,
 )
 
-log = logging.getLogger("pipeline/bq")
+log = logging.getLogger("iqb.pipeline.bq")
 
 
 class IQBPipeline:

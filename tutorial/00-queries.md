@@ -1,8 +1,20 @@
 ## IQB Queries
 
 This document does not delve into the details of the IQB formula, rather
-aims to introduce you to why and how we query the data to produce input
+it aims to introduce you to why and how we query the data to produce input
 to feed into the IQB formula.
+
+### What the queries do
+
+Each query aggregates ndt7 measurements over a time window, groups them
+by geography (and optionally ASN), and computes percentile summaries.
+
+Downloads (including latency and loss) come from `measurement-lab.ndt.unified_downloads`.
+
+Uploads come from `measurement-lab.ndt.unified_uploads`.
+
+The queries filter out rows with missing geo or metric fields and then compute
+the same percentile set (p1, p5, ..., p50, ..., p95, p99) for each metric.
 
 ### Why percentiles
 
@@ -14,7 +26,7 @@ in a concrete, repeatable way.
 ### Concrete example
 
 Consider for example this `ndt7` snapshot of IQB metrics only including
-the 5, 50, and 95 percentile data points (2024-10 US country level):
+the 5, 50, and 95 percentiles (2024-10; US; country level):
 
 |                   | p5         | p50    | p95         |
 | ----------------- | ---------- | ------ | ----------- |
@@ -28,22 +40,19 @@ the ones we would pick according to the IQB report. Keep on reading to
 understand the reason behind picking them.
 
 This is the data you would (approximately) get if you'd run the query
-youself using BigQuery and the `unified-downloads` table.
+yourself using BigQuery and the "unified" tables.
 
 ### Polarity and "top 5%" rule
 
-So, using IQB means selecting a given percentile slice and then using it
-inside of the IQB formula. It should be noted that the percentiles we
-provide here are actual percentiles, however, for properly selecting a
-slice we need to harmonize the meaning of percentiles except for the
-median, where there's no need to do so.
+Using IQB means selecting a given percentile slice and then using it
+inside of the IQB formula. It should be noted that, for properly selecting
+a slice we need to harmonize the meaning of percentiles except for the
+median.
 
-This happens because for download and upload "higher is better" while
-for latency and packet losses "lower is better". So, assuming our goal
+More specifically, consider this: for download and upload "higher is better"
+while for latency and packet losses "lower is better". So, assuming our goal
 is to stick to the report's interpretation ("top 5% performance"), then
 we would select:
-
-Rule of thumb:
 
 - for higher-is-better metrics (download/upload): use p95 to represent
   "top 5% performance"
@@ -51,27 +60,14 @@ Rule of thumb:
 - for lower-is-better metrics (latency/loss): use p5 to represent
   "top 5% performance"
 
-As a result, we are going to pick these numbers:
-
-1. 625 Mbit/s meaning that 5% of users have that speed or better
-
-2. 370 Mbit/s meaning that 5% of users have that speed or better
-
-3. 0.806 ms meaning that 5% of users have that latency or better
-
-4. 0 meaning that 5% of users have that packet loss rate or better
-
-Then we would plug this into the IQB formula.
+As a result, we would pick the numbers in bold in Table 1. And then we will
+plug these values in the IQB formula (not discussed in this document).
 
 ### Uniform representation in the queries
 
 To make this easier to use downstream, the queries normalize the
 percentile representation so the "top 5% performance" slice is always
-expressed as p95.
-
-In practical terms, for simplicity, the queries that IQB uses already
-flip the percentiles to give them uniform meaning. So, the actual
-table that you fetch from IQB looks like this *instead*:
+expressed as p95. So, the *actual* table looks like this:
 
 |                   | p5      | p50    | p95         |
 | ----------------- | ------- | ------ | ----------- |
@@ -82,7 +78,7 @@ table that you fetch from IQB looks like this *instead*:
 
 **Table 2**: Metrics with uniform representation. Values in bold are
 the ones we would pick according to the IQB report. See how now the
-pick boilds down to selecting a column in a columnar database.
+pick boils down to selecting a column in a columnar database.
 
 Note how the percentiles in the two bottom rows have been swapped for p5
 and p95, so that 95p corresponds to "top 5% performance".

@@ -14,7 +14,8 @@ Downloads (including latency and loss) come from `measurement-lab.ndt.unified_do
 Uploads come from `measurement-lab.ndt.unified_uploads`.
 
 The queries filter out rows with missing geo or metric fields and then compute
-the same percentile set (p1, p5, ..., p50, ..., p95, p99) for each metric.
+the same percentile set (p1, p5, ..., p50, ..., p95, p99) for each metric (download
+speed, upload speed, minimum RTT, and packet loss rate).
 
 ### Why percentiles
 

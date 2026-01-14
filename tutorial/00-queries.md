@@ -21,6 +21,9 @@ the 5, 50, and 95 percentile data points (2024-10 US country level):
 
 **Table 1**: Raw percentile metrics from actual data.
 
+This is the data you would (approximately) get if you'd run the query
+youself using BigQuery and the `unified-downloads` table.
+
 ### Polarity and "top 5%" rule
 
 So, using IQB means selecting a given percentile slice and then using it

@@ -110,3 +110,12 @@ For the upload and the download speeds we support these granularities:
 2. `subdivision1` and `subdivision1` with `asn`;
 
 3. `city` and `city` with `asn`.
+
+We organize data so that it is possible to navigate up and down from
+the granularities hierarchy.
+
+For example, you can start with a country view, then drill into the
+same country via `country_asn` to see ASNs, or via `subdivision1` to see
+regional detail, because subdivision-level rows still carry the country
+code and can be filtered to that country. From there you can go further
+down to `city` or `subdivision1_asn` using the same filters.

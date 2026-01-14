@@ -16,14 +16,16 @@ in a concrete, repeatable way.
 Consider for example this `ndt7` snapshot of IQB metrics only including
 the 5, 50, and 95 percentile data points (2024-10 US country level):
 
-|                   | p5      | p50    | p95     |
-| ----------------- | ------- | ------ | ------- |
-| Download (Mbit/s) | 2.74    | 96.35  | 625.69  |
-| Upload (Mbit/s)   | 0.15    | 20.95  | 370.48  |
-| Latency (ms)      | 0.806   | 16.13  | 80.584  |
-| Packet Loss Rate  | 0.0000  | 0.0005 | 0.1202  |
+|                   | p5         | p50    | p95         |
+| ----------------- | ---------- | ------ | ----------- |
+| Download (Mbit/s) | 2.74       | 96.35  | **625.69**  |
+| Upload (Mbit/s)   | 0.15       | 20.95  | **370.48**  |
+| Latency (ms)      | **0.806**  | 16.13  | 80.584      |
+| Packet Loss Rate  | **0.0000** | 0.0005 | 0.1202      |
 
-**Table 1**: Raw percentile metrics from actual data.
+**Table 1**: Raw percentile metrics from actual data. Values in bold are
+the ones we would pick according to the IQB report. Keep on reading to
+understand the reason behind picking them.
 
 This is the data you would (approximately) get if you'd run the query
 youself using BigQuery and the `unified-downloads` table.
@@ -71,14 +73,16 @@ In practical terms, for simplicity, the queries that IQB uses already
 flip the percentiles to give them uniform meaning. So, the actual
 table that you fetch from IQB looks like this *instead*:
 
-|                   | p5      | p50    | p95     |
-| ----------------- | ------- | ------ | ------- |
-| Download (Mbit/s) | 2.74    | 96.35  | 625.69  |
-| Upload (Mbit/s)   | 0.15    | 20.95  | 370.48  |
-| Latency (ms)      | 80.584  | 16.13  | 0.806   |
-| Packet Loss Rate  | 0.1202  | 0.0005 | 0.0000  |
+|                   | p5      | p50    | p95         |
+| ----------------- | ------- | ------ | ----------- |
+| Download (Mbit/s) | 2.74    | 96.35  | **625.69**  |
+| Upload (Mbit/s)   | 0.15    | 20.95  | **370.48**  |
+| Latency (ms)      | 80.584  | 16.13  | **0.806**   |
+| Packet Loss Rate  | 0.1202  | 0.0005 | **0.0000**  |
 
-**Table 2**: Metrics with uniform representation.
+**Table 2**: Metrics with uniform representation. Values in bold are
+the ones we would pick according to the IQB report. See how now the
+pick boilds down to selecting a column in a columnar database.
 
 Note how the percentiles in the two bottom rows have been swapped for p5
 and p95, so that 95p corresponds to "top 5% performance".

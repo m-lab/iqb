@@ -98,7 +98,7 @@ IQB_CONFIG = {
                 },
                 "upload_throughput_mbps": {
                     "w": 1,
-                    "threshold min": 10,
+                    "threshold min": 5,
                     "datasets": {
                         "m-lab": {"w": 1},
                         "cloudflare": {"w": 0},
@@ -130,7 +130,7 @@ IQB_CONFIG = {
             "network requirements": {
                 "download_throughput_mbps": {
                     "w": 4,
-                    "threshold min": 10,
+                    "threshold min": 25,
                     "datasets": {
                         "m-lab": {"w": 1},
                         "cloudflare": {"w": 0},
@@ -212,7 +212,7 @@ IQB_CONFIG = {
             "network requirements": {
                 "download_throughput_mbps": {
                     "w": 4,
-                    "threshold min": 10,
+                    "threshold min": 25,
                     "datasets": {
                         "m-lab": {"w": 1},
                         "cloudflare": {"w": 0},
@@ -221,7 +221,7 @@ IQB_CONFIG = {
                 },
                 "upload_throughput_mbps": {
                     "w": 4,
-                    "threshold min": 10,
+                    "threshold min": 25,
                     "datasets": {
                         "m-lab": {"w": 1},
                         "cloudflare": {"w": 0},
@@ -230,7 +230,7 @@ IQB_CONFIG = {
                 },
                 "latency_ms": {
                     "w": 5,
-                    "threshold min": 100,
+                    "threshold min": 10,
                     "datasets": {
                         "m-lab": {"w": 1},
                         "cloudflare": {"w": 0},
@@ -239,7 +239,7 @@ IQB_CONFIG = {
                 },
                 "packet_loss": {
                     "w": 4,
-                    "threshold min": 0.01,
+                    "threshold min": 0.005,
                     "datasets": {
                         "m-lab": {"w": 1},
                         "cloudflare": {"w": 0},

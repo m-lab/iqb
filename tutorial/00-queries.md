@@ -1,5 +1,9 @@
 ## IQB Queries
 
+This document does not delve into the details of the IQB formula, rather
+aims to introduce you to why and how we query the data to produce input
+to feed into the IQB formula.
+
 ### Why percentiles
 
 The IQB principle is simple: pick a percentile, compare those metric

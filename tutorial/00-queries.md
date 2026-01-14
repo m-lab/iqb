@@ -62,7 +62,7 @@ we would select:
   "top 5% performance"
 
 As a result, we would pick the numbers in bold in Table 1. And then we will
-plug these values in the IQB formula (not discussed in this document).
+plug these values in the IQB formula.
 
 ### Uniform representation in the queries
 

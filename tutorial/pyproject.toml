@@ -1,0 +1,28 @@
+# TODO(bassosimone): temporary code for the presentation that needs
+# to be rationalized and refactored in the right place
+
+[project]
+name = "iqb-tutorial"
+version = "0.1.0"
+description = "Tutorial explaining IQB and how to use it"
+requires-python = ">=3.13"
+dependencies = [
+    "jupyter>=1.1.1",
+    "ipykernel>=6.29.0",
+    "notebook>=7.3.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "plotly>=5.17.0",
+    "matplotlib>=3.9.0",
+    "mlab-iqb",
+]
+
+[tool.uv.sources]
+mlab-iqb = { workspace = true }
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "nbconvert>=7.16.0",
+    "nbformat>=5.10.0",
+]

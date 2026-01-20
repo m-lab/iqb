@@ -11,6 +11,7 @@ members = [
     "iqb-analysis",
     "iqb-data",
     "iqb-prototype",
+    "iqb-tutorial",
     "mlab-iqb",
 ]
 
@@ -992,6 +993,47 @@ requires-dist = [
     { name = "pycountry", specifier = ">=23.12.11" },
     { name = "pytest", specifier = ">=8.0.0" },
     { name = "streamlit", specifier = ">=1.39.0" },
+]
+
+[[package]]
+name = "iqb-tutorial"
+version = "0.1.0"
+source = { virtual = "tutorial" }
+dependencies = [
+    { name = "ipykernel" },
+    { name = "jupyter" },
+    { name = "matplotlib" },
+    { name = "mlab-iqb" },
+    { name = "notebook" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "plotly" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "nbconvert" },
+    { name = "nbformat" },
+    { name = "pytest" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ipykernel", specifier = ">=6.29.0" },
+    { name = "jupyter", specifier = ">=1.1.1" },
+    { name = "matplotlib", specifier = ">=3.9.0" },
+    { name = "mlab-iqb", editable = "library" },
+    { name = "notebook", specifier = ">=7.3.0" },
+    { name = "numpy", specifier = ">=1.26.0" },
+    { name = "pandas", specifier = ">=2.2.0" },
+    { name = "plotly", specifier = ">=5.17.0" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "nbconvert", specifier = ">=7.16.0" },
+    { name = "nbformat", specifier = ">=5.10.0" },
+    { name = "pytest", specifier = ">=8.0.0" },
 ]
 
 [[package]]

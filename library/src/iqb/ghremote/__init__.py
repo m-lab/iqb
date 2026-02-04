@@ -24,11 +24,15 @@ Where $datadir defaults to `.iqb` in the current working directory.
 """
 
 from .cache import IQBRemoteCache
+from .diff import DiffEntry, DiffState, diff
 
 # Backward compatibility alias
 IQBGitHubRemoteCache = IQBRemoteCache
 
 __all__ = [
+    "DiffEntry",
+    "DiffState",
     "IQBGitHubRemoteCache",
     "IQBRemoteCache",
+    "diff",
 ]

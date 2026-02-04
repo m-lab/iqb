@@ -1247,6 +1247,22 @@
     "cache/v1/20251201T000000Z/20260101T000000Z/uploads_by_country_subdivision1_asn/stats.json": {
       "sha256": "9365ed4b965c2b220de474cf882cf183de21e5f894a3359a2420def3458bef15",
       "url": "https://storage.googleapis.com/mlab-sandbox-iqb-us-central1/cache/v1/20251201T000000Z/20260101T000000Z/uploads_by_country_subdivision1_asn/stats.json"
+    },
+    "cache/v1/20260101T000000Z/20260201T000000Z/downloads_by_country/data.parquet": {
+      "sha256": "4d34ee7e2b649e54254f03e805934dd58ac7c56fca79d1c0c2b45d12e8f2a6d8",
+      "url": "https://storage.googleapis.com/mlab-sandbox-iqb-us-central1/cache/v1/20260101T000000Z/20260201T000000Z/downloads_by_country/data.parquet"
+    },
+    "cache/v1/20260101T000000Z/20260201T000000Z/downloads_by_country/stats.json": {
+      "sha256": "7ae465039d0610a8e71e2ce8fb6eda5f0a93085df28babcba32452c2cbd41e27",
+      "url": "https://storage.googleapis.com/mlab-sandbox-iqb-us-central1/cache/v1/20260101T000000Z/20260201T000000Z/downloads_by_country/stats.json"
+    },
+    "cache/v1/20260101T000000Z/20260201T000000Z/uploads_by_country/data.parquet": {
+      "sha256": "e9047458ee022ba628d8d1c062256f058acf87f6820469ce8f9a3c2ae2c4c041",
+      "url": "https://storage.googleapis.com/mlab-sandbox-iqb-us-central1/cache/v1/20260101T000000Z/20260201T000000Z/uploads_by_country/data.parquet"
+    },
+    "cache/v1/20260101T000000Z/20260201T000000Z/uploads_by_country/stats.json": {
+      "sha256": "7c31a157d92724ea7fd69bbbb35c35dec91b74c9ea8c245292f7c6c0dd1e2bdd",
+      "url": "https://storage.googleapis.com/mlab-sandbox-iqb-us-central1/cache/v1/20260101T000000Z/20260201T000000Z/uploads_by_country/stats.json"
     }
   },
   "v": 0

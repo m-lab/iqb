@@ -34,4 +34,5 @@ def version_cmd() -> None:
 # Register subcommands (must be after cli is defined)
 from . import cache as _cache  # noqa: E402, F401
 from . import cache_pull as _cache_pull  # noqa: E402, F401
+from . import cache_push as _cache_push  # noqa: E402, F401
 from . import cache_status as _cache_status  # noqa: E402, F401

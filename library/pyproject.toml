@@ -20,12 +20,16 @@ dependencies = [
     "dacite>=1.9.2",
     "filelock>=3.20.1",
     "rich>=14.2.0",
+    "click>=8.1.0",
 ]
 
 [project.urls]
 Homepage = "https://github.com/m-lab/iqb"
 Repository = "https://github.com/m-lab/iqb"
 Documentation = "https://github.com/m-lab/iqb/tree/main/library"
+
+[project.scripts]
+iqb = "iqb.cli:cli"
 
 [build-system]
 requires = ["hatchling", "hatch-vcs"]

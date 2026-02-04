@@ -38,6 +38,11 @@ score = iqb.calculate_iqb_score(print_details=True)
 iqb.print_config()
 ```
 
+## Command-Line Interface
+
+The library provides an `iqb` command-line tool. Run `uv run iqb --help`
+from the sources or `iqb --help` when installed for usage details.
+
 ## GCloud Configuration
 
 To run BigQuery queries, you need to be logged in using the

@@ -1543,6 +1543,7 @@ wheels = [
 name = "mlab-iqb"
 source = { editable = "library" }
 dependencies = [
+    { name = "click" },
     { name = "dacite" },
     { name = "db-dtypes" },
     { name = "filelock" },
@@ -1563,6 +1564,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "click", specifier = ">=8.1.0" },
     { name = "dacite", specifier = ">=1.9.2" },
     { name = "db-dtypes", specifier = ">=1.0.0" },
     { name = "filelock", specifier = ">=3.20.1" },

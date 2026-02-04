@@ -16,8 +16,8 @@ results as local parquet files. Covers cache entry lifecycle,
 locking, stats, and direct parquet reading.
 
 ### Chapter 2 — [Pipeline Remote Cache](02-pipeline-cache.ipynb)
-Using `IQBGitHubRemoteCache` to fetch pre-computed results from
-GitHub releases without BigQuery access. Manifest format and
+Using `IQBRemoteCache` to fetch pre-computed results from
+the remote cache without BigQuery access. Manifest format and
 cache layout.
 
 ### Chapter 3 — [Researcher API](../../analysis/00-template.ipynb)

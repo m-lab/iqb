@@ -1,1 +1,1 @@
-"""Tests for the iqb.ghremote package."""
+"""Tests for the iqb.ghremote (remote cache) package."""

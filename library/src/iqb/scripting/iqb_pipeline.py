@@ -7,8 +7,8 @@ from pathlib import Path
 
 from .. import (
     IQBDatasetMLabTable,
-    IQBGitHubRemoteCache,
     IQBPipeline,
+    IQBRemoteCache,
     iqb_dataset_name_for_mlab,
 )
 from . import iqb_granularity
@@ -101,6 +101,6 @@ def create(
         pipeline=IQBPipeline(
             project=project,
             data_dir=data_dir,
-            remote_cache=IQBGitHubRemoteCache(data_dir=data_dir),
+            remote_cache=IQBRemoteCache(data_dir=data_dir),
         )
     )

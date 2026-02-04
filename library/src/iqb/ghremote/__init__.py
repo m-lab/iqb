@@ -1,8 +1,8 @@
 """
-GitHub remote cache synchronization tool for IQB data files.
+Remote cache synchronization for IQB data files.
 
-This is a throwaway module for the initial phase of the project. It will
-eventually be replaced by a proper GCS-based solution.
+The `ghremote` package (globally-hosted remote) downloads cache files
+from URLs listed in a manifest and verifies their SHA256 hashes.
 
 Manifest format:
 
@@ -11,7 +11,7 @@ Manifest format:
   "files": {
     "cache/v1/.../data.parquet": {
       "sha256": "3a421c62179a...",
-      "url": "https://github.com/.../3a421c62179a__cache__v1__...parquet"
+      "url": "https://storage.googleapis.com/...data.parquet"
     }
   }
 }
@@ -23,8 +23,12 @@ The manifest is expected at:
 Where $datadir defaults to `.iqb` in the current working directory.
 """
 
-from .cache import IQBGitHubRemoteCache
+from .cache import IQBRemoteCache
+
+# Backward compatibility alias
+IQBGitHubRemoteCache = IQBRemoteCache
 
 __all__ = [
     "IQBGitHubRemoteCache",
+    "IQBRemoteCache",
 ]

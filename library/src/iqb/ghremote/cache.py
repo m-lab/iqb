@@ -1,4 +1,4 @@
-"""Module containing the RemoteCache implementation."""
+"""Module containing the IQBRemoteCache implementation."""
 
 from __future__ import annotations
 
@@ -38,7 +38,7 @@ class FileEntry:
 
 @dataclass(frozen=True, kw_only=True)
 class Manifest:
-    """Manifest for cached files stored in GitHub releases."""
+    """Manifest for remotely cached files."""
 
     v: int
     files: dict[str, FileEntry] = field(default_factory=dict)
@@ -79,11 +79,12 @@ def _manifest_path_for_data_dir(data_dir: Path) -> Path:
     return data_dir / "state" / "ghremote" / "manifest.json"
 
 
-class IQBGitHubRemoteCache:
+class IQBRemoteCache:
     """
-    Remote cache for query results using GitHub releases.
+    Remote cache for query results.
 
-    This class implements the pipeline.RemoteCache protocol.
+    This class implements the pipeline.RemoteCache protocol. It downloads
+    files from URLs specified in the manifest and verifies their SHA256 hashes.
 
     The manifest is loaded from $datadir/state/ghremote/manifest.json,
     where $datadir defaults to .iqb in the current working directory.
@@ -133,7 +134,7 @@ class IQBGitHubRemoteCache:
 
 
 def _sync_file_entry(entry: FileEntry, dest_path: Path):
-    """Sync the given FileEntry with the file cached in a GitHub release."""
+    """Sync the given FileEntry with the remotely cached file."""
     # Determine whether we need to download again
     exists = dest_path.exists()
     if not exists or entry.sha256 != _compute_sha256(dest_path):

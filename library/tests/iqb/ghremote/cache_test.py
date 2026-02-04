@@ -1,4 +1,4 @@
-"""Tests for the iqb.ghremote.cache module."""
+"""Tests for the iqb.ghremote.cache module (remote cache)."""
 
 import hashlib
 import json
@@ -11,7 +11,7 @@ from dacite.exceptions import WrongTypeError
 
 from iqb.ghremote.cache import (
     FileEntry,
-    IQBGitHubRemoteCache,
+    IQBRemoteCache,
     Manifest,
 )
 
@@ -32,8 +32,8 @@ def _write_manifest(data_dir, manifest_data):
     return manifest_path
 
 
-class TestIQBGitHubLoadManifest:
-    """Tests for loading the GitHub remote manifest."""
+class TestIQBRemoteCacheLoadManifest:
+    """Tests for loading the remote cache manifest."""
 
     def test_load_invalid_json_string(self, tmp_path):
         """Verify we get JSONDecodeError when loading an invalid JSON string."""
@@ -42,7 +42,7 @@ class TestIQBGitHubLoadManifest:
         manifest_file.write_text("{ invalid json }")
 
         with pytest.raises(json.JSONDecodeError):
-            IQBGitHubRemoteCache(data_dir=tmp_path)
+            IQBRemoteCache(data_dir=tmp_path)
 
     def test_load_invalid_json_fields_types(self, tmp_path):
         """Verify that dacite throws if the fields have invalid types."""
@@ -52,7 +52,7 @@ class TestIQBGitHubLoadManifest:
         manifest_file.write_text('{"v": "not an int", "files": {}}')
 
         with pytest.raises((WrongTypeError, ValueError, TypeError)):
-            IQBGitHubRemoteCache(data_dir=tmp_path)
+            IQBRemoteCache(data_dir=tmp_path)
 
     def test_load_invalid_version_number(self, tmp_path):
         """Verify that there is a ValueError when the version number is invalid."""
@@ -61,7 +61,7 @@ class TestIQBGitHubLoadManifest:
         manifest_file.write_text('{"v": 1, "files": {}}')
 
         with pytest.raises(ValueError, match="Unsupported manifest version"):
-            IQBGitHubRemoteCache(data_dir=tmp_path)
+            IQBRemoteCache(data_dir=tmp_path)
 
     def test_load_success_with_file(self, tmp_path):
         """Verify that we can correctly load a manifest when backed by an existing file."""
@@ -75,7 +75,7 @@ class TestIQBGitHubLoadManifest:
             },
         }
         _write_manifest(tmp_path, manifest_data)
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
         manifest = cache.manifest
 
         assert manifest.v == 0
@@ -87,7 +87,7 @@ class TestIQBGitHubLoadManifest:
 
     def test_load_success_without_file(self, tmp_path):
         """Verify that we return a default manifest when the file is missing."""
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
         manifest = cache.manifest
 
         assert manifest.v == 0
@@ -133,8 +133,8 @@ class TestManifestGetFileEntry:
             manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
 
 
-class TestIQBGitHubRemoteCacheSync:
-    """Tests for the IQBGitHubRemoteCache.sync method."""
+class TestIQBRemoteCacheSync:
+    """Tests for the IQBRemoteCache.sync method."""
 
     def _create_mock_entry(self, tmp_path):
         """Helper to create a mock PipelineCacheEntry."""
@@ -179,7 +179,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         with caplog.at_level(logging.WARNING):
             result = cache.sync(entry)
@@ -205,7 +205,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         with caplog.at_level(logging.WARNING):
             result = cache.sync(entry)
@@ -239,7 +239,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -282,7 +282,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         # Mock urlopen - it should NOT be called
         mock_urlopen = Mock(side_effect=AssertionError("Should not download!"))
@@ -324,7 +324,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -361,7 +361,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -400,7 +400,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         # Mock urlopen to raise URLError
         with (
@@ -437,7 +437,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -482,7 +482,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 

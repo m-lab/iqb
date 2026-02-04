@@ -4,7 +4,7 @@ This directory contains documentations and presentations.
 
 - [internals/](internals/): internal architecture documentation for
 the IQB data pipeline, organized as a sequence of chapters covering
-BigQuery queries, the `IQBPipeline`, and the GitHub remote cache.
+BigQuery queries, the `IQBPipeline`, and the remote cache.
 
 - [2025-12-11-pulse-slides.pdf](2025-12-11-pulse-slides.pdf): slides
 of [@sermpezis](https://github.com/sermpezis) during the [ISOC

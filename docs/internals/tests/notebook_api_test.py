@@ -18,9 +18,7 @@ def _extract_code_from_notebook(notebook_path: Path) -> str:
     with open(notebook_path) as f:
         nb = json.load(f)
     return "\n\n".join(
-        "".join(cell["source"])
-        for cell in nb["cells"]
-        if cell["cell_type"] == "code"
+        "".join(cell["source"]) for cell in nb["cells"] if cell["cell_type"] == "code"
     )
 
 

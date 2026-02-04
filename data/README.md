@@ -10,8 +10,8 @@ and local cache artifacts produced during generation.
 - `pipeline.yaml`: Matrix configuration (dates and granularities) used by the
   data generation script.
 - `ghcache.py`: Helper for publishing cache files to the remote cache.
-- `state/ghremote/manifest.json`: Release manifest used by the remote
-  cache implementation.
+- `state/ghremote/manifest.json`: Manifest used by the remote cache
+  implementation.
 
 Static cache fixtures used by tests and notebooks are stored elsewhere:
 
@@ -32,8 +32,9 @@ Raw query results stored efficiently for flexible analysis:
 ## Remote Cache Synchronization
 
 Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
-constraints, we distribute pre-generated cache files via a remote cache (currently
-GCS buckets). The release manifest lives at `state/ghremote/manifest.json`.
+constraints, we distribute pre-generated cache files via a GCS bucket
+(`mlab-sandbox-iqb-us-central1`). The manifest lives at
+`state/ghremote/manifest.json`.
 
 ### For Maintainers (Publishing New Cache)
 
@@ -46,13 +47,12 @@ uv run ./data/ghcache.py scan
 This:
 1. Scans `cache/v1/` for git-ignored files
 2. Computes SHA256 hashes
-3. Copies files to `data/` with mangled names (ready for upload)
-4. Updates `state/ghremote/manifest.json` manifest
+3. Updates `state/ghremote/manifest.json` with correct GCS URLs
+4. Prints the `gcloud storage rsync` command to upload files
 
 Then:
-1. Upload the cache files to the remote cache (e.g., GCS bucket)
-2. Update URLs in `state/ghremote/manifest.json` if needed
-3. Commit updated `state/ghremote/manifest.json` to repository
+1. Run the printed `gcloud storage rsync` command to upload to GCS
+2. Commit updated `state/ghremote/manifest.json` to repository
 
 ### Running the Data Generation Pipeline
 

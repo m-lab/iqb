@@ -4,14 +4,15 @@
 Remote cache management tool for IQB data files.
 
 This tool manages caching of large parquet/JSON files with local SHA256
-verification. It scans locally generated files and prepares a manifest
-for remote distribution.
+verification. It scans locally generated files and updates the manifest
+with correct GCS URLs for remote distribution.
 
 Subcommands:
-  scan - Scan local files and prepare them for remote upload
+  scan - Scan local files and update manifest
 
-The 'scan' command copies files to the current directory with mangled names,
-ready for upload to the remote cache.
+The 'scan' command computes SHA256 hashes for new or changed cache files,
+updates the manifest with correct GCS URLs, and prints the gcloud storage
+rsync command needed to upload the files.
 
 Manifest format (state/ghremote/manifest.json):
 {
@@ -19,13 +20,12 @@ Manifest format (state/ghremote/manifest.json):
   "files": {
     "cache/v1/.../data.parquet": {
       "sha256": "3a421c62179a...",
-      "url": "https://storage.googleapis.com/...data.parquet"
+      "url": "https://storage.googleapis.com/BUCKET/cache/v1/.../data.parquet"
     }
   }
 }
 
 File path format: cache/v1/{start_ts}/{end_ts}/{name}/data.parquet
-Mangled format: {sha256[:12]}__cache__v1__{start_ts}__{end_ts}__{name}__data.parquet
 """
 
 import argparse
@@ -33,15 +33,14 @@ import hashlib
 import json
 import os
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
 
 MANIFEST_PATH = Path("state") / "ghremote" / "manifest.json"
 CACHE_DIR = Path("cache") / "v1"
-TMP_DIR = Path("tmp")
-SHA256_PREFIX_LENGTH = 12
+GCS_BUCKET = "mlab-sandbox-iqb-us-central1"
+GCS_BASE_URL = f"https://storage.googleapis.com/{GCS_BUCKET}"
 
 
 def compute_sha256(file_path: Path) -> str:
@@ -96,20 +95,6 @@ def validate_cache_path(path: str) -> bool:
     return parts[5] in ("data.parquet", "stats.json")
 
 
-def mangle_path(local_path: str, sha256: str) -> str:
-    """
-    Convert local path to mangled remote cache filename.
-
-    Example:
-      Input:  cache/v1/20241001T000000Z/20241101T000000Z/downloads_by_country/data.parquet
-      SHA256: 3a421c62179a...
-      Output: 3a421c62179a__cache__v1__20241001T000000Z__20241101T000000Z__downloads_by_country__data.parquet
-    """
-    sha_prefix = sha256[:SHA256_PREFIX_LENGTH]
-    mangled = local_path.replace("/", "__")
-    return f"{sha_prefix}__{mangled}"
-
-
 def load_manifest() -> dict:
     """Load manifest from state/ghremote/manifest.json, or return empty if not found."""
     if not MANIFEST_PATH.exists():
@@ -144,16 +129,16 @@ def is_git_ignored(file_path: Path) -> bool:
 
 def cmd_scan(args) -> int:
     """
-    Scan command: Scan local files and prepare for upload.
+    Scan command: Scan local files and update manifest.
 
     1. Load or create manifest
     2. Scan cache/v1 for git-ignored files
     3. For new or changed files:
        - Compute SHA256
-       - Create mangled filename
-       - Copy to tmp directory (ready for manual upload)
+       - Generate GCS URL
        - Update manifest
     4. Save manifest
+    5. Print gcloud storage rsync command for uploading
     """
     _ = args
     manifest = load_manifest()
@@ -178,8 +163,7 @@ def cmd_scan(args) -> int:
 
     print(f"Found {len(ignored_files)} git-ignored files.")
 
-    files_to_upload = []
-    TMP_DIR.mkdir(parents=True, exist_ok=True)
+    updated_count = 0
 
     for file_path in ignored_files:
         # Convert to relative path string with forward slashes for cross-platform compatibility
@@ -200,37 +184,24 @@ def cmd_scan(args) -> int:
             continue
 
         # File is new or changed
+        url = f"{GCS_BASE_URL}/{rel_path}"
         print(f"New/changed: {rel_path}")
         print(f"  SHA256: {sha256}")
+        print(f"  URL: {url}")
 
-        # Create mangled filename
-        mangled_name = mangle_path(rel_path, sha256)
-        print(f"  Mangled: {mangled_name}")
-
-        # Copy to tmp directory with mangled name (for manual upload)
-        dest_path = TMP_DIR / mangled_name
-        shutil.copy2(file_path, dest_path)
-        print(f"  Copied to {dest_path} (ready for upload)")
-
-        # Prepare manifest entry (URL will need to be filled in manually or via script)
-        # For now, use placeholder URL
-        url_placeholder = f"https://github.com/m-lab/iqb/releases/download/v0.5.0/{mangled_name}"
-
-        files_dict[rel_path] = {"sha256": sha256, "url": url_placeholder}
-        files_to_upload.append(str(dest_path))
+        files_dict[rel_path] = {"sha256": sha256, "url": url}
+        updated_count += 1
 
     # Save updated manifest
     save_manifest(manifest)
     print(f"\nManifest updated: {MANIFEST_PATH}")
 
-    if files_to_upload:
-        print(f"\nFiles ready for upload ({len(files_to_upload)}):")
-        for f in files_to_upload:
-            print(f"  {f}")
+    if updated_count > 0:
+        print(f"\n{updated_count} file(s) added/updated in manifest.")
         print("\nNext steps:")
-        print("1. Upload cache files to the remote cache (e.g., GCS bucket)")
-        print("2. Update URLs in state/ghremote/manifest.json if needed")
-        print("3. Commit updated state/ghremote/manifest.json to repository")
+        print(f"1. Upload files to GCS:")
+        print(f"   gcloud storage rsync -r {CACHE_DIR} gs://{GCS_BUCKET}/{CACHE_DIR}")
+        print(f"2. Commit updated {MANIFEST_PATH} to repository")
 
     return 0
 
@@ -246,7 +217,7 @@ def main() -> int:
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
     # Scan subcommand
-    subparsers.add_parser("scan", help="Scan local files and prepare for upload")
+    subparsers.add_parser("scan", help="Scan local files and update manifest")
 
     args = parser.parse_args()
 

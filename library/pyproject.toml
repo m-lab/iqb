@@ -46,9 +46,6 @@ tag-pattern = "v(?P<version>.*)"
 root = ".."
 relative_to = "pyproject.toml"
 
-[tool.hatch.build.hooks.vcs]
-version-file = "src/iqb/_version.py"
-
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",

@@ -15,9 +15,11 @@ from .pipeline import (
     iqb_dataset_name_for_mlab,
 )
 
+from importlib.metadata import PackageNotFoundError, version
+
 try:
-    from ._version import __version__
-except ImportError:  # pragma: no cover - build-time generated
+    __version__ = version("mlab-iqb")
+except PackageNotFoundError:  # pragma: no cover - not installed
     __version__ = "0.0.0"
 
 # Backward compatibility alias

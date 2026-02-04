@@ -141,6 +141,8 @@ class IQBRemoteCache:
         _sync_file_entry(parquet_entry, entry.data_parquet_file_path())
 
 
+# TODO(bassosimone): this download logic overlaps with cli/cache_pull.py;
+# consider unifying into a shared helper once both implementations stabilise.
 def _sync_file_entry(entry: FileEntry, dest_path: Path):
     """Sync the given FileEntry with the remotely cached file."""
     # Determine whether we need to download again

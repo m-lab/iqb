@@ -1,5 +1,5 @@
 [tool.uv.workspace]
-members = ["library", "prototype", "analysis", "data"]
+members = ["library", "prototype", "analysis", "data", "docs/internals"]
 
 # Pytest configuration for workspace-level test execution
 # This allows running "uv run pytest" from the root to test all workspace members
@@ -9,6 +9,7 @@ testpaths = [
     "prototype/tests",
     "analysis/tests",
     "data/tests",
+    "docs/internals/tests",
 ]
 python_files = ["*_test.py", "test_*.py"]
 python_classes = ["Test*"]

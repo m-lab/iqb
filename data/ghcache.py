@@ -199,9 +199,11 @@ def cmd_scan(args) -> int:
     if updated_count > 0:
         print(f"\n{updated_count} file(s) added/updated in manifest.")
         print("\nNext steps:")
-        print(f"1. Upload files to GCS:")
-        print(f"   gcloud storage rsync -r {CACHE_DIR} gs://{GCS_BUCKET}/{CACHE_DIR}")
-        print(f"2. Commit updated {MANIFEST_PATH} to repository")
+        print("1. Remove zero-length .lock files left over by the pipeline:")
+        print(f"   find data/{CACHE_DIR} -type f -name .lock -delete")
+        print("2. Upload files to GCS:")
+        print(f"   gcloud storage rsync -r data/{CACHE_DIR} gs://{GCS_BUCKET}/{CACHE_DIR}")
+        print(f"3. Commit updated data/{MANIFEST_PATH} to repository")
 
     return 0
 

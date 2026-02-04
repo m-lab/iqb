@@ -36,6 +36,26 @@ constraints, we distribute pre-generated cache files via a GCS bucket
 (`mlab-sandbox-iqb-us-central1`). The manifest lives at
 `state/ghremote/manifest.json`.
 
+### Bucket Setup
+
+The GCS bucket was created in the `mlab-sandbox` project:
+
+```bash
+gcloud storage buckets create gs://mlab-sandbox-iqb-us-central1 \
+    --project=mlab-sandbox \
+    --location=us-central1 \
+    --uniform-bucket-level-access
+```
+
+Public read access was granted so that the library can download cache
+files without authentication:
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://mlab-sandbox-iqb-us-central1 \
+    --member=allUsers \
+    --role=roles/storage.objectViewer
+```
+
 ### For Maintainers (Publishing New Cache)
 
 When you generate new cache files locally (under `./cache/v1`):
@@ -51,8 +71,12 @@ This:
 4. Prints the `gcloud storage rsync` command to upload files
 
 Then:
-1. Run the printed `gcloud storage rsync` command to upload to GCS
-2. Commit updated `state/ghremote/manifest.json` to repository
+1. Remove zero-length `.lock` files left over by the pipeline before uploading:
+   ```bash
+   find data/cache/v1 -type f -name .lock -delete
+   ```
+2. Run the printed `gcloud storage rsync` command to upload to GCS
+3. Commit updated `state/ghremote/manifest.json` to repository
 
 ### Running the Data Generation Pipeline
 

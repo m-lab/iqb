@@ -213,9 +213,7 @@ def main() -> int:
     script_dir = Path(__file__).resolve().parent
     os.chdir(script_dir)
 
-    parser = argparse.ArgumentParser(
-        description="Remote cache management tool for IQB data files"
-    )
+    parser = argparse.ArgumentParser(description="Remote cache management tool for IQB data files")
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 
     # Scan subcommand

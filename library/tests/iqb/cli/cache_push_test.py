@@ -43,11 +43,18 @@ _FILE_B = f"cache/v1/{_TS1}/{_TS2}/uploads/data.parquet"
 _BUCKET = "mlab-sandbox-iqb-us-central1"
 
 
+def _drain_reader(reader, **_kwargs) -> None:
+    """Read all data from the reader, simulating what GCS does internally."""
+    while reader.read(8192):
+        pass
+
+
 def _mock_storage_client() -> MagicMock:
     """Create a mock storage.Client whose bucket returns mock blobs."""
     mock_client = MagicMock()
     mock_bucket = MagicMock()
     mock_client.bucket.return_value = mock_bucket
+    mock_bucket.blob.return_value.upload_from_file.side_effect = _drain_reader
     return mock_client
 
 
@@ -230,8 +237,18 @@ class TestCachePushManifestCrashSafety:
         mock_client_cls.return_value = mock_client
         mock_blob = mock_client.bucket.return_value.blob.return_value
 
-        # First upload succeeds, second fails
-        mock_blob.upload_from_file.side_effect = [None, Exception("network error")]
+        # First upload succeeds (drains reader), second fails
+        call_count = 0
+
+        def _succeed_then_fail(reader, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                _drain_reader(reader, **kwargs)
+            else:
+                raise Exception("network error")
+
+        mock_blob.upload_from_file.side_effect = _succeed_then_fail
 
         runner = CliRunner()
         result = runner.invoke(cli, ["cache", "push", "-d", str(tmp_path)])

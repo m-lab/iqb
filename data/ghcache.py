@@ -1,20 +1,17 @@
 #!/usr/bin/env python3
 
 """
-GitHub cache synchronization tool for IQB data files.
+Remote cache management tool for IQB data files.
 
-**INTERIM SOLUTION**: This is a throwaway script for the initial phase of the
-project. It will eventually be replaced by a proper GCS-based solution.
-
-This tool manages caching of large parquet/JSON files using GitHub releases
-as a distribution mechanism, with local SHA256 verification.
+This tool manages caching of large parquet/JSON files with local SHA256
+verification. It scans locally generated files and prepares a manifest
+for remote distribution.
 
 Subcommands:
-  scan - Scan local files and prepare them for upload to GitHub release
-  sync - Download files from GitHub release based on manifest
+  scan - Scan local files and prepare them for remote upload
 
 The 'scan' command copies files to the current directory with mangled names,
-ready for manual upload to GitHub releases.
+ready for upload to the remote cache.
 
 Manifest format (state/ghremote/manifest.json):
 {
@@ -22,7 +19,7 @@ Manifest format (state/ghremote/manifest.json):
   "files": {
     "cache/v1/.../data.parquet": {
       "sha256": "3a421c62179a...",
-      "url": "https://github.com/.../3a421c62179a__cache__v1__...parquet"
+      "url": "https://storage.googleapis.com/...data.parquet"
     }
   }
 }
@@ -101,7 +98,7 @@ def validate_cache_path(path: str) -> bool:
 
 def mangle_path(local_path: str, sha256: str) -> str:
     """
-    Convert local path to mangled GitHub release filename.
+    Convert local path to mangled remote cache filename.
 
     Example:
       Input:  cache/v1/20241001T000000Z/20241101T000000Z/downloads_by_country/data.parquet
@@ -231,7 +228,7 @@ def cmd_scan(args) -> int:
         for f in files_to_upload:
             print(f"  {f}")
         print("\nNext steps:")
-        print("1. Upload mangled files to GitHub release v0.5.0")
+        print("1. Upload cache files to the remote cache (e.g., GCS bucket)")
         print("2. Update URLs in state/ghremote/manifest.json if needed")
         print("3. Commit updated state/ghremote/manifest.json to repository")
 
@@ -244,7 +241,7 @@ def main() -> int:
     os.chdir(script_dir)
 
     parser = argparse.ArgumentParser(
-        description="GitHub cache synchronization tool for IQB data files (interim solution)"
+        description="Remote cache management tool for IQB data files"
     )
     subparsers = parser.add_subparsers(dest="command", help="Subcommand to run")
 

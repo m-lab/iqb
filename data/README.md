@@ -9,8 +9,8 @@ and local cache artifacts produced during generation.
   under `./cache/v1/` for local use.
 - `pipeline.yaml`: Matrix configuration (dates and granularities) used by the
   data generation script.
-- `ghcache.py`: Helper for publishing cache files to GitHub releases.
-- `state/ghremote/manifest.json`: Release manifest used by the GitHub remote
+- `ghcache.py`: Helper for publishing cache files to the remote cache.
+- `state/ghremote/manifest.json`: Release manifest used by the remote
   cache implementation.
 
 Static cache fixtures used by tests and notebooks are stored elsewhere:
@@ -29,11 +29,11 @@ Raw query results stored efficiently for flexible analysis:
   - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
 - **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
 
-## GitHub Cache Synchronization (Interim Solution)
+## Remote Cache Synchronization
 
 Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
-constraints, we use GitHub releases to distribute pre-generated cache files.
-The release manifest lives at `state/ghremote/manifest.json`.
+constraints, we distribute pre-generated cache files via a remote cache (currently
+GCS buckets). The release manifest lives at `state/ghremote/manifest.json`.
 
 ### For Maintainers (Publishing New Cache)
 
@@ -49,9 +49,10 @@ This:
 3. Copies files to `data/` with mangled names (ready for upload)
 4. Updates `state/ghremote/manifest.json` manifest
 
-Then manually:
-1. Upload mangled files to GitHub release (e.g., v0.1.0)
-2. Commit updated `state/ghremote/manifest.json` to repository
+Then:
+1. Upload the cache files to the remote cache (e.g., GCS bucket)
+2. Update URLs in `state/ghremote/manifest.json` if needed
+3. Commit updated `state/ghremote/manifest.json` to repository
 
 ### Running the Data Generation Pipeline
 
@@ -74,7 +75,7 @@ This orchestrates the complete pipeline:
 
 1. Loads `./data/pipeline.yaml` to determine dates and granularities (edit this
    file to change the matrix)
-2. Attempts to fetch from the GitHub cache first
+2. Attempts to fetch from the remote cache first
 3. Otherwise, if `-B` is present, queries both download and upload metrics for each dataset
 4. Saves results to v1 Parquet cache with query metadata
 
@@ -82,5 +83,4 @@ Omit the `-B` flag to avoid querying BigQuery.
 
 ## Future Improvements (Phase 2+)
 
-- Replace GitHub releases with GCS buckets for cache distribution
 - Additional datasets (Ookla, Cloudflare)

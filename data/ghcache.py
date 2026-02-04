@@ -32,36 +32,21 @@ File path format: cache/v1/{start_ts}/{end_ts}/{name}/data.parquet
 """
 
 import argparse
-import json
 import os
 import sys
 from pathlib import Path
 
-from dacite import from_dict
+from iqb.ghremote import (
+    DiffState,
+    FileEntry,
+    diff,
+    load_manifest,
+    manifest_path_for_data_dir,
+    save_manifest,
+)
 
-from iqb.ghremote.cache import Manifest
-from iqb.ghremote.diff import DiffState, diff
-
-MANIFEST_PATH = Path("state") / "ghremote" / "manifest.json"
 GCS_BUCKET = "mlab-sandbox-iqb-us-central1"
 GCS_BASE_URL = f"https://storage.googleapis.com/{GCS_BUCKET}"
-
-
-def load_manifest() -> dict:
-    """Load manifest from state/ghremote/manifest.json, or return empty if not found."""
-    if not MANIFEST_PATH.exists():
-        return {"v": 0, "files": {}}
-
-    with open(MANIFEST_PATH) as f:
-        return json.load(f)
-
-
-def save_manifest(manifest: dict) -> None:
-    """Save manifest to state/ghremote/manifest.json."""
-    MANIFEST_PATH.parent.mkdir(parents=True, exist_ok=True)
-    with open(MANIFEST_PATH, "w") as f:
-        json.dump(manifest, f, indent=2, sort_keys=True)
-        f.write("\n")  # Trailing newline
 
 
 def cmd_scan(args) -> int:
@@ -78,9 +63,8 @@ def cmd_scan(args) -> int:
     5. Print gcloud storage rsync command for uploading
     """
     _ = args
-    manifest_dict = load_manifest()
-    files_dict = manifest_dict.setdefault("files", {})
-    manifest = from_dict(Manifest, manifest_dict)
+    manifest_file = manifest_path_for_data_dir(Path("."))
+    manifest = load_manifest(manifest_file)
 
     print("Scanning local cache files...")
 
@@ -90,20 +74,20 @@ def cmd_scan(args) -> int:
         if entry.state == DiffState.MATCHING:
             print(f"Already in manifest: {entry.file}")
         elif entry.state in (DiffState.ONLY_LOCAL, DiffState.SHA256_MISMATCH):
-            sha256 = entry.local_sha256
+            assert entry.local_sha256 is not None
             url = f"{GCS_BASE_URL}/{entry.file}"
             action = "Changed" if entry.state == DiffState.SHA256_MISMATCH else "New"
             print(f"{action}: {entry.file}")
-            print(f"  SHA256: {sha256}")
+            print(f"  SHA256: {entry.local_sha256}")
             print(f"  URL: {url}")
-            files_dict[entry.file] = {"sha256": sha256, "url": url}
+            manifest.files[entry.file] = FileEntry(sha256=entry.local_sha256, url=url)
             updated_count += 1
         elif entry.state == DiffState.ONLY_REMOTE:
             print(f"In manifest but not on disk: {entry.file}")
 
     # Save updated manifest
-    save_manifest(manifest_dict)
-    print(f"\nManifest updated: {MANIFEST_PATH}")
+    save_manifest(manifest, manifest_file)
+    print(f"\nManifest updated: {manifest_file}")
 
     if updated_count > 0:
         print(f"\n{updated_count} file(s) added/updated in manifest.")
@@ -112,7 +96,7 @@ def cmd_scan(args) -> int:
         print("   find data/cache/v1 -type f -name .lock -delete")
         print("2. Upload files to GCS:")
         print(f"   gcloud storage rsync -r data/cache/v1 gs://{GCS_BUCKET}/cache/v1")
-        print(f"3. Commit updated data/{MANIFEST_PATH} to repository")
+        print(f"3. Commit updated data/{manifest_file} to repository")
 
     return 0
 

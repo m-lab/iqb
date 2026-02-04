@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.request import urlopen
@@ -36,7 +36,7 @@ class FileEntry:
     url: str
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(kw_only=True)
 class Manifest:
     """Manifest for remotely cached files."""
 
@@ -63,7 +63,7 @@ class Manifest:
             raise KeyError(f"no remotely-cached file for {key}") from exc
 
 
-def _load_manifest(manifest_file: Path) -> Manifest:
+def load_manifest(manifest_file: Path) -> Manifest:
     """Load manifest from the given file, or return empty manifest if not found."""
     if not manifest_file.exists():
         return Manifest(v=0, files={})
@@ -74,9 +74,17 @@ def _load_manifest(manifest_file: Path) -> Manifest:
     return from_dict(Manifest, data)
 
 
-def _manifest_path_for_data_dir(data_dir: Path) -> Path:
+def manifest_path_for_data_dir(data_dir: Path) -> Path:
     """Return the manifest path under the given data directory."""
     return data_dir / "state" / "ghremote" / "manifest.json"
+
+
+def save_manifest(manifest: Manifest, manifest_file: Path) -> None:
+    """Save manifest to the given file path."""
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(manifest_file, "w") as filep:
+        json.dump(asdict(manifest), filep, indent=2, sort_keys=True)
+        filep.write("\n")
 
 
 class IQBRemoteCache:
@@ -96,8 +104,8 @@ class IQBRemoteCache:
         data_dir: str | Path | None = None,
     ) -> None:
         self.data_dir = data_dir_or_default(data_dir)
-        manifest_path = _manifest_path_for_data_dir(self.data_dir)
-        self.manifest = _load_manifest(manifest_path)
+        manifest_path = manifest_path_for_data_dir(self.data_dir)
+        self.manifest = load_manifest(manifest_path)
 
     def sync(self, entry: PipelineCacheEntry) -> bool:
         """

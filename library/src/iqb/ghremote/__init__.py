@@ -23,7 +23,14 @@ The manifest is expected at:
 Where $datadir defaults to `.iqb` in the current working directory.
 """
 
-from .cache import IQBRemoteCache
+from .cache import (
+    FileEntry,
+    IQBRemoteCache,
+    Manifest,
+    load_manifest,
+    manifest_path_for_data_dir,
+    save_manifest,
+)
 from .diff import DiffEntry, DiffState, diff
 
 # Backward compatibility alias
@@ -32,7 +39,12 @@ IQBGitHubRemoteCache = IQBRemoteCache
 __all__ = [
     "DiffEntry",
     "DiffState",
+    "FileEntry",
     "IQBGitHubRemoteCache",
     "IQBRemoteCache",
+    "Manifest",
     "diff",
+    "load_manifest",
+    "manifest_path_for_data_dir",
+    "save_manifest",
 ]

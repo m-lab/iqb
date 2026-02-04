@@ -137,7 +137,7 @@ def _sync_file_entry(entry: FileEntry, dest_path: Path):
     """Sync the given FileEntry with the remotely cached file."""
     # Determine whether we need to download again
     exists = dest_path.exists()
-    if not exists or entry.sha256 != _compute_sha256(dest_path):
+    if not exists or entry.sha256 != compute_sha256(dest_path):
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         # Operate inside a temporary directory in the destination directory so
         # `os.replace()` is atomic and we avoid cross-filesystem moves.
@@ -183,13 +183,13 @@ def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
 
     # Make sure the sha256 matches
     log.info("validating %s... start", entry)
-    sha256 = _compute_sha256(tmp_file)
+    sha256 = compute_sha256(tmp_file)
     if sha256 != entry.sha256:
         raise ValueError(f"SHA256 mismatch: expected {entry.sha256}, got {sha256}")
     log.info("validating %s... ok", entry)
 
 
-def _compute_sha256(path: Path) -> str:
+def compute_sha256(path: Path) -> str:
     """Compute SHA256 hash of a file."""
     sha256 = hashlib.sha256()
     with open(path, "rb") as fp:

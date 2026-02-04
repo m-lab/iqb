@@ -1,10 +1,7 @@
-# TODO(bassosimone): temporary code for the presentation that needs
-# to be rationalized and refactored in the right place
-
 [project]
-name = "iqb-tutorial"
+name = "iqb-docs-internals"
 version = "0.1.0"
-description = "Tutorial explaining IQB and how to use it"
+description = "Internal architecture documentation for the IQB data pipeline"
 requires-python = ">=3.13"
 dependencies = [
     "jupyter>=1.1.1",

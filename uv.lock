@@ -10,8 +10,8 @@ resolution-markers = [
 members = [
     "iqb-analysis",
     "iqb-data",
+    "iqb-docs-internals",
     "iqb-prototype",
-    "iqb-tutorial",
     "mlab-iqb",
 ]
 
@@ -969,36 +969,9 @@ requires-dist = [
 ]
 
 [[package]]
-name = "iqb-prototype"
+name = "iqb-docs-internals"
 version = "0.1.0"
-source = { virtual = "prototype" }
-dependencies = [
-    { name = "geopandas" },
-    { name = "mlab-iqb" },
-    { name = "numpy" },
-    { name = "pandas" },
-    { name = "plotly" },
-    { name = "pycountry" },
-    { name = "pytest" },
-    { name = "streamlit" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "geopandas", specifier = ">=0.14.0" },
-    { name = "mlab-iqb", editable = "library" },
-    { name = "numpy", specifier = ">=1.26.0" },
-    { name = "pandas", specifier = ">=2.2.0" },
-    { name = "plotly", specifier = ">=5.17.0" },
-    { name = "pycountry", specifier = ">=23.12.11" },
-    { name = "pytest", specifier = ">=8.0.0" },
-    { name = "streamlit", specifier = ">=1.39.0" },
-]
-
-[[package]]
-name = "iqb-tutorial"
-version = "0.1.0"
-source = { virtual = "tutorial" }
+source = { virtual = "docs/internals" }
 dependencies = [
     { name = "ipykernel" },
     { name = "jupyter" },
@@ -1034,6 +1007,33 @@ dev = [
     { name = "nbconvert", specifier = ">=7.16.0" },
     { name = "nbformat", specifier = ">=5.10.0" },
     { name = "pytest", specifier = ">=8.0.0" },
+]
+
+[[package]]
+name = "iqb-prototype"
+version = "0.1.0"
+source = { virtual = "prototype" }
+dependencies = [
+    { name = "geopandas" },
+    { name = "mlab-iqb" },
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "plotly" },
+    { name = "pycountry" },
+    { name = "pytest" },
+    { name = "streamlit" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "geopandas", specifier = ">=0.14.0" },
+    { name = "mlab-iqb", editable = "library" },
+    { name = "numpy", specifier = ">=1.26.0" },
+    { name = "pandas", specifier = ">=2.2.0" },
+    { name = "plotly", specifier = ">=5.17.0" },
+    { name = "pycountry", specifier = ">=23.12.11" },
+    { name = "pytest", specifier = ">=8.0.0" },
+    { name = "streamlit", specifier = ">=1.39.0" },
 ]
 
 [[package]]

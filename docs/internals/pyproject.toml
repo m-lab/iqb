@@ -20,6 +20,14 @@ mlab-iqb = { workspace = true }
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
+    "pyright>=1.1.380",
     "nbconvert>=7.16.0",
     "nbformat>=5.10.0",
 ]
+
+[tool.pyright]
+include = ["tests"]
+exclude = ["**/__pycache__", ".venv"]
+pythonVersion = "3.13"
+typeCheckingMode = "basic"
+reportMissingTypeStubs = false

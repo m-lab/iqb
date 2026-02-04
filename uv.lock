@@ -987,6 +987,7 @@ dependencies = [
 dev = [
     { name = "nbconvert" },
     { name = "nbformat" },
+    { name = "pyright" },
     { name = "pytest" },
 ]
 
@@ -1006,6 +1007,7 @@ requires-dist = [
 dev = [
     { name = "nbconvert", specifier = ">=7.16.0" },
     { name = "nbformat", specifier = ">=5.10.0" },
+    { name = "pyright", specifier = ">=1.1.380" },
     { name = "pytest", specifier = ">=8.0.0" },
 ]
 

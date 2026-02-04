@@ -7,8 +7,8 @@ from pathlib import Path
 
 from .. import (
     IQBDatasetMLabTable,
-    IQBRemoteCache,
     IQBPipeline,
+    IQBRemoteCache,
     iqb_dataset_name_for_mlab,
 )
 from . import iqb_granularity

@@ -1,7 +1,7 @@
 """
 Remote cache synchronization for IQB data files.
 
-The ``ghremote`` package (globally-hosted remote) downloads cache files
+The `ghremote` package (globally-hosted remote) downloads cache files
 from URLs listed in a manifest and verifies their SHA256 hashes.
 
 Manifest format:

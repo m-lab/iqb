@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 from iqb.ghremote.cache import FileEntry, Manifest
-from iqb.ghremote.diff import DiffEntry, DiffState, diff
+from iqb.ghremote.diff import DiffEntry, DiffState, _validate_cache_path, diff
 
 
 def _sha256(content: bytes) -> str:
@@ -256,3 +256,51 @@ class TestDiffIsIterator:
         assert isinstance(result, Iterator)
         # Should not be a list or tuple
         assert not isinstance(result, (list, tuple))
+
+
+class TestValidateCachePath:
+    """Tests for _validate_cache_path covering all branches."""
+
+    _VALID = f"cache/v1/{_TS1}/{_TS2}/{_NAME}/data.parquet"
+
+    def test_valid_data_parquet(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/{_NAME}/data.parquet") is True
+
+    def test_valid_stats_json(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/{_NAME}/stats.json") is True
+
+    def test_too_few_components(self):
+        assert _validate_cache_path("cache/v1") is False
+
+    def test_too_many_components(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/{_NAME}/extra/data.parquet") is False
+
+    def test_wrong_first_component(self):
+        assert _validate_cache_path(f"notcache/v1/{_TS1}/{_TS2}/{_NAME}/data.parquet") is False
+
+    def test_wrong_second_component(self):
+        assert _validate_cache_path(f"cache/v2/{_TS1}/{_TS2}/{_NAME}/data.parquet") is False
+
+    def test_invalid_first_timestamp(self):
+        assert _validate_cache_path(f"cache/v1/not-a-ts/{_TS2}/{_NAME}/data.parquet") is False
+
+    def test_invalid_second_timestamp(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/not-a-ts/{_NAME}/data.parquet") is False
+
+    def test_name_with_uppercase(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/Downloads/data.parquet") is False
+
+    def test_name_with_hyphen(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/my-name/data.parquet") is False
+
+    def test_name_with_underscore(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/my_name/data.parquet") is True
+
+    def test_invalid_filename(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/{_NAME}/other.txt") is False
+
+    def test_lock_file(self):
+        assert _validate_cache_path(f"cache/v1/{_TS1}/{_TS2}/{_NAME}/.lock") is False
+
+    def test_empty_string(self):
+        assert _validate_cache_path("") is False

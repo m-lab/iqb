@@ -4,6 +4,8 @@ This library provides methods for calculating the IQB score based on
 network measurement data, weight matrices, and quality thresholds.
 """
 
+from importlib.metadata import PackageNotFoundError, version
+
 from .cache import IQBCache
 from .calculator import IQBCalculator
 from .config import IQB_CONFIG
@@ -14,8 +16,6 @@ from .pipeline import (
     IQBPipeline,
     iqb_dataset_name_for_mlab,
 )
-
-from importlib.metadata import PackageNotFoundError, version
 
 try:
     __version__ = version("mlab-iqb")

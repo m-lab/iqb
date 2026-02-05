@@ -99,24 +99,18 @@ def run(data_dir: str | None, workflow_file: str | None, verbose: bool) -> None:
     """Run the BigQuery pipeline for all matrix entries."""
 
     console = get_console()
-
     resolved_dir = data_dir_or_default(data_dir)
-
     workflow_path = Path(workflow_file) if workflow_file else resolved_dir / "pipeline.yaml"
-
     iqb_logging.configure(verbose=verbose)
-
-    ppl = Pipeline(pipeline=IQBPipeline(project="measurement-lab", data_dir=resolved_dir))
-
+    pipe = Pipeline(pipeline=IQBPipeline(project="measurement-lab", data_dir=resolved_dir))
     time_periods, granularities = load_pipeline_config(workflow_path)
-
     interceptor = iqb_exception.Interceptor()
 
     for grain in granularities:
         for start, end in time_periods:
             console.print(Panel(f"Sync {grain} data for {start} \u2192 {end}"))
             with interceptor:
-                ppl.sync_mlab(
+                pipe.sync_mlab(
                     grain,
                     enable_bigquery=True,
                     start_date=start,

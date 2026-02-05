@@ -9,7 +9,6 @@ resolution-markers = [
 [manifest]
 members = [
     "iqb-analysis",
-    "iqb-data",
     "iqb-docs-internals",
     "iqb-prototype",
     "mlab-iqb",
@@ -966,23 +965,6 @@ dev = [
     { name = "nbconvert", specifier = ">=7.16.0" },
     { name = "nbformat", specifier = ">=5.10.0" },
     { name = "pytest", specifier = ">=8.0.0" },
-]
-
-[[package]]
-name = "iqb-data"
-version = "0.1.0"
-source = { virtual = "data" }
-dependencies = [
-    { name = "click" },
-    { name = "mlab-iqb" },
-    { name = "pyyaml" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "click", specifier = ">=8.3.0" },
-    { name = "mlab-iqb", editable = "library" },
-    { name = "pyyaml", specifier = ">=6.0.0" },
 ]
 
 [[package]]

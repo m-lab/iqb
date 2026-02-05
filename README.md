@@ -59,9 +59,14 @@ See [analysis/README.md](analysis/README.md) for more information.
 
 ### **`data/`**
 
-Workspace for data curation scripts, release manifests, and local cache artifacts.
+Workspace containing the default pipeline configuration, the default cache directory,
+and instructions for generating new data using the pipeline.
 
 See [data/README.md](data/README.md) for details.
+
+### **`.iqb`**
+
+Symbolic link to [data](data) that simplifies running the pipeline on Unix.
 
 ## Development Environment
 

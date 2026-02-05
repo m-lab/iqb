@@ -994,6 +994,19 @@ def render_comparison_sidebar(
     with st.sidebar:
         st.markdown("### Compare Trends")
 
+        compare_country_key = f"{chart_key}_compare_country"
+        compare_subdiv_key = f"{chart_key}_compare_subdiv"
+
+        def _clear_comparison():
+            st.session_state[compare_country_key] = 0
+            st.session_state[compare_subdiv_key] = 0
+
+        st.button(
+            "Clear Comparison",
+            key=f"{chart_key}_clear_compare",
+            on_click=_clear_comparison,
+        )
+
         # Country dropdown
         countries = get_all_countries_for_comparison(cache, start_date, end_date)
         country_options = [("", "Select Country")] + countries
@@ -1044,16 +1057,6 @@ def render_comparison_sidebar(
             "City",
             city_options,
             key=compare_city_key,
-        )
-
-        def _clear_comparison():
-            st.session_state[compare_country_key] = 0
-            st.session_state[compare_subdiv_key] = 0
-
-        st.button(
-            "Clear Comparison",
-            key=f"{chart_key}_clear_compare",
-            on_click=_clear_comparison,
         )
 
         if selected_city == "All (Region Level)":
@@ -1616,6 +1619,79 @@ if (
                         st.rerun()
 
         st.markdown("---")
+        metrics = subdivision_info.get("metrics", selected_data["metrics"])
+        update_state_from_cache(state, metrics, percentile)
+
+        col_sunburst, col_details = st.columns(2)
+
+        with col_sunburst:
+            st.subheader(f"{subdivision_name} - IQB Score")
+            tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
+            try:
+                iqb_data = build_iqb_data_from_cache(metrics, percentile)
+                iqb_score = state.iqb.calculate_iqb_score(
+                    data=iqb_data, print_details=False
+                )
+                with tab1:
+                    render_sunburst(
+                        prepare_requirements_sunburst_data(state),
+                        title="Requirements → Datasets",
+                        iqb_score=iqb_score,
+                        height=400,
+                    )
+                with tab2:
+                    render_sunburst(
+                        prepare_use_cases_sunburst_data(state),
+                        title="Use Cases → Datasets",
+                        iqb_score=iqb_score,
+                        height=400,
+                    )
+                with tab3:
+                    render_sunburst(
+                        prepare_complete_hierarchy_sunburst_data(state),
+                        title="Use Cases → Requirements → Datasets",
+                        iqb_score=iqb_score,
+                        hierarchy_levels=3,
+                        height=400,
+                    )
+            except Exception as e:
+                st.error(f"Error rendering sunbursts: {e}")
+
+        with col_details:
+            st.subheader("Raw Metrics")
+            table_data = {
+                "Percentile": PERCENTILES,
+                "Download (Mbps)": [
+                    metrics["download_throughput_mbps"][p] for p in PERCENTILES
+                ],
+                "Upload (Mbps)": [
+                    metrics["upload_throughput_mbps"][p] for p in PERCENTILES
+                ],
+                "Latency (ms)": [metrics["latency_ms"][p] for p in PERCENTILES],
+                "Packet Loss (%)": [metrics["packet_loss"][p] for p in PERCENTILES],
+            }
+            df = pd.DataFrame(table_data)
+
+            def highlight_selected(row):
+                return (
+                    ["background-color: #ffffcc"] * len(row)
+                    if row["Percentile"] == percentile
+                    else [""] * len(row)
+                )
+
+            st.dataframe(
+                df.style.apply(highlight_selected, axis=1).format(
+                    {
+                        "Download (Mbps)": "{:.2f}",
+                        "Upload (Mbps)": "{:.2f}",
+                        "Latency (ms)": "{:.2f}",
+                        "Packet Loss (%)": "{:.4f}",
+                    }
+                ),
+                width="stretch",
+                hide_index=True,
+            )
+
         create_trend_charts(
             cache,
             country_code,

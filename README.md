@@ -1,6 +1,6 @@
 # Internet Quality Barometer (IQB)
 
-[![Build Status](https://github.com/m-lab/iqb/actions/workflows/ci.yml/badge.svg)](https://github.com/m-lab/iqb/actions) [![codecov](https://codecov.io/gh/m-lab/iqb/branch/main/graph/badge.svg)](https://codecov.io/gh/m-lab/iqb)
+[![Build Status](https://github.com/m-lab/iqb/actions/workflows/ci.yml/badge.svg)](https://github.com/m-lab/iqb/actions) [![codecov](https://codecov.io/gh/m-lab/iqb/branch/main/graph/badge.svg)](https://codecov.io/gh/m-lab/iqb) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/m-lab/iqb)
 
 This repository contains the source for code the Internet Quality Barometer (IQB)
 library, and related applications and notebooks.
@@ -68,28 +68,35 @@ See [data/README.md](data/README.md) for details.
 
 Symbolic link to [data](data) that simplifies running the pipeline on Unix.
 
-## Development Environment
+## Data Flow
 
-We use [uv](https://astral.sh/uv) as a replacement for several Python repository
-management tools such as `pip`, `poetry`, etc.
+The components above connect as follows:
 
-### Installing uv
-
-On Ubuntu:
-
-```bash
-sudo snap install astral-uv --classic
+```
+BigQuery → [iqb pipeline run] → local cache/ → [IQBCache] → [IQBCalculator] → scores
+                                      ↕
+                              [iqb cache pull/push] ↔ GCS
 ```
 
-On macOS:
+The **pipeline** queries BigQuery for M-Lab NDT measurements and stores
+percentile summaries as Parquet files in the local cache. To avoid expensive
+re-queries, **`iqb cache pull`** can download pre-computed results from GCS
+instead. The **`IQBCache`** API reads cached data, and **`IQBCalculator`**
+applies quality thresholds and weights to produce IQB scores. The
+**prototype** and **analysis notebooks** both consume scores through
+these library APIs.
 
-```bash
-brew install uv
-```
+## Understanding the Codebase
 
-On other platforms, see the [uv installation guide](https://docs.astral.sh/uv/getting-started/installation/).
+- To learn **how the data pipeline works**, read the
+[internals guide](docs/internals/README.md) — it walks through queries,
+the pipeline, the remote cache, and the researcher API in sequence.
 
-### Quick Start
+- To understand **why specific technical decisions were made**, see the
+[design documents](docs/design/README.md) — architecture decision records
+covering cache design, data distribution, and more.
+
+## Quick Start
 
 ```bash
 # Clone the repository
@@ -104,68 +111,5 @@ cd prototype
 uv run streamlit run Home.py
 ```
 
-### Using VSCode
-
-This repository is configured for VSCode with selected Python
-development tools (Ruff, Pyright, pytest).
-
-When you first open this repository with VSCode, it will prompt you
-to install the required extensions for Python development.
-
-Make sure you also read the following section to avoid `uv`
-issues: there is no official `uv` extension for VSCode yet and
-it seems more prudent to avoid using unofficial ones.
-
-#### First-time uv setup
-
-Running `uv sync --dev` creates the required `.venv` directory
-that VSCode needs to find the proper python version and the proper
-development tools.
-
-If you open the repository using VSCode *before* running
-`uv sync --dev`, you see the following error:
-
-```
-Unexpected error while trying to find the Ruff binary
-```
-
-To fix this, either run `uv sync --dev` from the command line or
-use VSCode directly to run `uv` and reload:
-
-1. Run the setup task:
-
-    - Press `Ctrl+Shift+P` (or `Cmd+Shift+P` on macOS)
-
-    - Type "Tasks: Run Task"
-
-    - Select **"IQB: Setup Development Environment"**
-
-    - This runs `uv sync --dev` to install all development dependencies
-
-2. After setup completes, reload VSCode:
-
-    - Press `Ctrl+Shift+P` → "Developer: Reload Window"
-
-    - The Ruff error should disappear
-
-#### Available Tasks
-
-Access them via `Ctrl+Shift+P` → "Tasks: Run Task":
-
-- **IQB: Setup Development Environment** - Run `uv sync --dev` to install/update dependencies
-
-- **IQB: Run Tests** - Run the pytest test suite
-
-- **IQB: Run Ruff Check** - Check code style and quality
-
-- **IQB: Run Pyright** - Run type checking
-
-#### Extensions
-
-VSCode will prompt to install these extensions:
-
-- Python (`ms-python.python`)
-
-- Pylance (`ms-python.vscode-pylance`)
-
-- Ruff (`charliermarsh.ruff`)
+See [CONTRIBUTING.md](CONTRIBUTING.md) for full development environment
+setup, VSCode configuration, and component-specific workflows.

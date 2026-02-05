@@ -58,7 +58,15 @@ this directory, Streamlit will reload on save.
 ```
 prototype/
 ├── Home.py              # Main Streamlit entry point
+├── app_state.py         # Application state management
+├── session_state.py     # Session state management
+├── pages/               # Streamlit multi-page app pages
+├── cache/               # Static data cache (JSON files per country)
+├── utils/               # Helpers (data loading, calculations, constants)
+├── visualizations/      # Chart and UI components (sunburst, etc.)
+├── natural_earth/       # GeoJSON extraction for map visualizations
 ├── pyproject.toml       # Dependencies (streamlit, pandas, mlab-iqb)
+├── Dockerfile           # Container image for Cloud Run
 └── README.md            # This file
 ```
 

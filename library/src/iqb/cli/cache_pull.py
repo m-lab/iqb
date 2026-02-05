@@ -77,8 +77,7 @@ def _download_one(
             got = sha256.hexdigest()
             if got != entry.remote_sha256:
                 raise ValueError(
-                    f"SHA256 mismatch for {entry.file}: "
-                    f"expected {entry.remote_sha256}, got {got}"
+                    f"SHA256 mismatch for {entry.file}: expected {entry.remote_sha256}, got {got}"
                 )
             os.replace(tmp_file, dest)
     except Exception as exc:
@@ -100,15 +99,9 @@ def _download_one(
 
 
 @cache.command()
-@click.option(
-    "-d", "--dir", "data_dir", default=None, help="Data directory (default: .iqb)"
-)
-@click.option(
-    "-f", "--force", is_flag=True, help="Re-download files with mismatched hashes"
-)
-@click.option(
-    "-j", "--jobs", default=8, show_default=True, help="Number of parallel downloads"
-)
+@click.option("-d", "--dir", "data_dir", default=None, help="Data directory (default: .iqb)")
+@click.option("-f", "--force", is_flag=True, help="Re-download files with mismatched hashes")
+@click.option("-j", "--jobs", default=8, show_default=True, help="Number of parallel downloads")
 def pull(data_dir: str | None, force: bool, jobs: int) -> None:
     """Download missing cache files from the manifest."""
     resolved = data_dir_or_default(data_dir)

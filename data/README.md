@@ -26,12 +26,12 @@ The [state/ghremote/manifest.json](state/ghremote/manifest.json) file lists
 all the query results already cached at GCS. Run:
 
 ```bash
-uv run iqb cache pull -d ..
+uv run iqb cache pull -d .
 ```
 
 to sync files from GCS to the local copy.
 
-Omit `-d ..` if running from the top-level directory.
+Omit `-d .` if running from the top-level directory.
 
 Run `uv run iqb cache pull --help` for more help.
 
@@ -40,14 +40,14 @@ Run `uv run iqb cache pull --help` for more help.
 Run the pipeline to query BigQuery and populate the local cache:
 
 ```bash
-uv run iqb pipeline run -d ..
+uv run iqb pipeline run -d .
 ```
 
 This command loads `pipeline.yaml` to determine the query matrix and
 executes BigQuery to generate data. If the cache already contains data, we
 do not execute BigQuery to avoid burning cloud credits.
 
-Omit `-d ..` if running from the top-level directory.
+Omit `-d .` if running from the top-level directory.
 
 Run `uv run iqb pipeline run --help` for more help.
 
@@ -56,12 +56,25 @@ Run `uv run iqb pipeline run --help` for more help.
 Show which entries are local, remote, or missing:
 
 ```bash
-uv run iqb cache status -d ..
+uv run iqb cache status -d .
 ```
 
-Omit `-d ..` if running from the top-level directory.
+Omit `-d .` if running from the top-level directory.
 
 Run `uv run iqb cache status --help` for more help.
+
+## `iqb cache usage` - Cache Disk and BigQuery Usage
+
+Show per-period cache statistics including parquet file sizes,
+cumulative BigQuery bytes billed, and query durations:
+
+```bash
+uv run iqb cache usage -d .
+```
+
+Omit `-d .` if running from the top-level directory.
+
+Run `uv run iqb cache usage --help` for more help.
 
 ### `iqb cache push` - Publishing Data
 
@@ -69,12 +82,12 @@ After generating new cache files locally using `iqb pipeline run`, push
 them to GCS and update the manifest:
 
 ```bash
-uv run iqb cache push -d ..
+uv run iqb cache push -d .
 ```
 
 Then commit the updated `state/ghremote/manifest.json`.
 
-Omit `-d ..` if running from the top-level directory.
+Omit `-d .` if running from the top-level directory.
 
 Run `uv run iqb cache push --help` for more help.
 

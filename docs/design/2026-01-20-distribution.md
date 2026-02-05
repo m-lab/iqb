@@ -2,6 +2,7 @@
 
 **Date:** 2026-01-20
 **Status:** Implemented (GCS bucket `mlab-sandbox-iqb-us-central1`, PR #131)
+**Builds on:** [2025-12-21-remote.md](2025-12-21-remote.md) (layered cache lookup)
 
 ## Requirements
 

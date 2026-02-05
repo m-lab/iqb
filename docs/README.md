@@ -1,13 +1,11 @@
 ## Documentation and Presentations
 
-This directory contains documentations and presentations.
+- [design/](design/): Architecture decision records explaining **why**
+the system was built this way — cache format, remote cache strategy,
+data distribution, parallelization.
 
-- [design/](design/): design documents capturing architectural decisions,
-requirements analyses, technical evaluations, etc.
-
-- [internals/](internals/): internal architecture documentation for
-the IQB data pipeline, organized as a sequence of chapters covering
-BigQuery queries, the `IQBPipeline`, and the remote cache.
+- [internals/](internals/): Sequential guide explaining **how** the
+data pipeline works — start here if you are new to the codebase.
 
 - [2025-12-11-pulse-slides.pdf](2025-12-11-pulse-slides.pdf): slides
 of [@sermpezis](https://github.com/sermpezis) during the [ISOC

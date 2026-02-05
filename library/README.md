@@ -22,21 +22,35 @@ uv sync --dev
 ## Usage
 
 ```python
-from iqb import IQB
+from iqb import IQBCache, IQBCalculator, IQBDatasetGranularity, IQBRemoteCache
 
-# Create an IQB instance
-iqb = IQB(name='my_analysis')
+# Initialize cache (downloads data from GCS if not available locally)
+cache = IQBCache(remote_cache=IQBRemoteCache())
 
-# Calculate IQB score with default data
-score = iqb.calculate_iqb_score()
-print(f'IQB score: {score}')
+# Initialize calculator with default IQB configuration
+calculator = IQBCalculator()
 
-# Calculate with detailed output
-score = iqb.calculate_iqb_score(print_details=True)
+# Load cached measurement data for US, October 2025
+entry = cache.get_cache_entry(
+    start_date="2025-10-01",
+    end_date="2025-11-01",
+    granularity=IQBDatasetGranularity.COUNTRY,
+)
 
-# Print configuration
-iqb.print_config()
+# Read M-Lab data filtered to the US
+df_pair = entry.mlab.read_data_frame_pair(country_code="US")
+
+# Extract the 50th percentile and convert for the calculator
+p50 = df_pair.to_iqb_data(percentile=50)
+data = {"m-lab": p50.to_dict()}
+
+# Calculate IQB score
+score = calculator.calculate_iqb_score(data=data)
+print(f"IQB score: {score:.3f}")
 ```
+
+See [analysis/00-template.ipynb](../analysis/00-template.ipynb) for a
+complete walkthrough with step-by-step explanations.
 
 ## Command-Line Interface
 
@@ -190,12 +204,11 @@ naming pattern `*_test.py`:
 
 ```python
 """tests/my_feature_test.py"""
-import pytest
-from iqb import IQB
+from iqb import IQBCalculator
 
 class TestMyFeature:
     def test_something(self):
-        iqb = IQB()
+        calculator = IQBCalculator()
         # Your test code here
         assert True
 ```

@@ -307,7 +307,9 @@ def get_available_periods(_manifest_files: tuple) -> list[tuple[str, str, str]]:
             sy, sm, sd, ey, em, ed = match.groups()
             start_date = f"{sy}-{sm}-{sd}"
             end_date = f"{ey}-{em}-{ed}"
-            label = datetime.strptime(start_date, "%Y-%m-%d").strftime("%B %Y")
+            start_label = datetime.strptime(start_date, "%Y-%m-%d").strftime("%b %Y")
+            end_label = datetime.strptime(end_date, "%Y-%m-%d").strftime("%b %Y")
+            label = f"{start_label} - {end_label}"
             periods.add((label, start_date, end_date))
     return sorted(periods, key=lambda x: x[1], reverse=True)
 

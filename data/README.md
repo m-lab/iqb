@@ -1,4 +1,4 @@
-# IQB Data Directory
+# IQB Data Workspace
 
 This directory holds cache artifacts, pipeline configuration, and the
 remote-cache manifest produced by the IQB data pipeline.

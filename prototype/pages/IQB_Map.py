@@ -300,7 +300,7 @@ def get_available_periods(_manifest_files: tuple) -> list[tuple[str, str, str]]:
     periods = set()
     for key in _manifest_files:
         match = re.match(
-            r"cache/v1/(\d{4})(\d{2})(\d{2})T.*/(\d{4})(\d{2})(\d{2})T.*/downloads_by_country/",
+            r"cache/v1/(\d{4})(\d{2})(\d{2})T.*/(\d{4})(\d{2})(\d{2})T.*/downloads_by_country_city/",
             key,
         )
         if match:

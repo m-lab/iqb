@@ -1044,6 +1044,16 @@ def render_comparison_sidebar(
             key=compare_city_key,
         )
 
+        def _clear_comparison():
+            st.session_state[compare_country_key] = 0
+            st.session_state[compare_subdiv_key] = 0
+
+        st.button(
+            "Clear Comparison",
+            key=f"{chart_key}_clear_compare",
+            on_click=_clear_comparison,
+        )
+
         if selected_city == "All (Region Level)":
             # Subdivision-level comparison
             return (

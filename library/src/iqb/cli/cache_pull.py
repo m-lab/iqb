@@ -1,9 +1,15 @@
 """Cache pull command."""
 
+# TODO(bassosimone): this download logic overlaps with ghremote/cache.py;
+# consider unifying into a shared helper once both implementations stabilise.
+
 import hashlib
+import json
 import os
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
@@ -29,13 +35,24 @@ def _short_name(file: str) -> str:
     return "/".join(parts[-2:]) if len(parts) >= 2 else file
 
 
+def _now() -> str:
+    """Return the current time formatted for metrics spans."""
+    return datetime.now().astimezone().strftime("%Y-%m-%d %H:%M:%S %z")
+
+
 def _download_one(
     entry: DiffEntry,
     data_dir: Path,
     session: requests.Session,
     progress: Progress,
-) -> str:
-    """Download a single file, verify SHA256, atomic-replace. Returns the file path."""
+) -> dict[str, object]:
+    """Download a single file, verify SHA256, atomic-replace. Returns a metrics span."""
+    t0 = _now()
+    worker_id = threading.get_ident()
+    total_bytes = 0
+    content_length: int | None = None
+    ok = True
+    error: str | None = None
     assert entry.url is not None
     assert entry.remote_sha256 is not None
     dest = data_dir / entry.file
@@ -46,30 +63,52 @@ def _download_one(
             tmp_file = Path(tmp_dir) / dest.name
             resp = session.get(entry.url, stream=True)
             resp.raise_for_status()
-            content_length = resp.headers.get("Content-Length")
-            if content_length is not None:
-                progress.update(task_id, total=int(content_length))
+            cl = resp.headers.get("Content-Length")
+            if cl is not None:
+                content_length = int(cl)
+                progress.update(task_id, total=content_length)
             sha256 = hashlib.sha256()
             with open(tmp_file, "wb") as fp:
                 for chunk in resp.iter_content(chunk_size=8192):
                     fp.write(chunk)
                     sha256.update(chunk)
+                    total_bytes += len(chunk)
                     progress.update(task_id, advance=len(chunk))
             got = sha256.hexdigest()
             if got != entry.remote_sha256:
                 raise ValueError(
-                    f"SHA256 mismatch for {entry.file}: expected {entry.remote_sha256}, got {got}"
+                    f"SHA256 mismatch for {entry.file}: "
+                    f"expected {entry.remote_sha256}, got {got}"
                 )
             os.replace(tmp_file, dest)
+    except Exception as exc:
+        ok = False
+        error = str(exc)
     finally:
         progress.remove_task(task_id)
-    return entry.file
+    return {
+        "t0": t0,
+        "t": _now(),
+        "worker_id": worker_id,
+        "file": entry.file,
+        "url": entry.url,
+        "content_length": content_length,
+        "bytes": total_bytes,
+        "ok": ok,
+        "error": error,
+    }
 
 
 @cache.command()
-@click.option("-d", "--dir", "data_dir", default=None, help="Data directory (default: .iqb)")
-@click.option("-f", "--force", is_flag=True, help="Re-download files with mismatched hashes")
-@click.option("-j", "--jobs", default=8, show_default=True, help="Number of parallel downloads")
+@click.option(
+    "-d", "--dir", "data_dir", default=None, help="Data directory (default: .iqb)"
+)
+@click.option(
+    "-f", "--force", is_flag=True, help="Re-download files with mismatched hashes"
+)
+@click.option(
+    "-j", "--jobs", default=8, show_default=True, help="Number of parallel downloads"
+)
 def pull(data_dir: str | None, force: bool, jobs: int) -> None:
     """Download missing cache files from the manifest."""
     resolved = data_dir_or_default(data_dir)
@@ -90,6 +129,7 @@ def pull(data_dir: str | None, force: bool, jobs: int) -> None:
 
     session = requests.Session()
     failed: list[tuple[str, str]] = []
+    spans: list[dict[str, object]] = []
     t0 = time.monotonic()
     with (
         Progress(
@@ -107,13 +147,27 @@ def pull(data_dir: str | None, force: bool, jobs: int) -> None:
         for future in as_completed(futures):
             entry = futures[future]
             try:
-                future.result()
+                span = future.result()
+                spans.append(span)
+                if not span["ok"]:
+                    failed.append((str(span["file"]), str(span["error"] or "unknown")))
             except Exception as exc:
+                # Defensive: bug in _download_one itself
                 failed.append((entry.file, str(exc)))
     elapsed = time.monotonic() - t0
 
-    ok = len(targets) - len(failed)
-    click.echo(f"Downloaded {ok}/{len(targets)} file(s) in {elapsed:.1f}s.")
+    # Write metrics
+    log_dir = resolved / "state" / "logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    now = datetime.now().astimezone().strftime("%Y%m%dT%H%M%S")
+    log_file = log_dir / f"{now}_{time.time_ns()}_pull.jsonl"
+    with open(log_file, "w") as fp:
+        for span in spans:
+            fp.write(json.dumps(span) + "\n")
+
+    ok_count = len(targets) - len(failed)
+    click.echo(f"Downloaded {ok_count}/{len(targets)} file(s) in {elapsed:.1f}s.")
+    click.echo(f"Detailed logs: {log_file.relative_to(resolved)}")
 
     if failed:
         click.echo(f"{len(failed)} download(s) failed:", err=True)

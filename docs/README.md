@@ -2,6 +2,9 @@
 
 This directory contains documentations and presentations.
 
+- [design/](design/): design documents capturing architectural decisions,
+requirements analyses, technical evaluations, etc.
+
 - [internals/](internals/): internal architecture documentation for
 the IQB data pipeline, organized as a sequence of chapters covering
 BigQuery queries, the `IQBPipeline`, and the remote cache.

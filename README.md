@@ -34,7 +34,7 @@ https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf).
 
 ### **`docs/`**
 
-Documentation and presentations.
+Documentation, tutorials, design documents, and presentations.
 
 See [docs/README.md](docs/README.md) for details.
 

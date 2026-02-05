@@ -63,6 +63,19 @@ Omit `-d ..` if running from the top-level directory.
 
 Run `uv run iqb cache status --help` for more help.
 
+## `iqb cache usage` - Cache Disk and BigQuery Usage
+
+Show per-period cache statistics including parquet file sizes,
+cumulative BigQuery bytes billed, and query durations:
+
+```bash
+uv run iqb cache usage -d ..
+```
+
+Omit `-d ..` if running from the top-level directory.
+
+Run `uv run iqb cache usage --help` for more help.
+
 ### `iqb cache push` - Publishing Data
 
 After generating new cache files locally using `iqb pipeline run`, push

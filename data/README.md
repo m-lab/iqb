@@ -43,7 +43,7 @@ Run the pipeline to query BigQuery and populate the local cache:
 uv run iqb pipeline run -d ..
 ```
 
-This command loads `data/pipeline.yaml` to determine the query matrix and
+This command loads `pipeline.yaml` to determine the query matrix and
 executes BigQuery to generate data. If the cache already contains data, we
 do not execute BigQuery to avoid burning cloud credits.
 

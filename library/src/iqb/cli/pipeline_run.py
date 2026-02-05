@@ -80,9 +80,7 @@ def load_pipeline_config(
 
     granularities = tuple(grain.strip() for grain in config.matrix.granularities)
     if not granularities or any(not grain for grain in granularities):
-        raise click.ClickException(
-            "Pipeline config matrix must include non-empty granularities."
-        )
+        raise click.ClickException("Pipeline config matrix must include non-empty granularities.")
 
     return time_periods, granularities
 
@@ -108,9 +106,7 @@ def run(data_dir: str | None, workflow_file: str | None, verbose: bool) -> None:
 
     iqb_logging.configure(verbose=verbose)
 
-    ppl = Pipeline(
-        pipeline=IQBPipeline(project="measurement-lab", data_dir=resolved_dir)
-    )
+    ppl = Pipeline(pipeline=IQBPipeline(project="measurement-lab", data_dir=resolved_dir))
 
     time_periods, granularities = load_pipeline_config(workflow_path)
 

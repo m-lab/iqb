@@ -49,7 +49,7 @@ do not execute BigQuery to avoid burning cloud credits.
 
 Omit `-d ..` if running from the top-level directory.
 
-Run `uv run iqb cache pull --help` for more help.
+Run `uv run iqb pipeline run --help` for more help.
 
 ## `iqb cache status` - Checking Cache Status
 

@@ -77,7 +77,7 @@ class IQBPipeline:
         # Alternative quick implementation:
         #   - Use environment variable: IQB_SAMPLE_PERCENT (default: 100)
         #   - No code changes to queries
-        #   - Example: IQB_SAMPLE_PERCENT=25 uv run python data/generate_data.py ...
+        #   - Example: IQB_SAMPLE_PERCENT=25 uv run iqb pipeline run -d data/ ...
         #
         # Decision: Not implementing now (YAGNI - add when actually needed)
 

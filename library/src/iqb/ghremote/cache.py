@@ -1,4 +1,4 @@
-"""Module containing the RemoteCache implementation."""
+"""Module containing the IQBRemoteCache implementation."""
 
 from __future__ import annotations
 
@@ -6,7 +6,7 @@ import hashlib
 import json
 import logging
 import os
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.request import urlopen
@@ -36,9 +36,9 @@ class FileEntry:
     url: str
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass(kw_only=True)
 class Manifest:
-    """Manifest for cached files stored in GitHub releases."""
+    """Manifest for remotely cached files."""
 
     v: int
     files: dict[str, FileEntry] = field(default_factory=dict)
@@ -63,7 +63,7 @@ class Manifest:
             raise KeyError(f"no remotely-cached file for {key}") from exc
 
 
-def _load_manifest(manifest_file: Path) -> Manifest:
+def load_manifest(manifest_file: Path) -> Manifest:
     """Load manifest from the given file, or return empty manifest if not found."""
     if not manifest_file.exists():
         return Manifest(v=0, files={})
@@ -74,16 +74,25 @@ def _load_manifest(manifest_file: Path) -> Manifest:
     return from_dict(Manifest, data)
 
 
-def _manifest_path_for_data_dir(data_dir: Path) -> Path:
+def manifest_path_for_data_dir(data_dir: Path) -> Path:
     """Return the manifest path under the given data directory."""
     return data_dir / "state" / "ghremote" / "manifest.json"
 
 
-class IQBGitHubRemoteCache:
-    """
-    Remote cache for query results using GitHub releases.
+def save_manifest(manifest: Manifest, manifest_file: Path) -> None:
+    """Save manifest to the given file path."""
+    manifest_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(manifest_file, "w") as filep:
+        json.dump(asdict(manifest), filep, indent=2, sort_keys=True)
+        filep.write("\n")
 
-    This class implements the pipeline.RemoteCache protocol.
+
+class IQBRemoteCache:
+    """
+    Remote cache for query results.
+
+    This class implements the pipeline.RemoteCache protocol. It downloads
+    files from URLs specified in the manifest and verifies their SHA256 hashes.
 
     The manifest is loaded from $datadir/state/ghremote/manifest.json,
     where $datadir defaults to .iqb in the current working directory.
@@ -95,8 +104,8 @@ class IQBGitHubRemoteCache:
         data_dir: str | Path | None = None,
     ) -> None:
         self.data_dir = data_dir_or_default(data_dir)
-        manifest_path = _manifest_path_for_data_dir(self.data_dir)
-        self.manifest = _load_manifest(manifest_path)
+        manifest_path = manifest_path_for_data_dir(self.data_dir)
+        self.manifest = load_manifest(manifest_path)
 
     def sync(self, entry: PipelineCacheEntry) -> bool:
         """
@@ -132,11 +141,13 @@ class IQBGitHubRemoteCache:
         _sync_file_entry(parquet_entry, entry.data_parquet_file_path())
 
 
+# TODO(bassosimone): this download logic overlaps with cli/cache_pull.py;
+# consider unifying into a shared helper once both implementations stabilise.
 def _sync_file_entry(entry: FileEntry, dest_path: Path):
-    """Sync the given FileEntry with the file cached in a GitHub release."""
+    """Sync the given FileEntry with the remotely cached file."""
     # Determine whether we need to download again
     exists = dest_path.exists()
-    if not exists or entry.sha256 != _compute_sha256(dest_path):
+    if not exists or entry.sha256 != compute_sha256(dest_path):
         dest_path.parent.mkdir(parents=True, exist_ok=True)
         # Operate inside a temporary directory in the destination directory so
         # `os.replace()` is atomic and we avoid cross-filesystem moves.
@@ -182,13 +193,13 @@ def _sync_file_entry_tmp(entry: FileEntry, tmp_file: Path):
 
     # Make sure the sha256 matches
     log.info("validating %s... start", entry)
-    sha256 = _compute_sha256(tmp_file)
+    sha256 = compute_sha256(tmp_file)
     if sha256 != entry.sha256:
         raise ValueError(f"SHA256 mismatch: expected {entry.sha256}, got {sha256}")
     log.info("validating %s... ok", entry)
 
 
-def _compute_sha256(path: Path) -> str:
+def compute_sha256(path: Path) -> str:
     """Compute SHA256 hash of a file."""
     sha256 = hashlib.sha256()
     with open(path, "rb") as fp:

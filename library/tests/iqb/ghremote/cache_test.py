@@ -1,4 +1,4 @@
-"""Tests for the iqb.ghremote.cache module."""
+"""Tests for the iqb.ghremote.cache module (remote cache)."""
 
 import hashlib
 import json
@@ -11,8 +11,11 @@ from dacite.exceptions import WrongTypeError
 
 from iqb.ghremote.cache import (
     FileEntry,
-    IQBGitHubRemoteCache,
+    IQBRemoteCache,
     Manifest,
+    load_manifest,
+    manifest_path_for_data_dir,
+    save_manifest,
 )
 
 
@@ -21,47 +24,43 @@ def _compute_test_sha256(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
-def _manifest_path_for_data_dir(data_dir):
-    return data_dir / "state" / "ghremote" / "manifest.json"
-
-
 def _write_manifest(data_dir, manifest_data):
-    manifest_path = _manifest_path_for_data_dir(data_dir)
+    manifest_path = manifest_path_for_data_dir(data_dir)
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest_data))
     return manifest_path
 
 
-class TestIQBGitHubLoadManifest:
-    """Tests for loading the GitHub remote manifest."""
+class TestIQBRemoteCacheLoadManifest:
+    """Tests for loading the remote cache manifest."""
 
     def test_load_invalid_json_string(self, tmp_path):
         """Verify we get JSONDecodeError when loading an invalid JSON string."""
-        manifest_file = _manifest_path_for_data_dir(tmp_path)
+        manifest_file = manifest_path_for_data_dir(tmp_path)
         manifest_file.parent.mkdir(parents=True, exist_ok=True)
         manifest_file.write_text("{ invalid json }")
 
         with pytest.raises(json.JSONDecodeError):
-            IQBGitHubRemoteCache(data_dir=tmp_path)
+            IQBRemoteCache(data_dir=tmp_path)
 
     def test_load_invalid_json_fields_types(self, tmp_path):
         """Verify that dacite throws if the fields have invalid types."""
-        manifest_file = _manifest_path_for_data_dir(tmp_path)
+        manifest_file = manifest_path_for_data_dir(tmp_path)
         manifest_file.parent.mkdir(parents=True, exist_ok=True)
         # v should be int, not string
         manifest_file.write_text('{"v": "not an int", "files": {}}')
 
         with pytest.raises((WrongTypeError, ValueError, TypeError)):
-            IQBGitHubRemoteCache(data_dir=tmp_path)
+            IQBRemoteCache(data_dir=tmp_path)
 
     def test_load_invalid_version_number(self, tmp_path):
         """Verify that there is a ValueError when the version number is invalid."""
-        manifest_file = _manifest_path_for_data_dir(tmp_path)
+        manifest_file = manifest_path_for_data_dir(tmp_path)
         manifest_file.parent.mkdir(parents=True, exist_ok=True)
         manifest_file.write_text('{"v": 1, "files": {}}')
 
         with pytest.raises(ValueError, match="Unsupported manifest version"):
-            IQBGitHubRemoteCache(data_dir=tmp_path)
+            IQBRemoteCache(data_dir=tmp_path)
 
     def test_load_success_with_file(self, tmp_path):
         """Verify that we can correctly load a manifest when backed by an existing file."""
@@ -75,7 +74,7 @@ class TestIQBGitHubLoadManifest:
             },
         }
         _write_manifest(tmp_path, manifest_data)
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
         manifest = cache.manifest
 
         assert manifest.v == 0
@@ -87,7 +86,7 @@ class TestIQBGitHubLoadManifest:
 
     def test_load_success_without_file(self, tmp_path):
         """Verify that we return a default manifest when the file is missing."""
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
         manifest = cache.manifest
 
         assert manifest.v == 0
@@ -133,8 +132,8 @@ class TestManifestGetFileEntry:
             manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
 
 
-class TestIQBGitHubRemoteCacheSync:
-    """Tests for the IQBGitHubRemoteCache.sync method."""
+class TestIQBRemoteCacheSync:
+    """Tests for the IQBRemoteCache.sync method."""
 
     def _create_mock_entry(self, tmp_path):
         """Helper to create a mock PipelineCacheEntry."""
@@ -179,7 +178,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         with caplog.at_level(logging.WARNING):
             result = cache.sync(entry)
@@ -205,7 +204,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         with caplog.at_level(logging.WARNING):
             result = cache.sync(entry)
@@ -239,7 +238,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -282,7 +281,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         # Mock urlopen - it should NOT be called
         mock_urlopen = Mock(side_effect=AssertionError("Should not download!"))
@@ -324,7 +323,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -361,7 +360,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -400,7 +399,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         # Mock urlopen to raise URLError
         with (
@@ -437,7 +436,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -482,7 +481,7 @@ class TestIQBGitHubRemoteCacheSync:
                 },
             },
         )
-        cache = IQBGitHubRemoteCache(data_dir=tmp_path)
+        cache = IQBRemoteCache(data_dir=tmp_path)
 
         mock_urlopen = self._mock_urlopen_with_content(json_content, parquet_content)
 
@@ -497,3 +496,104 @@ class TestIQBGitHubRemoteCacheSync:
         assert entry.stats_json_file_path().exists()
         assert entry.data_parquet_file_path().exists()
         assert entry.data_parquet_file_path().parent.exists()
+
+
+class TestManifestPathForDataDir:
+    """Tests for manifest_path_for_data_dir."""
+
+    def test_returns_expected_path(self, tmp_path):
+        """Verify the manifest path is under state/ghremote/manifest.json."""
+        result = manifest_path_for_data_dir(tmp_path)
+        assert result == tmp_path / "state" / "ghremote" / "manifest.json"
+
+
+class TestLoadManifest:
+    """Tests for load_manifest."""
+
+    def test_missing_file_returns_empty_manifest(self, tmp_path):
+        """Verify that a missing manifest file returns an empty Manifest."""
+        manifest_file = manifest_path_for_data_dir(tmp_path)
+        manifest = load_manifest(manifest_file)
+        assert manifest.v == 0
+        assert len(manifest.files) == 0
+
+    def test_valid_file_loads_correctly(self, tmp_path):
+        """Verify that a valid manifest file is loaded correctly."""
+        manifest_file = manifest_path_for_data_dir(tmp_path)
+        manifest_file.parent.mkdir(parents=True, exist_ok=True)
+        manifest_data = {
+            "v": 0,
+            "files": {
+                "cache/v1/20241001T000000Z/20241031T235959Z/test/data.parquet": {
+                    "sha256": "abc123",
+                    "url": "https://example.com/data.parquet",
+                }
+            },
+        }
+        manifest_file.write_text(json.dumps(manifest_data))
+
+        manifest = load_manifest(manifest_file)
+        assert manifest.v == 0
+        assert len(manifest.files) == 1
+        key = "cache/v1/20241001T000000Z/20241031T235959Z/test/data.parquet"
+        assert manifest.files[key].sha256 == "abc123"
+        assert manifest.files[key].url == "https://example.com/data.parquet"
+
+
+class TestSaveManifest:
+    """Tests for save_manifest."""
+
+    def test_round_trip(self, tmp_path):
+        """Verify that saving and loading a manifest preserves data."""
+        manifest_file = manifest_path_for_data_dir(tmp_path)
+        original = Manifest(
+            v=0,
+            files={
+                "cache/v1/20241001T000000Z/20241031T235959Z/test/data.parquet": FileEntry(
+                    sha256="abc123",
+                    url="https://example.com/data.parquet",
+                )
+            },
+        )
+
+        save_manifest(original, manifest_file)
+        loaded = load_manifest(manifest_file)
+
+        assert loaded.v == original.v
+        assert loaded.files == original.files
+
+    def test_creates_parent_dirs(self, tmp_path):
+        """Verify that save_manifest creates parent directories."""
+        manifest_file = tmp_path / "deep" / "nested" / "manifest.json"
+        manifest = Manifest(v=0, files={})
+
+        save_manifest(manifest, manifest_file)
+
+        assert manifest_file.exists()
+
+    def test_output_format(self, tmp_path):
+        """Verify output has sorted keys, 2-space indent, trailing newline."""
+        manifest_file = manifest_path_for_data_dir(tmp_path)
+        manifest = Manifest(
+            v=0,
+            files={
+                "b_file": FileEntry(sha256="bbb", url="https://example.com/b"),
+                "a_file": FileEntry(sha256="aaa", url="https://example.com/a"),
+            },
+        )
+
+        save_manifest(manifest, manifest_file)
+        content = manifest_file.read_text()
+
+        # Trailing newline
+        assert content.endswith("\n")
+
+        # Sorted keys: "a_file" should come before "b_file"
+        a_pos = content.index('"a_file"')
+        b_pos = content.index('"b_file"')
+        assert a_pos < b_pos
+
+        # 2-space indent
+        parsed = json.loads(content)
+        re_dumped = json.dumps(parsed, indent=2, sort_keys=True) + "\n"
+        assert content == re_dumped

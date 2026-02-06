@@ -52,33 +52,6 @@ jobs:
             exit 1
           }
 
-      - name: Check code formatting with ruff (data)
-        working-directory: data
-        run: |
-          uv run ruff format --check || {
-            echo "❌ Code formatting check failed!"
-            echo "To fix locally, run: cd data && uv run ruff format"
-            exit 1
-          }
-
-      - name: Lint code with ruff (data)
-        working-directory: data
-        run: |
-          uv run ruff check || {
-            echo "❌ Linting check failed!"
-            echo "To fix locally, run: cd data && uv run ruff check --fix"
-            exit 1
-          }
-
-      - name: Type check with pyright (data)
-        working-directory: data
-        run: |
-          uv run pyright || {
-            echo "❌ Type checking failed!"
-            echo "To see errors locally, run: cd data && uv run pyright"
-            exit 1
-          }
-
   test-all:
     name: Test All Components
     runs-on: ubuntu-latest

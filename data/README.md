@@ -1,86 +1,121 @@
 # IQB Data Workspace
 
-This directory is a workspace for data curation scripts, release manifests,
-and local cache artifacts produced during generation.
+This directory holds cache artifacts, pipeline configuration, and the
+remote-cache manifest produced by the IQB data pipeline.
 
 ## What Lives Here
 
-- `generate_data.py`: Orchestrates BigQuery extraction and writes cache files
-  under `./cache/v1/` for local use.
-- `pipeline.yaml`: Matrix configuration (dates and granularities) used by the
-  data generation script.
-- `ghcache.py`: Helper for publishing cache files to GitHub releases.
-- `state/ghremote/manifest.json`: Release manifest used by the GitHub remote
-  cache implementation.
+- `pipeline.yaml` — configuration consumed by `iqb pipeline run`.
+- `cache/` — local cache written by the `iqb pipeline run`.
+- `state/ghremote/manifest.json` — manifest used by `iqb cache`.
 
-Static cache fixtures used by tests and notebooks are stored elsewhere:
+## Prerequisites
 
-- Real data fixtures: `library/tests/fixtures/real-data`
-- Fake data fixtures: `library/tests/fixtures/fake-data`
-- Notebook cache: `analysis/.iqb` (seeded to avoid network downloads in tests)
+- Python 3.13 using `uv` as documented in the toplevel [README.md](../README.md).
+
+- Google Cloud SDK (`gcloud`) installed.
+
+- `gcloud auth login` with an account subscribed to the [M-Lab Discuss mailing
+list](https://groups.google.com/a/measurementlab.net/g/discuss).
+
+- `gcloud auth application-default login` using the same account.
+
+## `iqb cache pull` - Getting GCS-Cached Data
+
+The [state/ghremote/manifest.json](state/ghremote/manifest.json) file lists
+all the query results already cached at GCS. Run:
+
+```bash
+uv run iqb cache pull -d .
+```
+
+to sync files from GCS to the local copy.
+
+Omit `-d .` if running from the top-level directory.
+
+Run `uv run iqb cache pull --help` for more help.
+
+## `iqb pipeline run` - Generating Data
+
+Run the pipeline to query BigQuery and populate the local cache:
+
+```bash
+uv run iqb pipeline run -d .
+```
+
+This command loads `pipeline.yaml` to determine the query matrix and
+executes BigQuery to generate data. If the cache already contains data, we
+do not execute BigQuery to avoid burning cloud credits.
+
+Omit `-d .` if running from the top-level directory.
+
+Run `uv run iqb pipeline run --help` for more help.
+
+## `iqb cache status` - Checking Cache Status
+
+Show which entries are local, remote, or missing:
+
+```bash
+uv run iqb cache status -d .
+```
+
+Omit `-d .` if running from the top-level directory.
+
+Run `uv run iqb cache status --help` for more help.
+
+## `iqb cache usage` - Cache Disk and BigQuery Usage
+
+Show per-period cache statistics including parquet file sizes,
+cumulative BigQuery bytes billed, and query durations:
+
+```bash
+uv run iqb cache usage -d .
+```
+
+Omit `-d .` if running from the top-level directory.
+
+Run `uv run iqb cache usage --help` for more help.
+
+### `iqb cache push` - Publishing Data
+
+After generating new cache files locally using `iqb pipeline run`, push
+them to GCS and update the manifest:
+
+```bash
+uv run iqb cache push -d .
+```
+
+Then commit the updated `state/ghremote/manifest.json`.
+
+Omit `-d .` if running from the top-level directory.
+
+Run `uv run iqb cache push --help` for more help.
+
+## Bucket Setup
+
+The GCS bucket we use was created in the `mlab-sandbox` project with:
+
+```bash
+gcloud storage buckets create gs://mlab-sandbox-iqb-us-central1 \
+    --project=mlab-sandbox \
+    --location=us-central1 \
+    --uniform-bucket-level-access
+```
+
+Public read access was granted so that the library can download cache
+files without authentication:
+
+```bash
+gcloud storage buckets add-iam-policy-binding gs://mlab-sandbox-iqb-us-central1 \
+    --member=allUsers \
+    --role=roles/storage.objectViewer
+```
 
 ## Cache Format
 
-Raw query results stored efficiently for flexible analysis:
+Raw query results stored efficiently as Parquet files for flexible analysis:
 
 - **Location**: `./cache/v1/{start_date}/{end_date}/{query_type}/`
 - **Files**:
-  - `data.parquet` - Query results (~1-60 MiB, streamable, chunked row groups)
-  - `stats.json` - Query metadata (start time, duration, bytes processed/billed, template hash)
-- **Use case**: Efficient filtering, large-scale analysis, direct PyArrow/Pandas processing
-
-## GitHub Cache Synchronization (Interim Solution)
-
-Since the v1 Parquet files can be large (~1-60 MiB) and we have BigQuery quota
-constraints, we use GitHub releases to distribute pre-generated cache files.
-The release manifest lives at `state/ghremote/manifest.json`.
-
-### For Maintainers (Publishing New Cache)
-
-When you generate new cache files locally (under `./cache/v1`):
-
-```bash
-uv run ./data/ghcache.py scan
-```
-
-This:
-1. Scans `cache/v1/` for git-ignored files
-2. Computes SHA256 hashes
-3. Copies files to `data/` with mangled names (ready for upload)
-4. Updates `state/ghremote/manifest.json` manifest
-
-Then manually:
-1. Upload mangled files to GitHub release (e.g., v0.1.0)
-2. Commit updated `state/ghremote/manifest.json` to repository
-
-### Running the Data Generation Pipeline
-
-**Prerequisites**:
-
-- Google Cloud SDK (`gcloud`) installed
-
-- `gcloud`-authenticated with an account subscribed to
-[M-Lab Discuss mailing list](https://groups.google.com/a/measurementlab.net/g/discuss)
-
-- Python 3.13 using `uv` as documented in the toplevel [README.md](../README.md)
-
-**Complete Pipeline**:
-
-```bash
-uv run python ./data/generate_data.py -B
-```
-
-This orchestrates the complete pipeline:
-
-1. Loads `./data/pipeline.yaml` to determine dates and granularities (edit this
-   file to change the matrix)
-2. Attempts to fetch from the GitHub cache first
-3. Otherwise, if `-B` is present, queries both download and upload metrics for each dataset
-4. Saves results to v1 Parquet cache with query metadata
-
-Omit the `-B` flag to avoid querying BigQuery.
-
-## Future Improvements (Phase 2+)
-
-- Replace GitHub releases with GCS buckets for cache distribution
-- Additional datasets (Ookla, Cloudflare)
+  - `data.parquet` — query results (~1-60 MiB, streamable, chunked row groups)
+  - `stats.json` — query metadata (start time, duration, bytes processed/billed, template hash)

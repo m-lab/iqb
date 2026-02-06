@@ -102,7 +102,7 @@ class TestCreate:
     def test_defaults(self) -> None:
         pipeline_instance = Mock()
         with (
-            patch("iqb.scripting.iqb_pipeline.IQBGitHubRemoteCache") as cache_cls,
+            patch("iqb.scripting.iqb_pipeline.IQBRemoteCache") as cache_cls,
             patch(
                 "iqb.scripting.iqb_pipeline.IQBPipeline", return_value=pipeline_instance
             ) as pipeline_cls,
@@ -120,7 +120,7 @@ class TestCreate:
     def test_custom_args(self, tmp_path) -> None:
         pipeline_instance = Mock()
         with (
-            patch("iqb.scripting.iqb_pipeline.IQBGitHubRemoteCache") as cache_cls,
+            patch("iqb.scripting.iqb_pipeline.IQBRemoteCache") as cache_cls,
             patch(
                 "iqb.scripting.iqb_pipeline.IQBPipeline", return_value=pipeline_instance
             ) as pipeline_cls,

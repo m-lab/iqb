@@ -35,7 +35,7 @@ strategy ensures eventual consistency on Unix. Windows does not
 quite support that, but maybe it's best to avoid using Windows to
 implement servers anyway, so we don't need extra complexity.
 
-Pipeline code and `ghremote` code use this strategy.
+Pipeline code and remote cache code use this strategy.
 
 Cache Spec Ownership
 --------------------
@@ -55,8 +55,8 @@ BigQuery queries.
 
 The remote cache is implemented as a Protocol (see `pipeline.RemoteCache`)
 that requires a `sync(entry: PipelineCacheEntry) -> bool` method. This
-design allows pluggable remote cache implementations (e.g., GCS, GitHub
-releases, S3) without coupling the pipeline to specific storage backends.
+design allows pluggable remote cache implementations (e.g., GCS, S3)
+without coupling the pipeline to specific storage backends.
 
 Cache lookup order:
 1. Local disk cache (fast, free)

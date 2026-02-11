@@ -21,7 +21,7 @@ import pycountry
 import streamlit as st
 from dacite import from_dict
 from iqb import IQBCache, IQBDatasetGranularity
-from iqb.ghremote.cache import IQBGitHubRemoteCache, Manifest, data_dir_or_default
+from iqb.ghremote.cache import IQBRemoteCache, Manifest, data_dir_or_default
 from plotly.subplots import make_subplots
 from session_state import initialize_app_state
 from visualizations.sunburst_data import (
@@ -151,7 +151,7 @@ COUNTRY_COORDS = {
 
 
 # --- Remote Cache ---
-class GitHubURLRemoteCache(IQBGitHubRemoteCache):
+class GitHubURLRemoteCache(IQBRemoteCache):
     """Remote cache that fetches manifest from a URL."""
 
     def __init__(self, manifest_url: str, data_dir=None):

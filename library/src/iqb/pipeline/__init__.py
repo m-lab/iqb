@@ -95,7 +95,7 @@ The `{since}` timestamp is included and the `{until}` one is excluded. This
 simplifies specifying time ranges significantly (e.g., October 2025 is
 represented using `since=20251001T000000Z` and `until=20251101T000000Z`).
 
-The *current* implementation of the pipline enforces YYYY-MM-DD dates
+The *current* implementation of the pipeline enforces YYYY-MM-DD dates
 because the underlying queries only support dates. Yet, we design the data
 format to accommodate for more fine grained time intervals in the future.
 

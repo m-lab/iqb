@@ -29,33 +29,33 @@ class TestDownloadsByCountryQuery:
     def test_downloads_by_country_can_be_read(self):
         """Test that downloads_by_country.sql can be read."""
         query_file = files(iqb.queries).joinpath("downloads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert content is not None
         assert len(content) > 0
 
     def test_downloads_by_country_has_date_placeholders(self):
         """Test that downloads_by_country.sql contains date placeholders."""
         query_file = files(iqb.queries).joinpath("downloads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert "{START_DATE}" in content
         assert "{END_DATE}" in content
 
     def test_downloads_by_country_queries_unified_downloads_table(self):
         """Test that downloads_by_country.sql queries the correct table."""
         query_file = files(iqb.queries).joinpath("downloads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert "measurement-lab.ndt.unified_downloads" in content
 
     def test_downloads_by_country_groups_by_country_code(self):
         """Test that downloads_by_country.sql groups by country code."""
         query_file = files(iqb.queries).joinpath("downloads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert "GROUP BY country_code" in content
 
     def test_downloads_by_country_calculates_percentiles(self):
         """Test that downloads_by_country.sql calculates percentiles."""
         query_file = files(iqb.queries).joinpath("downloads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         # Should calculate p1, p5, p10, p25, p50, p75, p90, p95, p99
         assert "APPROX_QUANTILES" in content
         assert "download_p95" in content or "download_p99" in content
@@ -72,33 +72,33 @@ class TestUploadsByCountryQuery:
     def test_uploads_by_country_can_be_read(self):
         """Test that uploads_by_country.sql can be read."""
         query_file = files(iqb.queries).joinpath("uploads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert content is not None
         assert len(content) > 0
 
     def test_uploads_by_country_has_date_placeholders(self):
         """Test that uploads_by_country.sql contains date placeholders."""
         query_file = files(iqb.queries).joinpath("uploads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert "{START_DATE}" in content
         assert "{END_DATE}" in content
 
     def test_uploads_by_country_queries_unified_uploads_table(self):
         """Test that uploads_by_country.sql queries the correct table."""
         query_file = files(iqb.queries).joinpath("uploads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert "measurement-lab.ndt.unified_uploads" in content
 
     def test_uploads_by_country_groups_by_country_code(self):
         """Test that uploads_by_country.sql groups by country code."""
         query_file = files(iqb.queries).joinpath("uploads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         assert "GROUP BY country_code" in content
 
     def test_uploads_by_country_calculates_percentiles(self):
         """Test that uploads_by_country.sql calculates percentiles."""
         query_file = files(iqb.queries).joinpath("uploads_by_country.sql")
-        content = query_file.read_text()
+        content = query_file.read_text(encoding="utf-8")
         # Should calculate p1, p5, p10, p25, p50, p75, p90, p95, p99
         assert "APPROX_QUANTILES" in content
         assert "upload_p95" in content or "upload_p99" in content
@@ -110,7 +110,7 @@ class TestQueryTemplateSubstitution:
     def test_downloads_query_date_substitution(self):
         """Test that date placeholders can be substituted in downloads query."""
         query_file = files(iqb.queries).joinpath("downloads_by_country.sql")
-        template = query_file.read_text()
+        template = query_file.read_text(encoding="utf-8")
 
         # Substitute placeholders
         query = template.replace("{START_DATE}", "2024-10-01")
@@ -125,7 +125,7 @@ class TestQueryTemplateSubstitution:
     def test_uploads_query_date_substitution(self):
         """Test that date placeholders can be substituted in uploads query."""
         query_file = files(iqb.queries).joinpath("uploads_by_country.sql")
-        template = query_file.read_text()
+        template = query_file.read_text(encoding="utf-8")
 
         # Substitute placeholders
         query = template.replace("{START_DATE}", "2024-10-01")

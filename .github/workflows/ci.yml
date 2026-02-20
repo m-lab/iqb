@@ -84,6 +84,27 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: m-lab/iqb
 
+  test-windows:
+    name: Test on Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Sync workspace dependencies
+        run: uv sync --dev
+
+      - name: Run library tests on Windows
+        working-directory: library
+        run: uv run pytest --tb=short -q
+
   test-prototype-integration:
     name: Test Streamlit Prototype Integration
     runs-on: ubuntu-latest

@@ -79,19 +79,8 @@ class IQBCalculator:
                 f"The binary requirement score method is not implemented for the network_requirement: {network_requirement}"
             )
 
-    def calculate_iqb_score(self, data=None, print_details=False):
+    def calculate_iqb_score(self, data, print_details=False):
         """Calculates IQB score based on given data."""
-
-        # TODO(bassosimone): remove the default data sample in a subsequent interation.
-        sample_data = {
-            "m-lab": {
-                "download_throughput_mbps": 15,
-                "upload_throughput_mbps": 20,
-                "latency_ms": 75,
-                "packet_loss": 0.007,
-            }
-        }
-        data = sample_data if data is None else data
 
         # TODO(bassosimone): remove printing from the current function and instead
         # add more tests to gain better confidence about it being WAI

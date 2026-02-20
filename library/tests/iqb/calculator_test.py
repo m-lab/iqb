@@ -90,41 +90,42 @@ class TestBinaryRequirementScore:
 class TestIQBCalculatorScoreCalculation:
     """Tests for IQBCalculator score calculation."""
 
+    _SAMPLE_DATA = {
+        "m-lab": {
+            "download_throughput_mbps": 15,
+            "upload_throughput_mbps": 20,
+            "latency_ms": 75,
+            "packet_loss": 0.007,
+        }
+    }
+
     def test_calculate_iqb_score_default_data(self):
-        """Test that IQBCalculator score can be calculated with default data."""
+        """Test that IQBCalculator score can be calculated with explicit input data."""
         iqb = IQBCalculator(name="test1")
-        score = iqb.calculate_iqb_score()
+        score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         # The score should be a float between 0 and 1
         assert isinstance(score, (int, float))
         assert 0 <= score <= 1
 
     def test_calculate_iqb_score_with_custom_data(self):
-        """Test that passing custom data raises NotImplementedError."""
+        """Test that IQBCalculator score can be calculated with custom data."""
         iqb = IQBCalculator()
-        sample_data = {
-            "m-lab": {
-                "download_throughput_mbps": 15,
-                "upload_throughput_mbps": 20,
-                "latency_ms": 75,
-                "packet_loss": 0.007,
-            }
-        }
-        score = iqb.calculate_iqb_score(data=sample_data)
+        score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         assert isinstance(score, (int, float))
         assert 0 <= score <= 1
 
     def test_calculate_iqb_score_print_details(self):
         """Test that IQBCalculator score calculation works with print_details=True."""
         iqb = IQBCalculator()
-        score = iqb.calculate_iqb_score(print_details=True)
+        score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA, print_details=True)
         assert isinstance(score, (int, float))
         assert 0 <= score <= 1
 
     def test_calculate_iqb_score_consistency(self):
         """Test that IQBCalculator score calculation is consistent across calls."""
         iqb = IQBCalculator()
-        score1 = iqb.calculate_iqb_score()
-        score2 = iqb.calculate_iqb_score()
+        score1 = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
+        score2 = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         assert score1 == score2
 
 

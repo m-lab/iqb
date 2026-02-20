@@ -32,7 +32,7 @@ def status(data_dir: str | None, show_all: bool) -> None:
     printed using the following status letter:
 
     \b
-      ' '  not modifed (on dish, in cache, same hash)
+      ' '  not modified (on disk, in cache, same hash)
     """
     resolved = data_dir_or_default(data_dir)
     manifest_path = manifest_path_for_data_dir(resolved)

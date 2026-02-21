@@ -1,7 +1,5 @@
 """Pipeline run command."""
 
-# TODO(bassosimone): add support for -f/--force to bypass cache
-
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -94,8 +92,9 @@ def load_pipeline_config(
     metavar="WORKFLOW",
     help="Path to YAML workflow file (default: <dir>/pipeline.yaml)",
 )
+@click.option("-f", "--force", is_flag=True, default=False, help="Bypass cache and force sync")
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Verbose mode.")
-def run(data_dir: str | None, workflow_file: str | None, verbose: bool) -> None:
+def run(data_dir: str | None, workflow_file: str | None, force: bool, verbose: bool) -> None:
     """Run the BigQuery pipeline for all matrix entries."""
 
     console = get_console()
@@ -115,6 +114,7 @@ def run(data_dir: str | None, workflow_file: str | None, verbose: bool) -> None:
                     enable_bigquery=True,
                     start_date=start,
                     end_date=end,
+                    force=force,
                 )
 
     raise SystemExit(interceptor.exitcode())

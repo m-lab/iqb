@@ -3,6 +3,7 @@
 import hashlib
 import logging
 from datetime import datetime
+from functools import partial
 from importlib.resources import files
 from pathlib import Path
 
@@ -91,6 +92,7 @@ class IQBPipeline:
         enable_bigquery: bool,
         start_date: str,
         end_date: str,
+        force: bool = False,
     ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query template.
@@ -103,6 +105,7 @@ class IQBPipeline:
             enable_bigquery: Whether to enabled querying from BigQuery.
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+            force: Whether to bypass cache and force BigQuery query execution.
 
         Returns:
             PipelineCacheEntry with paths to data.parquet and stats.json.
@@ -116,14 +119,16 @@ class IQBPipeline:
 
         # 2. prepare for synching from BigQuery
         if enable_bigquery:
-            entry.syncers.append(self._bq_syncer)
+            if force:
+                entry.syncers.clear()
+            entry.syncers.append(partial(self._bq_syncer, force=force))
 
         # 3. return the entry
         return entry
 
-    def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
+    def _bq_syncer(self, entry: PipelineCacheEntry, *, force: bool = False) -> bool:
         """Internal method to get the entry files using a BigQuery query."""
-        if entry.exists():
+        if not force and entry.exists():
             log.info("querying for %s... skipped (cached)", entry)
             return True
         try:

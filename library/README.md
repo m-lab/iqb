@@ -178,7 +178,7 @@ uv run pyright --verbose
 # - "Loading pyproject.toml file at ..."
 # - "Found X source files" (should be ~5 files)
 # - Python version and search paths
-# - "X errors, Y warnings, Z informations"
+# - "X errors, Y warnings, Z information"
 ```
 
 If you see `"Found 0 source files"`, the configuration is wrong.

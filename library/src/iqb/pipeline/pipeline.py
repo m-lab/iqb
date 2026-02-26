@@ -113,16 +113,19 @@ class IQBPipeline:
             start_date=start_date,
             end_date=end_date,
         )
+        import os
 
-        # 2. prepare for synching from BigQuery
-        if enable_bigquery:
+        # In dev mode, always enable BigQuery syncer to allow local testing
+        if os.getenv("IQB_DEV_MODE") == "1":
+            entry.syncers.append(self._bq_syncer)
+        # In normal runs, respect the enable_bigquery flag
+        elif enable_bigquery:
             entry.syncers.append(self._bq_syncer)
 
         # 3. return the entry
         return entry
 
     def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
-        """Internal method to get the entry files using a BigQuery query."""
         if entry.exists():
             log.info("querying for %s... skipped (cached)", entry)
             return True
@@ -192,7 +195,7 @@ def _load_query_template(
         the SHA256 hash of the original template file.
     """
     query_file = files(queries).joinpath(f"{dataset_name}.sql")
-    template_text = query_file.read_text()
+    template_text = query_file.read_text(encoding="utf-8")
 
     # Compute hash of the query template
     template_hash = hashlib.sha256(template_text.encode("utf-8")).hexdigest()

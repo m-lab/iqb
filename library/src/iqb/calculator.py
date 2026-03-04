@@ -82,7 +82,7 @@ class IQBCalculator:
     def calculate_iqb_score(self, data=None, print_details=False):
         """Calculates IQB score based on given data."""
 
-        # TODO(bassosimone): remove the default data sample in a subsequent interation.
+        # TODO(bassosimone): remove the default data sample in a subsequent iteration.
         sample_data = {
             "m-lab": {
                 "download_throughput_mbps": 15,

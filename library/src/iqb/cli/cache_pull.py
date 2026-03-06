@@ -28,6 +28,15 @@ from ..ghremote.diff import DiffEntry
 from ..pipeline.cache import data_dir_or_default
 from .cache import cache
 
+_thread_local = threading.local()
+
+
+def _get_session() -> requests.Session:
+    """Return a per-thread requests.Session for connection reuse."""
+    if not hasattr(_thread_local, "session"):
+        _thread_local.session = requests.Session()
+    return _thread_local.session
+
 
 def _short_name(file: str) -> str:
     """Extract a short display name from a cache path."""
@@ -43,7 +52,6 @@ def _now() -> str:
 def _download_one(
     entry: DiffEntry,
     data_dir: Path,
-    session: requests.Session,
     progress: Progress,
 ) -> dict[str, object]:
     """Download a single file, verify SHA256, atomic-replace. Returns a metrics span."""
@@ -61,6 +69,7 @@ def _download_one(
     try:
         with TemporaryDirectory(dir=dest.parent) as tmp_dir:
             tmp_file = Path(tmp_dir) / dest.name
+            session = _get_session()
             resp = session.get(entry.url, stream=True)
             resp.raise_for_status()
             cl = resp.headers.get("Content-Length")
@@ -120,7 +129,6 @@ def pull(data_dir: str | None, force: bool, jobs: int) -> None:
         click.echo("Nothing to download.")
         return
 
-    session = requests.Session()
     failed: list[tuple[str, str]] = []
     spans: list[dict[str, object]] = []
     t0 = time.monotonic()
@@ -134,8 +142,7 @@ def pull(data_dir: str | None, force: bool, jobs: int) -> None:
         ThreadPoolExecutor(max_workers=jobs) as pool,
     ):
         futures = {
-            pool.submit(_download_one, entry, resolved, session, progress): entry
-            for entry in targets
+            pool.submit(_download_one, entry, resolved, progress): entry for entry in targets
         }
         for future in as_completed(futures):
             entry = futures[future]

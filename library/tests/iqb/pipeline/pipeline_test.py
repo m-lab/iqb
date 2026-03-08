@@ -317,6 +317,42 @@ class TestIQBPipelineGetCacheEntry:
         mock_client.return_value.execute_query.assert_not_called()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    def test_bq_syncer_force_queries_when_exists(self, mock_client, tmp_path):
+        """Test that force=True bypasses cached skip and executes BigQuery."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
+
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "data.parquet").write_text("fake parquet data")
+        (cache_dir / "stats.json").write_text("{}")
+
+        mock_result = MagicMock(spec=PipelineBQPQQueryResult)
+        mock_client.return_value.execute_query.return_value = mock_result
+
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            enable_bigquery=True,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            force=True,
+        )
+
+        with entry.lock():
+            entry.sync()
+
+        mock_client.return_value.execute_query.assert_called_once()
+        mock_result.save_data_parquet.assert_called_once()
+        mock_result.save_stats_json.assert_called_once()
+
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_bq_syncer_failure(self, mock_client, tmp_path):
         """Test that _bq_syncer handles exceptions and returns False."""
         # Create the pipeline

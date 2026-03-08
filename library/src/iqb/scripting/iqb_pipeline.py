@@ -32,6 +32,7 @@ class Pipeline:
         *,
         enable_bigquery: bool,
         end_date: str,
+        force: bool = False,
         start_date: str,
     ) -> None:
         """
@@ -67,9 +68,10 @@ class Pipeline:
                 enable_bigquery=enable_bigquery,
                 start_date=start_date,
                 end_date=end_date,
+                force=force,
             )
             with entry.lock():
-                if not entry.exists():
+                if force or not entry.exists():
                     entry.sync()
 
         log.info(

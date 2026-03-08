@@ -4,7 +4,7 @@ import copy
 from typing import Dict, Tuple
 
 from app_state import IQBAppState
-from iqb import IQB_CONFIG
+from iqb import IQB, IQB_CONFIG
 from utils.data_utils import get_available_datasets, get_available_requirements
 
 
@@ -66,6 +66,15 @@ def get_config_with_custom_settings(state: IQBAppState) -> Dict:
             ]
 
     return modified_config
+
+
+def calculate_iqb_score_with_custom_settings(
+    state: IQBAppState, data: Dict[str, Dict[str, float]], print_details: bool = False
+) -> float:
+    """Calculate IQB score using current UI-customized thresholds and weights."""
+    custom_config = get_config_with_custom_settings(state)
+    calculator = IQB(config=custom_config)
+    return calculator.calculate_iqb_score(data=data, print_details=print_details)
 
 
 def calculate_component_importance() -> Dict[str, float]:

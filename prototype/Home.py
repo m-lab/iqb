@@ -2,7 +2,10 @@
 
 import streamlit as st
 from session_state import initialize_app_state
-from utils.calculation_utils import build_data_for_calculate
+from utils.calculation_utils import (
+    build_data_for_calculate,
+    calculate_iqb_score_with_custom_settings,
+)
 from visualizations.sunburst_data import (
     prepare_complete_hierarchy_sunburst_data,
     prepare_requirements_sunburst_data,
@@ -69,8 +72,8 @@ def main():
     with right_col:
         try:
             data_for_calculation = build_data_for_calculate(state)
-            iqb_score = state.iqb.calculate_iqb_score(
-                data=data_for_calculation, print_details=False
+            iqb_score = calculate_iqb_score_with_custom_settings(
+                state, data=data_for_calculation, print_details=False
             )
 
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])

@@ -1,5 +1,6 @@
 """Module that implements calculating IQB scores."""
 
+import copy
 from pprint import pprint
 
 from .config import IQB_CONFIG
@@ -13,20 +14,29 @@ class IQBCalculator:
         Initialize a new instance of IQBCalculator.
 
         Parameters:
-            config (str): The file with the configuration of the IQB formula parameters. If "None" (default), it gets the parameters from the IQB_CONFIG dict.
+            config (dict | str): If "None" (default), use IQB_CONFIG. A dict is used
+                as in-memory configuration. A string is currently treated as a
+                configuration file path and is not implemented.
             name (str): [Optional] name for the IQBCalculator instance.
         """
         self.set_config(config)
         self.name = name
 
     def set_config(self, config):
-        """Sets up configuration parameters. If "None" (default), it gets the parameters from the IQB_CONFIG dict."""
+        """Set up configuration parameters."""
         if config is None:
             self.config = IQB_CONFIG
-        else:
+        elif isinstance(config, dict):
+            # Keep calculator behavior isolated from external mutations.
+            self.config = copy.deepcopy(config)
+        elif isinstance(config, str):
             # TODO: load config data from file (json, yaml, or other format) as a dict
             raise NotImplementedError(
                 "method for reading from configuration file other than the default not implemented"
+            )
+        else:
+            raise TypeError(
+                f"config must be None, dict, or str, got: {type(config).__name__}"
             )
 
     def print_config(self):
@@ -36,27 +46,27 @@ class IQBCalculator:
         """
         # TODO: to be updated
         print("### IQB formula weights and thresholds")
-        pprint(IQB_CONFIG)
+        pprint(self.config)
         print()
 
         print("### Use cases")
-        for uc in IQB_CONFIG["use cases"]:
+        for uc in self.config["use cases"]:
             print(f"\t{uc}")
         print()
 
         print("### Network requirements")
-        for uc in IQB_CONFIG["use cases"]:
-            for nr in IQB_CONFIG["use cases"][uc]["network requirements"]:
+        for uc in self.config["use cases"]:
+            for nr in self.config["use cases"][uc]["network requirements"]:
                 print(f"\t{nr}")
             break
         print()
 
         print("### Weights & Thresholds")
         print("\tUse case\t \tNetwork requirement \tWeight \tThreshold min")
-        for uc in IQB_CONFIG["use cases"]:
-            for nr in IQB_CONFIG["use cases"][uc]["network requirements"]:
-                nr_w = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["w"]
-                nr_th = IQB_CONFIG["use cases"][uc]["network requirements"][nr]["threshold min"]
+        for uc in self.config["use cases"]:
+            for nr in self.config["use cases"][uc]["network requirements"]:
+                nr_w = self.config["use cases"][uc]["network requirements"][nr]["w"]
+                nr_th = self.config["use cases"][uc]["network requirements"][nr]["threshold min"]
                 print(f"\t{uc:20} \t{nr:20} \t{nr_w} \t{nr_th}")
         print()
 

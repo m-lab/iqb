@@ -20,10 +20,14 @@ import plotly.graph_objects as go
 import pycountry
 import streamlit as st
 from dacite import from_dict
-from iqb import IQBCache, IQBDatasetGranularity
+from iqb import IQB, IQBCache, IQBDatasetGranularity
 from iqb.ghremote.cache import IQBRemoteCache, Manifest, data_dir_or_default
 from plotly.subplots import make_subplots
 from session_state import initialize_app_state
+from utils.calculation_utils import (
+    calculate_iqb_score_with_custom_settings,
+    get_config_with_custom_settings,
+)
 from visualizations.sunburst_data import (
     prepare_complete_hierarchy_sunburst_data,
     prepare_requirements_sunburst_data,
@@ -175,6 +179,7 @@ if "selected_percentile" not in st.session_state:
     st.session_state.selected_percentile = "p95"
 
 state = st.session_state.app_state
+custom_config = get_config_with_custom_settings(state)
 
 
 # --- Helper Functions ---
@@ -250,27 +255,15 @@ def build_iqb_data_from_cache(metrics: dict, percentile: str = "p95") -> dict:
 
 
 def calculate_iqb_score_from_metrics(
-    metrics: dict, percentile: str = "p95"
+    metrics: dict, percentile: str = "p95", custom_config: dict | None = None
 ) -> float | None:
     """Calculate actual IQB score from cache metrics."""
     if not metrics:
         return None
     try:
-        temp_state = initialize_app_state()
-        temp_state.manual_entry["m-lab"]["download_throughput_mbps"] = metrics[
-            "download_throughput_mbps"
-        ][percentile]
-        temp_state.manual_entry["m-lab"]["upload_throughput_mbps"] = metrics[
-            "upload_throughput_mbps"
-        ][percentile]
-        temp_state.manual_entry["m-lab"]["latency_ms"] = metrics["latency_ms"][
-            percentile
-        ]
-        temp_state.manual_entry["m-lab"]["packet_loss"] = metrics["packet_loss"][
-            percentile
-        ]
         iqb_data = build_iqb_data_from_cache(metrics, percentile)
-        return temp_state.iqb.calculate_iqb_score(data=iqb_data, print_details=False)
+        calculator = IQB(config=custom_config) if custom_config is not None else IQB()
+        return calculator.calculate_iqb_score(data=iqb_data, print_details=False)
     except Exception:
         return None
 
@@ -479,6 +472,7 @@ def load_historical_data(
     available_periods: list[tuple[str, str, str]],
     percentile: str = "p95",
     subdivision_code: str | None = None,
+    custom_config: dict | None = None,
 ) -> pd.DataFrame:
     """Load historical data for a country or subdivision across all available periods."""
     rows = []
@@ -558,7 +552,7 @@ def load_historical_data(
                 "latency_ms": {percentile: float(latency)},
                 "packet_loss": {percentile: float(packet_loss)},
             }
-            score = calculate_iqb_score_from_metrics(metrics, percentile)
+            score = calculate_iqb_score_from_metrics(metrics, percentile, custom_config)
 
             rows.append(
                 {
@@ -583,13 +577,17 @@ def load_historical_data(
 
 @st.cache_data
 def load_country_data_for_date(
-    _cache: IQBCache, start_date: str, end_date: str, percentile: str = "p95"
+    _cache: IQBCache,
+    start_date: str,
+    end_date: str,
+    percentile: str = "p95",
+    custom_config: dict | None = None,
 ) -> dict[str, dict]:
     """Load and enrich country data with IQB scores for a specific date range."""
     raw_data = fetch_map_data(_cache, start_date, end_date)
     for iso_a3, data in raw_data.items():
         metrics = data["metrics"]
-        score = calculate_iqb_score_from_metrics(metrics, percentile)
+        score = calculate_iqb_score_from_metrics(metrics, percentile, custom_config)
         data["score"] = score
         data["download"] = metrics["download_throughput_mbps"].get(percentile)
         data["upload"] = metrics["upload_throughput_mbps"].get(percentile)
@@ -1085,6 +1083,7 @@ def load_historical_data_city(
     city_name: str,
     available_periods: list[tuple[str, str, str]],
     percentile: str = "p95",
+    custom_config: dict | None = None,
 ) -> pd.DataFrame:
     """Load historical data for a specific city across all available periods."""
     rows = []
@@ -1134,7 +1133,7 @@ def load_historical_data_city(
                 "packet_loss": {percentile: float(dl_row[f"loss_p{p_num}"])},
             }
 
-            score = calculate_iqb_score_from_metrics(metrics, percentile)
+            score = calculate_iqb_score_from_metrics(metrics, percentile, custom_config)
 
             rows.append(
                 {
@@ -1168,6 +1167,7 @@ def create_trend_charts(
     subdivision_data: dict | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
+    custom_config: dict | None = None,
 ):
     """Create historical trend charts for a country or subdivision with optional comparison."""
 
@@ -1190,7 +1190,12 @@ def create_trend_charts(
 
     # Load primary data
     df = load_historical_data(
-        cache, country_code, periods_to_load, percentile, subdivision_code
+        cache,
+        country_code,
+        periods_to_load,
+        percentile,
+        subdivision_code,
+        custom_config,
     )
 
     if df.empty:
@@ -1209,16 +1214,27 @@ def create_trend_charts(
                 compare_city,
                 periods_to_load,
                 percentile,
+                custom_config,
             )
         elif compare_subdiv:
             # Subdivision-level comparison
             compare_df = load_historical_data(
-                cache, compare_country, periods_to_load, percentile, compare_subdiv
+                cache,
+                compare_country,
+                periods_to_load,
+                percentile,
+                compare_subdiv,
+                custom_config,
             )
         else:
             # Country-level comparison
             compare_df = load_historical_data(
-                cache, compare_country, periods_to_load, percentile, None
+                cache,
+                compare_country,
+                periods_to_load,
+                percentile,
+                None,
+                custom_config,
             )
 
         if compare_df is not None and compare_df.empty:
@@ -1317,6 +1333,7 @@ def _build_subdivision_map_data(
     geojson: dict,
     subdivision_data: dict[str, dict],
     percentile: str,
+    custom_config: dict | None = None,
 ) -> tuple[list, list, list, list, dict]:
     """Build data arrays for subdivision choropleth map."""
     name_to_data = {
@@ -1345,7 +1362,7 @@ def _build_subdivision_map_data(
 
         if matched_data:
             metrics = matched_data["metrics"]
-            score = calculate_iqb_score_from_metrics(metrics, percentile)
+            score = calculate_iqb_score_from_metrics(metrics, percentile, custom_config)
             locations.append(location_id)
             z_values.append(score if score is not None else 0)
             customdata.append(region_code or iso_code or location_id)
@@ -1378,13 +1395,14 @@ def create_subdivision_map(
     selected_subdivision: str | None = None,
     city_coords: dict[str, tuple[float, float]] | None = None,
     city_data: dict | None = None,
+    custom_config: dict | None = None,
 ) -> go.Figure | None:
     """Create choropleth map of subdivisions, optionally with city overlay."""
     if not geojson or not subdivision_data:
         return None
 
     locations, z_values, hover_texts, customdata, _ = _build_subdivision_map_data(
-        geojson, subdivision_data, percentile
+        geojson, subdivision_data, percentile, custom_config
     )
 
     # Always show the choropleth layer
@@ -1423,7 +1441,9 @@ def create_subdivision_map(
 
         for city, (lat, lon) in city_coords.items():
             if data := city_name_to_data.get(city):
-                score = calculate_iqb_score_from_metrics(data["metrics"], percentile)
+                score = calculate_iqb_score_from_metrics(
+                    data["metrics"], percentile, custom_config
+                )
                 samples = data["sample_counts"].get("downloads", 0)
                 lats.append(lat)
                 lons.append(lon)
@@ -1507,7 +1527,11 @@ with st.sidebar:
 # Main content
 with st.spinner("Loading data..."):
     country_data = load_country_data_for_date(
-        cache, START_DATE, END_DATE, st.session_state.selected_percentile
+        cache,
+        START_DATE,
+        END_DATE,
+        st.session_state.selected_percentile,
+        custom_config,
     )
 
 if not country_data:
@@ -1587,6 +1611,7 @@ if (
             selected_code,
             city_coords,
             filtered_city_data,
+            custom_config,
         )
         if fig:
             event = st.plotly_chart(
@@ -1629,8 +1654,8 @@ if (
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
             try:
                 iqb_data = build_iqb_data_from_cache(metrics, percentile)
-                iqb_score = state.iqb.calculate_iqb_score(
-                    data=iqb_data, print_details=False
+                iqb_score = calculate_iqb_score_with_custom_settings(
+                    state, data=iqb_data, print_details=False
                 )
                 with tab1:
                     render_sunburst(
@@ -1703,6 +1728,7 @@ if (
             subdivision_data=subdivision_data,
             start_date=START_DATE,
             end_date=END_DATE,
+            custom_config=custom_config,
         )
 
     # LEVEL 2: Subdivision view
@@ -1719,7 +1745,11 @@ if (
             ]
 
             fig = create_subdivision_map(
-                admin1_geojson, subdivision_data, iso_a3, percentile
+                admin1_geojson,
+                subdivision_data,
+                iso_a3,
+                percentile,
+                custom_config=custom_config,
             )
             if fig:
                 event = st.plotly_chart(
@@ -1763,8 +1793,8 @@ if (
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
             try:
                 iqb_data = build_iqb_data_from_cache(metrics, percentile)
-                iqb_score = state.iqb.calculate_iqb_score(
-                    data=iqb_data, print_details=False
+                iqb_score = calculate_iqb_score_with_custom_settings(
+                    state, data=iqb_data, print_details=False
                 )
                 with tab1:
                     render_sunburst(
@@ -1836,6 +1866,7 @@ if (
             subdivision_data=subdivision_data,
             start_date=START_DATE,
             end_date=END_DATE,
+            custom_config=custom_config,
         )
 
 # LEVEL 1: World map

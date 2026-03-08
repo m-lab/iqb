@@ -1,5 +1,7 @@
 """Tests for the IQBCalculator score calculation module."""
 
+import copy
+
 import pytest
 
 from iqb import IQB_CONFIG, IQBCalculator
@@ -22,6 +24,22 @@ class TestIQBCalculatorInitialization:
         """Test that IQBCalculator uses default config when none provided."""
         iqb = IQBCalculator()
         assert iqb.config == IQB_CONFIG
+
+    def test_init_accepts_dict_config(self):
+        """Test that IQBCalculator accepts an in-memory config dict."""
+        custom_config = copy.deepcopy(IQB_CONFIG)
+        custom_config["use cases"]["web browsing"]["network requirements"][
+            "download_throughput_mbps"
+        ]["threshold min"] = 500
+
+        iqb = IQBCalculator(config=custom_config)
+
+        assert (
+            iqb.config["use cases"]["web browsing"]["network requirements"][
+                "download_throughput_mbps"
+            ]["threshold min"]
+            == 500
+        )
 
     def test_init_with_invalid_config_raises_error(self):
         """Test that providing a non-existent config file raises NotImplementedError."""
@@ -127,6 +145,36 @@ class TestIQBCalculatorScoreCalculation:
         score2 = iqb.calculate_iqb_score()
         assert score1 == score2
 
+    def test_calculate_iqb_score_changes_with_custom_thresholds(self):
+        """Test that stricter thresholds lower the IQB score for the same data."""
+        sample_data = {
+            "m-lab": {
+                "download_throughput_mbps": 15,
+                "upload_throughput_mbps": 20,
+                "latency_ms": 75,
+                "packet_loss": 0.007,
+            }
+        }
+
+        default_score = IQBCalculator().calculate_iqb_score(data=sample_data)
+
+        strict_config = copy.deepcopy(IQB_CONFIG)
+        for use_case in strict_config["use cases"].values():
+            use_case["network requirements"]["download_throughput_mbps"]["threshold min"] = (
+                500
+            )
+            use_case["network requirements"]["upload_throughput_mbps"]["threshold min"] = (
+                500
+            )
+            use_case["network requirements"]["latency_ms"]["threshold min"] = 5
+            use_case["network requirements"]["packet_loss"]["threshold min"] = 0.001
+
+        strict_score = IQBCalculator(config=strict_config).calculate_iqb_score(
+            data=sample_data
+        )
+
+        assert strict_score < default_score
+
 
 class TestIQBCalculatorConfig:
     """Tests for IQBCalculator configuration."""
@@ -179,8 +227,24 @@ class TestIQBCalculatorMethods:
         iqb.set_config(None)
         assert iqb.config == IQB_CONFIG
 
+    def test_set_config_with_dict(self):
+        """Test that set_config accepts a dict."""
+        iqb = IQBCalculator()
+        custom_config = copy.deepcopy(IQB_CONFIG)
+        custom_config["use cases"]["gaming"]["w"] = 2
+
+        iqb.set_config(custom_config)
+
+        assert iqb.config["use cases"]["gaming"]["w"] == 2
+
     def test_set_config_with_file_raises_error(self):
         """Test that set_config raises error for file paths."""
         iqb = IQBCalculator()
         with pytest.raises(NotImplementedError):
             iqb.set_config("some_file.json")
+
+    def test_set_config_with_invalid_type_raises_type_error(self):
+        """Test that set_config rejects unsupported config types."""
+        iqb = IQBCalculator()
+        with pytest.raises(TypeError):
+            iqb.set_config(123)

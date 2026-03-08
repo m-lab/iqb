@@ -203,10 +203,10 @@ Create new test files in the `tests/` directory following the
 naming pattern `*_test.py`:
 
 ```python
-"""tests/my_feature_test.py"""
+"""tests/my_featrue_test.py"""
 from iqb import IQBCalculator
 
-class TestMyFeature:
+class TestMyFeatrue:
     def test_something(self):
         calculator = IQBCalculator()
         # Your test code here

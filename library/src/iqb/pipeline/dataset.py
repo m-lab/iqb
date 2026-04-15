@@ -1,16 +1,16 @@
 """Module to construct dataset names."""
 
-from enum import Enum
+from enum import StrEnum
 
 
-class IQBDatasetMLabTable(str, Enum):
+class IQBDatasetMLabTable(StrEnum):
     """Enumerate available parquet tables in the m-lab dataset."""
 
     DOWNLOAD = "downloads"
     UPLOAD = "uploads"
 
 
-class IQBDatasetGranularity(str, Enum):
+class IQBDatasetGranularity(StrEnum):
     """Enumerate available dataset granularity."""
 
     COUNTRY = "by_country"

@@ -38,7 +38,7 @@ def render_sunburst(data, title: str, iqb_score: float, hierarchy_levels: int = 
         hierarchy_levels=hierarchy_levels,
     )
     add_iqb_score_annotation(fig, iqb_score)
-    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
+    st.plotly_chart(fig, width="stretch", config={"staticPlot": True})
 
 
 def main():

@@ -1,109 +1,56 @@
 # Internet Quality Barometer (IQB)
 
-[![Build Status](https://github.com/m-lab/iqb/actions/workflows/ci.yml/badge.svg)](https://github.com/m-lab/iqb/actions) [![codecov](https://codecov.io/gh/m-lab/iqb/branch/main/graph/badge.svg)](https://codecov.io/gh/m-lab/iqb) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/m-lab/iqb)
+[![Build Status](https://github.com/m-lab/iqb/actions/workflows/ci.yml/badge.svg)](https://github.com/m-lab/iqb/actions)
+[![codecov](https://codecov.io/gh/m-lab/iqb/branch/main/graph/badge.svg)](https://codecov.io/gh/m-lab/iqb)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/m-lab/iqb)
 
-This repository contains the source for code the Internet Quality Barometer (IQB)
-library, and related applications and notebooks.
+IQB is an open-source framework developed by
+[Measurement Lab (M-Lab)](https://www.measurementlab.net/) that computes a
+composite Internet quality score across real-world use cases: web browsing,
+video streaming, video conferencing, audio streaming, online backup, and
+gaming. Unlike single-metric speed tests, IQB evaluates whether a connection
+meets the network requirements of each use case and aggregates the results
+into a single score between 0 and 1.
 
-## About IQB
+Read the conceptual background:
 
-IQB is an open-source project initiated by
-[Measurement Lab (M-Lab)](https://www.measurementlab.net/).
+- [M-Lab blog post](https://www.measurementlab.net/blog/iqb/)
+- [Detailed framework report (PDF)](https://www.measurementlab.net/publications/IQB_report_2025.pdf)
+- [Executive summary (PDF)](https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf)
+- [ACM IMC 2025 poster](https://arxiv.org/pdf/2509.19034)
 
-IQB is motivated by the need to redefine how we measure and understand Internet
-performance to keep pace with evolving technological demands and user
-expectations. IQB is a comprehensive framework for collecting data and
-calculating a composite score, the “IQB Score”, which reflects
-the quality of Internet experience. IQB takes a more holistic approach
-than “speed tests” and evaluates Internet performance across various
-use cases (web browsing, video streaming, online gaming, etc.),
-each with its own specific network requirements (latency, throughput, etc.).
+Live staging dashboard: [iqb.mlab-staging.measurementlab.net](https://iqb.mlab-staging.measurementlab.net/)
 
-Read more about the IQB framework in:
+---
 
-- M-Lab's [blog post](https://www.measurementlab.net/blog/iqb/).
+## Repository Structure
 
-- The IQB framework [detailed report](
-https://www.measurementlab.net/publications/IQB_report_2025.pdf) and
-[executive summary](
-https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf).
+| Directory | Description |
+|-----------|-------------|
+| `library/` | `mlab-iqb` Python package — scoring logic, cache API, data pipeline, CLI |
+| `prototype/` | Streamlit web dashboard (Phase 1 prototype) |
+| `analysis/` | Jupyter notebooks for research and experimentation |
+| `data/` | Pipeline configuration and local Parquet cache |
+| `docs/` | Documentation, design decision records, internals guide |
 
-- The IQB [poster](https://arxiv.org/pdf/2509.19034) at ACM IMC 2025.
-
-## Repository Architecture
-
-### **`docs/`**
-
-Documentation, tutorials, design documents, and presentations.
-
-See [docs/README.md](docs/README.md) for details.
-
-### **`library/`**
-
-The IQB library containing methods for calculating the IQB score and data collection.
-
-See [library/README.md](library/README.md) for details.
-
-### **`prototype/`**
-
-A Streamlit web application for applying and parametrizing the IQB framework
-in different use cases.
-
-See [prototype/README.md](prototype/README.md) for how to run it locally.
-
-### **`analysis/`**
-
-Jupyter notebooks for exploratory data analysis, experimentation, and research.
-
-See [analysis/README.md](analysis/README.md) for more information.
-
-### **`data/`**
-
-Workspace containing the default pipeline configuration, the default cache directory,
-and instructions for generating new data using the pipeline.
-
-See [data/README.md](data/README.md) for details.
-
-### **`.iqb`**
-
-Symbolic link to [data](data) that simplifies running the pipeline on Unix.
-
-## Data Flow
-
-The components above connect as follows:
-
-```
-BigQuery → [iqb pipeline run] → local cache/ → [IQBCache] → [IQBCalculator] → scores
-                                      ↕
-                              [iqb cache pull/push] ↔ GCS
-```
-
-The **pipeline** queries BigQuery for M-Lab NDT measurements and stores
-percentile summaries as Parquet files in the local cache. To avoid expensive
-re-queries, **`iqb cache pull`** can download pre-computed results from GCS
-instead. The **`IQBCache`** API reads cached data, and **`IQBCalculator`**
-applies quality thresholds and weights to produce IQB scores. The
-**prototype** and **analysis notebooks** both consume scores through
-these library APIs.
-
-## Understanding the Codebase
-
-- To learn **how the data pipeline works**, read the
-[internals guide](docs/internals/README.md) — it walks through queries,
-the pipeline, the remote cache, and the researcher API in sequence.
-
-- To understand **why specific technical decisions were made**, see the
-[design documents](docs/design/README.md) — architecture decision records
-covering cache design, data distribution, and more.
+---
 
 ## Quick Start
+
+### Requirements
+
+- Python 3.13 (see `.python-version`)
+- [uv](https://astral.sh/uv) — install with `brew install uv` on macOS or
+  `sudo snap install astral-uv --classic` on Ubuntu
+
+### Setup and Run
 
 ```bash
 # Clone the repository
 git clone git@github.com:m-lab/iqb.git
 cd iqb
 
-# Sync all dependencies (creates .venv automatically)
+# Install all workspace dependencies
 uv sync --dev
 
 # Run the Streamlit prototype
@@ -111,5 +58,72 @@ cd prototype
 uv run streamlit run Home.py
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for full development environment
-setup, VSCode configuration, and component-specific workflows.
+The dashboard will be available at `http://localhost:8501`.
+
+### Using the Library
+
+```python
+from iqb import IQBCache, IQBCalculator, IQBDatasetGranularity, IQBRemoteCache
+
+# Pull pre-computed data from GCS (requires gcloud auth)
+cache = IQBCache(remote_cache=IQBRemoteCache())
+
+# Load monthly country-level data
+entry = cache.get_cache_entry(
+    start_date="2025-10-01",
+    end_date="2025-11-01",
+    granularity=IQBDatasetGranularity.COUNTRY,
+)
+
+# Filter to a specific country and extract the median percentile
+p50 = entry.mlab.read_data_frame_pair(country_code="US").to_iqb_data(percentile=50)
+
+# Calculate the IQB score
+score = IQBCalculator().calculate_iqb_score(data={"m-lab": p50.to_dict()})
+print(f"IQB score: {score:.3f}")
+```
+
+See [`analysis/00-template.ipynb`](analysis/00-template.ipynb) for a complete
+walkthrough.
+
+### CLI
+
+```bash
+# Check which cache entries are available locally and remotely
+uv run iqb cache status
+
+# Pull pre-computed data from GCS to the local cache
+uv run iqb cache pull -d data/
+
+# Run the pipeline to generate new data from BigQuery
+uv run iqb pipeline run -d data/
+```
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [docs/architecture.md](docs/architecture.md) | System overview, data flow, component responsibilities, extensibility |
+| [docs/developer_guide.md](docs/developer_guide.md) | Local setup, adding metrics and pages, testing, contribution workflow |
+| [docs/user_guide.md](docs/user_guide.md) | IQB for consumers, policymakers, researchers, and ISPs |
+| [library/README.md](library/README.md) | Library API, testing, linting, type checking |
+| [prototype/README.md](prototype/README.md) | Running locally, Docker, Cloud Run deployment |
+| [data/README.md](data/README.md) | Pipeline commands, cache format, GCS configuration |
+| [analysis/README.md](analysis/README.md) | Notebook usage and conventions |
+| [docs/internals/](docs/internals/README.md) | Sequential guide to how the data pipeline works |
+| [docs/design/](docs/design/README.md) | Architecture decision records |
+| [CONTRIBUTING.md](CONTRIBUTING.md) | Development environment, VSCode setup, component workflows |
+
+---
+
+## Contributing
+
+Contributions are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) for
+development environment setup and [docs/developer_guide.md](docs/developer_guide.md)
+for guidance on adding metrics, use cases, and dashboard pages. All changes
+require passing tests, Ruff linting, and Pyright type checks before merge.
+
+---
+

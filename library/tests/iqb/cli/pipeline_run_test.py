@@ -193,6 +193,7 @@ class TestPipelineRunDateCoercion:
             enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
+            force=False,
         )
 
 
@@ -219,6 +220,34 @@ class TestPipelineRunValid:
             enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
+            force=False,
+        )
+
+
+class TestPipelineRunForceFlag:
+    """-f/--force flag is accepted and passed to sync."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_force_accepted(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _VALID_CONFIG)
+        mock_pipeline = MagicMock()
+        mock_pipeline_cls.return_value = mock_pipeline
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["pipeline", "run", "-d", str(tmp_path), "--force"],
+        )
+        assert result.exit_code == 0
+        mock_pipeline.sync_mlab.assert_called_once_with(
+            "country",
+            enable_bigquery=True,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            force=True,
         )
 
 

@@ -55,12 +55,14 @@ class TestPipelineSyncMlab:
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
+                force=False,
             ),
             call(
                 dataset_name="uploads_by_country",
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
+                force=False,
             ),
         ]
 
@@ -80,6 +82,40 @@ class TestPipelineSyncMlab:
 
         assert entry_download.synced is False
         assert entry_upload.synced is False
+
+    def test_force_syncs_existing_entries(self) -> None:
+        entry_download = _DummyEntry(exists=True)
+        entry_upload = _DummyEntry(exists=True)
+        pipeline = Mock()
+        pipeline.get_cache_entry.side_effect = [entry_download, entry_upload]
+
+        wrapper = iqb_pipeline.Pipeline(pipeline=pipeline)
+        wrapper.sync_mlab(
+            "country",
+            enable_bigquery=True,
+            force=True,
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+        )
+
+        assert entry_download.synced is True
+        assert entry_upload.synced is True
+        assert pipeline.get_cache_entry.call_args_list == [
+            call(
+                dataset_name="downloads_by_country",
+                enable_bigquery=True,
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+                force=True,
+            ),
+            call(
+                dataset_name="uploads_by_country",
+                enable_bigquery=True,
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+                force=True,
+            ),
+        ]
 
     def test_invalid_granularity_raises(self) -> None:
         pipeline = Mock()

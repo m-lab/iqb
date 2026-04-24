@@ -213,7 +213,6 @@ def build_metrics_dict(
     row: pd.Series, percentiles: list[int], is_upload: bool = False
 ) -> dict:
     """Build metrics dictionary from a DataFrame row."""
-    suffix = "" if not is_upload else "_up"
     metrics = {
         "download_throughput_mbps": {},
         "upload_throughput_mbps": {},
@@ -691,7 +690,6 @@ def lookup_city_coords(
         city_norm = normalize_name(city)
 
         # First priority: match (country, admin, city) with normalized names
-        found = False
         for sm_key, coord in sm_cities.items():
             if len(sm_key) == 3 and sm_key[0] == country_code.upper():
                 # Check if admin matches our subdivision
@@ -702,7 +700,6 @@ def lookup_city_coords(
                         or normalize_name(sm_key[2]) == city_norm
                     ):
                         coords[city] = coord
-                        found = True
                         break
 
         # Skip country-level fallback to avoid wrong-state matches

@@ -122,4 +122,9 @@ matrix:
     - start: "2025-12-01"
       end: "2026-01-01"
   granularities:
+    - country
+    - country_asn
+    - subdivision1
     - subdivision1_asn
+    - city
+    - city_asn

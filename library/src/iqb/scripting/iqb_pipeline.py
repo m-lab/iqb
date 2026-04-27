@@ -83,7 +83,7 @@ class Pipeline:
 def create(
     data_dir: str | Path | None = None,
     *,
-    project: str = "measurement-lab",
+    project: str = "mlab-sandbox",
 ) -> Pipeline:
     """
     Helper function to create a Pipeline instance.

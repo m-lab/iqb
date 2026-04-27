@@ -102,7 +102,7 @@ def run(data_dir: str | None, workflow_file: str | None, verbose: bool) -> None:
     resolved_dir = data_dir_or_default(data_dir)
     workflow_path = Path(workflow_file) if workflow_file else resolved_dir / "pipeline.yaml"
     iqb_logging.configure(verbose=verbose)
-    pipe = Pipeline(pipeline=IQBPipeline(project="measurement-lab", data_dir=resolved_dir))
+    pipe = Pipeline(pipeline=IQBPipeline(project="mlab-sandbox", data_dir=resolved_dir))
     time_periods, granularities = load_pipeline_config(workflow_path)
     interceptor = iqb_exception.Interceptor()
 

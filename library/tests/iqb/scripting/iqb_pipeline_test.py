@@ -111,7 +111,7 @@ class TestCreate:
 
         cache_cls.assert_called_once_with(data_dir=None)
         pipeline_cls.assert_called_once_with(
-            project="mlab-sandbox",
+            project="measurement-lab",
             data_dir=None,
             remote_cache=cache_cls.return_value,
         )

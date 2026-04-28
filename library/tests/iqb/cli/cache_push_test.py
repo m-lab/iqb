@@ -1,6 +1,7 @@
 """Tests for the iqb.cli.cache_push module."""
 
 import hashlib
+import io
 import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -8,6 +9,7 @@ from unittest.mock import MagicMock, patch
 from click.testing import CliRunner
 
 from iqb.cli import cli
+from iqb.cli.cache_push import _ProgressReader
 
 
 def _sha256(content: bytes) -> str:
@@ -56,6 +58,38 @@ def _mock_storage_client() -> MagicMock:
     mock_client.bucket.return_value = mock_bucket
     mock_bucket.blob.return_value.upload_from_file.side_effect = _drain_reader
     return mock_client
+
+
+class TestProgressReader:
+    """_ProgressReader forwards attribute access (tell, seek, ...) to the
+    wrapped file. Required by google-cloud-storage's resumable upload path
+    for files above ~8 MiB; without forwarding, large uploads fail with
+    AttributeError on .tell()."""
+
+    def test_read_updates_progress_and_returns_data(self):
+        progress = MagicMock()
+        task_id = MagicMock()
+        fp = io.BytesIO(b"hello world")
+        reader = _ProgressReader(fp, progress, task_id)
+
+        chunk = reader.read(5)
+
+        assert chunk == b"hello"
+        progress.update.assert_called_once_with(task_id, advance=5)
+
+    def test_tell_forwards_to_wrapped_file(self):
+        fp = io.BytesIO(b"abcdefghij")
+        reader = _ProgressReader(fp, MagicMock(), MagicMock())
+
+        fp.read(4)
+        assert reader.tell() == 4
+
+    def test_seek_forwards_to_wrapped_file(self):
+        fp = io.BytesIO(b"abcdefghij")
+        reader = _ProgressReader(fp, MagicMock(), MagicMock())
+
+        reader.seek(3)
+        assert reader.read(3) == b"def"
 
 
 class TestCachePushEmptyManifestNoLocalFiles:

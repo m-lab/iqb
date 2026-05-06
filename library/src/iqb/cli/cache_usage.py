@@ -62,7 +62,7 @@ def _read_stats_json(stats_path: Path) -> tuple[int, float]:
     if not stats_path.exists():
         return 0, 0.0
     try:
-        data = json.loads(stats_path.read_text())
+        data = json.loads(stats_path.read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError):
         return 0, 0.0
     bq_bytes = data.get("total_bytes_billed")

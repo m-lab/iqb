@@ -49,7 +49,7 @@ def _find_log_file(data_dir: Path) -> Path | None:
 def _read_spans(log_file: Path) -> list[dict]:
     """Read all spans from a JSONL log file."""
     spans = []
-    for line in log_file.read_text().splitlines():
+    for line in log_file.read_text(encoding="utf-8").splitlines():
         if line.strip():
             spans.append(json.loads(line))
     return spans

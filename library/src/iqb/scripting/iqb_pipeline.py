@@ -44,6 +44,8 @@ class Pipeline:
         Arguments:
             end_date: exclusive end date as a YYYY-MM-DD string.
             enable_bigquery: whether to enable querying from BigQuery.
+            force: if True, skip both the local on-disk cache and any remote
+                cache syncer, and re-query BigQuery for fresh data.
             granularity: geographical granularity to use.
             start_date: incluive start date as a YYYY-MM-DD string.
 

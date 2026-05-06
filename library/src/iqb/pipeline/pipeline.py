@@ -105,7 +105,8 @@ class IQBPipeline:
             enable_bigquery: Whether to enabled querying from BigQuery.
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
-            force: Whether to bypass cache and force BigQuery query execution.
+            force: If True, skip both the local on-disk cache and any remote
+                cache syncer, and re-query BigQuery for fresh data.
 
         Returns:
             PipelineCacheEntry with paths to data.parquet and stats.json.

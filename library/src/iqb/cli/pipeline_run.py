@@ -92,7 +92,13 @@ def load_pipeline_config(
     metavar="WORKFLOW",
     help="Path to YAML workflow file (default: <dir>/pipeline.yaml)",
 )
-@click.option("-f", "--force", is_flag=True, default=False, help="Bypass cache and force sync")
+@click.option(
+    "-f",
+    "--force",
+    is_flag=True,
+    default=False,
+    help="Bypass all caches (local and remote) and re-query BigQuery.",
+)
 @click.option(
     "--project",
     default="measurement-lab",

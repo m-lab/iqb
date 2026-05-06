@@ -1,7 +1,5 @@
 """Pipeline run command."""
 
-# TODO(bassosimone): add support for -f/--force to bypass cache
-
 from dataclasses import dataclass
 from datetime import date, datetime
 from pathlib import Path
@@ -50,7 +48,7 @@ def load_pipeline_config(
         raise TypeError(f"Cannot coerce {type(value)} to str")
 
     try:
-        content = config_path.read_text()
+        content = config_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise click.ClickException(f"Pipeline config not found: {config_path}") from exc
 
@@ -95,6 +93,14 @@ def load_pipeline_config(
     help="Path to YAML workflow file (default: <dir>/pipeline.yaml)",
 )
 @click.option(
+    "-f",
+    "--force",
+    "force_bigquery",
+    is_flag=True,
+    default=False,
+    help="Bypass all caches (local and remote) and re-query BigQuery.",
+)
+@click.option(
     "--project",
     default="measurement-lab",
     envvar="IQB_PROJECT",
@@ -105,6 +111,7 @@ def load_pipeline_config(
 def run(
     data_dir: str | None,
     workflow_file: str | None,
+    force_bigquery: bool,
     project: str,
     verbose: bool,
 ) -> None:
@@ -127,6 +134,7 @@ def run(
                     enable_bigquery=True,
                     start_date=start,
                     end_date=end,
+                    force_bigquery=force_bigquery,
                 )
 
     raise SystemExit(interceptor.exitcode())

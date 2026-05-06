@@ -161,7 +161,7 @@ def pull(data_dir: str | None, force: bool, jobs: int) -> None:
     log_dir.mkdir(parents=True, exist_ok=True)
     now = datetime.now().astimezone().strftime("%Y%m%dT%H%M%S")
     log_file = log_dir / f"{now}_{time.time_ns()}_pull.jsonl"
-    with open(log_file, "w") as fp:
+    with open(log_file, "w", encoding="utf-8") as fp:
         for span in spans:
             fp.write(json.dumps(span) + "\n")
 

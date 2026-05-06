@@ -172,7 +172,7 @@ class PipelineBQPQQueryResult:
         # of whether there's still a temporary file inside it
         with TemporaryDirectory(dir=stats_path.parent) as tmp_dir:
             tmp_file = Path(tmp_dir) / stats_path.name
-            with tmp_file.open("w") as filep:
+            with tmp_file.open("w", encoding="utf-8") as filep:
                 json.dump(stats, filep, indent=2)
                 filep.write("\n")
             # On Windows, readers may block replace due to missing

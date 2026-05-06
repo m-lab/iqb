@@ -32,6 +32,7 @@ class Pipeline:
         *,
         enable_bigquery: bool,
         end_date: str,
+        force_bigquery: bool = False,
         start_date: str,
     ) -> None:
         """
@@ -43,10 +44,14 @@ class Pipeline:
         Arguments:
             end_date: exclusive end date as a YYYY-MM-DD string.
             enable_bigquery: whether to enable querying from BigQuery.
+            force_bigquery: if True, skip both the local on-disk cache and any
+                remote cache syncer, and re-query BigQuery for fresh data.
+                Requires enable_bigquery=True; otherwise ValueError is raised.
             granularity: geographical granularity to use.
             start_date: incluive start date as a YYYY-MM-DD string.
 
         Raises:
+            ValueError: if force_bigquery=True but enable_bigquery=False.
             Exceptions in case of failure.
         """
         granularity = iqb_granularity.parse(granularity)
@@ -67,9 +72,10 @@ class Pipeline:
                 enable_bigquery=enable_bigquery,
                 start_date=start_date,
                 end_date=end_date,
+                force_bigquery=force_bigquery,
             )
             with entry.lock():
-                if not entry.exists():
+                if force_bigquery or not entry.exists():
                     entry.sync()
 
         log.info(

@@ -1,6 +1,7 @@
 """Tests for the iqb.cache.cache module."""
 
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import Mock
 
 import pytest
@@ -22,7 +23,7 @@ class TestIQBCacheInitialization:
     def test_init_with_custom_data_dir(self):
         """Test that IQBCache can be instantiated with custom data_dir."""
         cache = IQBCache(data_dir="/custom/path")
-        assert str(cache.data_dir) == "/custom/path"
+        assert cache.data_dir == Path("/custom/path")
 
     def test_init_with_remote_cache(self):
         """Test that we properly configure a remote cache."""

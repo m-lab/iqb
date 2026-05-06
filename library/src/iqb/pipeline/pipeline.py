@@ -3,6 +3,7 @@
 import hashlib
 import logging
 from datetime import datetime
+from functools import partial
 from importlib.resources import files
 from pathlib import Path
 
@@ -91,6 +92,7 @@ class IQBPipeline:
         enable_bigquery: bool,
         start_date: str,
         end_date: str,
+        force_bigquery: bool = False,
     ) -> PipelineCacheEntry:
         """
         Get or create a cache entry for the given query template.
@@ -103,27 +105,47 @@ class IQBPipeline:
             enable_bigquery: Whether to enabled querying from BigQuery.
             start_date: Date when to start the query (included) -- format YYYY-MM-DD
             end_date: Date when to end the query (excluded) -- format YYYY-MM-DD
+            force_bigquery: If True, skip both the local on-disk cache and any
+                remote cache syncer, and re-query BigQuery for fresh data.
+                Requires enable_bigquery=True; otherwise ValueError is raised.
 
         Returns:
             PipelineCacheEntry with paths to data.parquet and stats.json.
+
+        Raises:
+            ValueError: if force_bigquery=True but enable_bigquery=False.
         """
-        # 1. create the entry
+        # 1. defense in depth: the two flags meet here, so reject the
+        # incoherent combination at the deepest layer. Upstream callers
+        # (CLI, sync_mlab) should already prevent this, but we guard
+        # anyway so direct library users get a clear error rather than
+        # surprising syncer-list manipulation with no replacement.
+        if force_bigquery and not enable_bigquery:
+            raise ValueError("force_bigquery=True requires enable_bigquery=True")
+
+        # 2. create the entry
         entry = self.manager.get_cache_entry(
             dataset_name=dataset_name,
             start_date=start_date,
             end_date=end_date,
         )
 
-        # 2. prepare for syncing from BigQuery
+        # 3. prepare for syncing from BigQuery. As a side effect of
+        # force_bigquery=True we drop any preconfigured syncer (e.g. the
+        # remote-cache shortcut populated by the manager): the user asked
+        # for fresh BigQuery data, so cached fast-paths must not short-circuit
+        # the query.
+        if force_bigquery:
+            entry.syncers.clear()
         if enable_bigquery:
-            entry.syncers.append(self._bq_syncer)
+            entry.syncers.append(partial(self._bq_syncer, force_bigquery=force_bigquery))
 
-        # 3. return the entry
+        # 4. return the entry
         return entry
 
-    def _bq_syncer(self, entry: PipelineCacheEntry) -> bool:
+    def _bq_syncer(self, entry: PipelineCacheEntry, *, force_bigquery: bool = False) -> bool:
         """Internal method to get the entry files using a BigQuery query."""
-        if entry.exists():
+        if not force_bigquery and entry.exists():
             log.info("querying for %s... skipped (cached)", entry)
             return True
         try:
@@ -192,7 +214,7 @@ def _load_query_template(
         the SHA256 hash of the original template file.
     """
     query_file = files(queries).joinpath(f"{dataset_name}.sql")
-    template_text = query_file.read_text()
+    template_text = query_file.read_text(encoding="utf-8")
 
     # Compute hash of the query template
     template_hash = hashlib.sha256(template_text.encode("utf-8")).hexdigest()

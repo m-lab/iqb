@@ -36,6 +36,12 @@ cd prototype
 uv run streamlit run Home.py
 ```
 
+### Updating Dependencies
+
+```bash
+uv sync --upgrade
+```
+
 ### Using VSCode
 
 This repository is configured for VSCode with selected Python

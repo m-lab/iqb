@@ -49,7 +49,7 @@ def _find_log_file(data_dir: Path) -> Path | None:
 def _read_spans(log_file: Path) -> list[dict]:
     """Read all spans from a JSONL log file."""
     spans = []
-    for line in log_file.read_text().splitlines():
+    for line in log_file.read_text(encoding="utf-8").splitlines():
         if line.strip():
             spans.append(json.loads(line))
     return spans
@@ -73,6 +73,29 @@ class TestCachePullEmptyManifest:
         result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
         assert result.exit_code == 0
         assert "Nothing to download" in result.output
+
+
+class TestCachePullInvalidManifestKeys:
+    """Invalid manifest keys are ignored for safety."""
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_traversal_key_is_ignored(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _write_manifest(
+            tmp_path,
+            {
+                "../../etc/passwd": {
+                    "sha256": _sha256(b"malicious"),
+                    "url": "https://example.com/a",
+                }
+            },
+        )
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+
+        assert result.exit_code == 0
+        assert "Nothing to download" in result.output
+        mock_session_cls.assert_not_called()
 
 
 class TestCachePullOnlyRemote:

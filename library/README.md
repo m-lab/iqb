@@ -90,9 +90,18 @@ You can then use `pipeline` to run queries up to a daily quota.
 
 ## Coding Style
 
-We strongly prefer keyword-only arguments for public constructors (e.g.,
-`IQBPipeline`, `IQBCache`) and functions, because they are harder to misuse
-and they enable incremental refactoring.
+- We strongly prefer keyword-only arguments for public constructors (e.g.,
+  `IQBPipeline`, `IQBCache`) and functions, because they are harder to misuse
+  and they enable incremental refactoring.
+
+- Always pass an explicit `encoding="utf-8"` to text I/O calls (`open`,
+  `Path.open`, `Path.read_text`, `Path.write_text`). This is enforced by ruff
+  rule `PLW1514`. The Python default is locale-dependent (`cp1252` on Windows),
+  which silently breaks JSON and any non-ASCII content.
+
+- Compare paths as `Path` objects, not as their stringified form. `Path("/a/b")
+  == Path("/a/b")` works everywhere; `str(Path("/a/b")) == "/a/b"` is `False`
+  on Windows because `str()` uses backslashes there.
 
 ## Running Tests
 

@@ -55,12 +55,14 @@ class TestPipelineSyncMlab:
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
+                force_bigquery=False,
             ),
             call(
                 dataset_name="uploads_by_country",
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
+                force_bigquery=False,
             ),
         ]
 
@@ -80,6 +82,59 @@ class TestPipelineSyncMlab:
 
         assert entry_download.synced is False
         assert entry_upload.synced is False
+
+    def test_force_syncs_existing_entries(self) -> None:
+        entry_download = _DummyEntry(exists=True)
+        entry_upload = _DummyEntry(exists=True)
+        pipeline = Mock()
+        pipeline.get_cache_entry.side_effect = [entry_download, entry_upload]
+
+        wrapper = iqb_pipeline.Pipeline(pipeline=pipeline)
+        wrapper.sync_mlab(
+            "country",
+            enable_bigquery=True,
+            force_bigquery=True,
+            start_date="2024-01-01",
+            end_date="2024-02-01",
+        )
+
+        assert entry_download.synced is True
+        assert entry_upload.synced is True
+        assert pipeline.get_cache_entry.call_args_list == [
+            call(
+                dataset_name="downloads_by_country",
+                enable_bigquery=True,
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+                force_bigquery=True,
+            ),
+            call(
+                dataset_name="uploads_by_country",
+                enable_bigquery=True,
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+                force_bigquery=True,
+            ),
+        ]
+
+    def test_force_bigquery_without_enable_bigquery_propagates_value_error(self) -> None:
+        """sync_mlab must propagate the ValueError raised by get_cache_entry."""
+        entry = _DummyEntry(exists=False)
+        pipeline = Mock()
+        pipeline.get_cache_entry.side_effect = ValueError(
+            "force_bigquery=True requires enable_bigquery=True"
+        )
+
+        wrapper = iqb_pipeline.Pipeline(pipeline=pipeline)
+        with pytest.raises(ValueError, match="force_bigquery=True requires enable_bigquery=True"):
+            wrapper.sync_mlab(
+                "country",
+                enable_bigquery=False,
+                force_bigquery=True,
+                start_date="2024-01-01",
+                end_date="2024-02-01",
+            )
+        assert entry.synced is False
 
     def test_invalid_granularity_raises(self) -> None:
         pipeline = Mock()

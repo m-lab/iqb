@@ -317,6 +317,111 @@ class TestIQBPipelineGetCacheEntry:
         mock_client.return_value.execute_query.assert_not_called()
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    def test_bq_syncer_force_queries_when_exists(self, mock_client, tmp_path):
+        """Test that force=True bypasses cached skip and executes BigQuery."""
+        data_dir = tmp_path / "iqb"
+        pipeline = IQBPipeline(project="test-project", data_dir=data_dir)
+
+        cache_dir = (
+            data_dir
+            / "cache"
+            / "v1"
+            / "20241001T000000Z"
+            / "20241101T000000Z"
+            / "downloads_by_country"
+        )
+        cache_dir.mkdir(parents=True, exist_ok=True)
+        (cache_dir / "data.parquet").write_text("fake parquet data")
+        (cache_dir / "stats.json").write_text("{}")
+
+        mock_result = MagicMock(spec=PipelineBQPQQueryResult)
+        mock_client.return_value.execute_query.return_value = mock_result
+
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            enable_bigquery=True,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            force_bigquery=True,
+        )
+
+        with entry.lock():
+            entry.sync()
+
+        mock_client.return_value.execute_query.assert_called_once()
+        mock_result.save_data_parquet.assert_called_once()
+        mock_result.save_stats_json.assert_called_once()
+
+    def test_force_bigquery_without_enable_bigquery_raises(self, tmp_path):
+        """force_bigquery=True is incoherent with enable_bigquery=False."""
+        pipeline = IQBPipeline(project="test-project", data_dir=tmp_path / "iqb")
+        with pytest.raises(ValueError, match="force_bigquery=True requires enable_bigquery=True"):
+            pipeline.get_cache_entry(
+                dataset_name="downloads_by_country",
+                enable_bigquery=False,
+                start_date="2024-10-01",
+                end_date="2024-11-01",
+                force_bigquery=True,
+            )
+
+    def test_force_bigquery_drops_remote_cache_syncer(self, tmp_path):
+        """force_bigquery=True must drop preconfigured syncers (incl. remote cache)."""
+        remote = MagicMock()
+        pipeline = IQBPipeline(
+            project="test-project", data_dir=tmp_path / "iqb", remote_cache=remote
+        )
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            enable_bigquery=True,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            force_bigquery=True,
+        )
+        # Only the bq syncer remains; the remote_cache.sync was dropped.
+        assert len(entry.syncers) == 1
+        assert remote.sync not in entry.syncers
+
+    def test_force_bigquery_false_keeps_remote_cache_syncer(self, tmp_path):
+        """force_bigquery=False must preserve preconfigured remote-cache syncer."""
+        remote = MagicMock()
+        pipeline = IQBPipeline(
+            project="test-project", data_dir=tmp_path / "iqb", remote_cache=remote
+        )
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            enable_bigquery=True,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            force_bigquery=False,
+        )
+        # remote_cache.sync first (manager appended it), bq syncer second.
+        assert len(entry.syncers) == 2
+        assert entry.syncers[0] is remote.sync
+
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
+    def test_bq_syncer_force_queries_when_missing(self, mock_client, tmp_path):
+        """force_bigquery=True with no cache files queries BigQuery (happy path)."""
+        pipeline = IQBPipeline(project="test-project", data_dir=tmp_path / "iqb")
+        mock_result = MagicMock(spec=PipelineBQPQQueryResult)
+        mock_client.return_value.execute_query.return_value = mock_result
+
+        entry = pipeline.get_cache_entry(
+            dataset_name="downloads_by_country",
+            enable_bigquery=True,
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+            force_bigquery=True,
+        )
+        assert not entry.exists()
+
+        with entry.lock():
+            entry.sync()
+
+        mock_client.return_value.execute_query.assert_called_once()
+        mock_result.save_data_parquet.assert_called_once()
+        mock_result.save_stats_json.assert_called_once()
+
+    @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_bq_syncer_failure(self, mock_client, tmp_path):
         """Test that _bq_syncer handles exceptions and returns False."""
         # Create the pipeline

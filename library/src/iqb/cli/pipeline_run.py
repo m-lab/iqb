@@ -92,11 +92,7 @@ def load_pipeline_config(
     metavar="WORKFLOW",
     help="Path to YAML workflow file (default: <dir>/pipeline.yaml)",
 )
-<<<<<<< pipeline_run_force
 @click.option("-f", "--force", is_flag=True, default=False, help="Bypass cache and force sync")
-@click.option("-v", "--verbose", is_flag=True, default=False, help="Verbose mode.")
-def run(data_dir: str | None, workflow_file: str | None, force: bool, verbose: bool) -> None:
-=======
 @click.option(
     "--project",
     default="measurement-lab",
@@ -108,10 +104,10 @@ def run(data_dir: str | None, workflow_file: str | None, force: bool, verbose: b
 def run(
     data_dir: str | None,
     workflow_file: str | None,
+    force: bool,
     project: str,
     verbose: bool,
 ) -> None:
->>>>>>> main
     """Run the BigQuery pipeline for all matrix entries."""
 
     console = get_console()

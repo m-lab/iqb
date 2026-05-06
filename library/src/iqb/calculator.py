@@ -23,6 +23,9 @@ class IQBCalculator:
         """Sets up configuration parameters. If "None" (default), it gets the parameters from the IQB_CONFIG dict."""
         if config is None:
             self.config = IQB_CONFIG
+            # TODO: check the format of the config is the same of the IQB_CONFIG
+        elif isinstance(config, dict):
+            self.config = config
         else:
             # TODO: load config data from file (json, yaml, or other format) as a dict
             raise NotImplementedError(

@@ -114,7 +114,7 @@ class IQBPipeline:
             end_date=end_date,
         )
 
-        # 2. prepare for synching from BigQuery
+        # 2. prepare for syncing from BigQuery
         if enable_bigquery:
             entry.syncers.append(self._bq_syncer)
 

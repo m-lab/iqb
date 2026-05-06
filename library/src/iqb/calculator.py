@@ -82,7 +82,7 @@ class IQBCalculator:
                 f"The binary requirement score method is not implemented for the network_requirement: {network_requirement}"
             )
 
-    def calculate_iqb_score(self, data, print_details=False):
+    def calculate_iqb_score(self, data: dict, print_details=False):
         """Calculates IQB score based on given data."""
 
         # TODO(bassosimone): remove printing from the current function and instead

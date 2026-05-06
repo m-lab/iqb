@@ -99,20 +99,6 @@ class TestIQBCalculatorScoreCalculation:
         }
     }
 
-    # TODO(bassosimone): this test is now stale — after removing the implicit
-    # default-data fallback in `calculate_iqb_score`, it became a duplicate of
-    # `test_calculate_iqb_score_with_custom_data` (same call, same assertions).
-    # Repurpose as `test_calculate_iqb_score_requires_data` that asserts a
-    # `TypeError` is raised when `data` is omitted, to lock in the new API
-    # contract introduced by PR #167.
-    def test_calculate_iqb_score_default_data(self):
-        """Test that IQBCalculator score can be calculated with explicit input data."""
-        iqb = IQBCalculator(name="test1")
-        score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
-        # The score should be a float between 0 and 1
-        assert isinstance(score, (int, float))
-        assert 0 <= score <= 1
-
     def test_calculate_iqb_score_with_custom_data(self):
         """Test that IQBCalculator score can be calculated with custom data."""
         iqb = IQBCalculator()

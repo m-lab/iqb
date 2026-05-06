@@ -258,6 +258,62 @@ class TestDiffIsIterator:
         assert not isinstance(result, (list, tuple))
 
 
+class TestDiffInvalidManifestKeys:
+    """Invalid manifest keys are ignored for safety."""
+
+    def test_traversal_manifest_key_is_ignored(self, tmp_path: Path):
+        manifest = Manifest(
+            v=0,
+            files={
+                "../../etc/passwd": FileEntry(
+                    sha256="0" * 64,
+                    url="https://example.com/passwd",
+                )
+            },
+        )
+
+        results = list(diff(manifest, tmp_path))
+
+        assert results == []
+
+    def test_dotdot_inside_cache_path_is_ignored(self, tmp_path: Path):
+        manifest = Manifest(
+            v=0,
+            files={
+                f"cache/v1/{_TS1}/{_TS2}/{_NAME}/../data.parquet": FileEntry(
+                    sha256="0" * 64,
+                    url="https://example.com/a",
+                )
+            },
+        )
+
+        results = list(diff(manifest, tmp_path))
+
+        assert results == []
+
+    def test_mixed_valid_and_invalid_manifest_keys(self, tmp_path: Path):
+        content = b"remote content"
+        manifest = Manifest(
+            v=0,
+            files={
+                "../../etc/passwd": FileEntry(
+                    sha256="0" * 64,
+                    url="https://example.com/passwd",
+                ),
+                _FILE_A: FileEntry(
+                    sha256=_sha256(content),
+                    url="https://example.com/a.parquet",
+                ),
+            },
+        )
+
+        results = list(diff(manifest, tmp_path))
+
+        assert len(results) == 1
+        assert results[0].file == _FILE_A
+        assert results[0].state == DiffState.ONLY_REMOTE
+
+
 class TestValidateCachePath:
     """Tests for _validate_cache_path covering all branches."""
 

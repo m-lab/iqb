@@ -2,16 +2,19 @@
 
 from __future__ import annotations
 
+import logging
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from .cache import FileEntry, Manifest, compute_sha256
 
+log = logging.getLogger("iqb.ghremote.diff")
 
-class DiffState(str, Enum):
+
+class DiffState(StrEnum):
     """State of a diff entry comparing manifest vs local cache."""
 
     ONLY_REMOTE = "only_remote"
@@ -108,6 +111,9 @@ def diff(
     # Phase 2: iterate accepted manifest keys in sorted order
     seen: set[str] = set()
     for key in sorted(manifest.files):
+        if not _validate_cache_path(key):
+            log.warning("skipping invalid manifest key: %s", key)
+            continue
         if acceptp is not None and not acceptp(key):
             continue
         seen.add(key)

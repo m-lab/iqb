@@ -94,15 +94,27 @@ def load_pipeline_config(
     metavar="WORKFLOW",
     help="Path to YAML workflow file (default: <dir>/pipeline.yaml)",
 )
+@click.option(
+    "--project",
+    default="measurement-lab",
+    envvar="IQB_PROJECT",
+    show_default=True,
+    help="BigQuery billing project (env: IQB_PROJECT).",
+)
 @click.option("-v", "--verbose", is_flag=True, default=False, help="Verbose mode.")
-def run(data_dir: str | None, workflow_file: str | None, verbose: bool) -> None:
+def run(
+    data_dir: str | None,
+    workflow_file: str | None,
+    project: str,
+    verbose: bool,
+) -> None:
     """Run the BigQuery pipeline for all matrix entries."""
 
     console = get_console()
     resolved_dir = data_dir_or_default(data_dir)
     workflow_path = Path(workflow_file) if workflow_file else resolved_dir / "pipeline.yaml"
     iqb_logging.configure(verbose=verbose)
-    pipe = Pipeline(pipeline=IQBPipeline(project="measurement-lab", data_dir=resolved_dir))
+    pipe = Pipeline(pipeline=IQBPipeline(project=project, data_dir=resolved_dir))
     time_periods, granularities = load_pipeline_config(workflow_path)
     interceptor = iqb_exception.Interceptor()
 

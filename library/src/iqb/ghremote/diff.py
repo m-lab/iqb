@@ -6,7 +6,7 @@ import logging
 import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 from pathlib import Path
 
 from .cache import FileEntry, Manifest, compute_sha256
@@ -14,7 +14,7 @@ from .cache import FileEntry, Manifest, compute_sha256
 log = logging.getLogger("iqb.ghremote.diff")
 
 
-class DiffState(str, Enum):
+class DiffState(StrEnum):
     """State of a diff entry comparing manifest vs local cache."""
 
     ONLY_REMOTE = "only_remote"

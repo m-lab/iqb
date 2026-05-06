@@ -30,7 +30,8 @@ SELECT
     APPROX_QUANTILES(a.MeanThroughputMbps, 100)[OFFSET(99)] as upload_p99
 FROM
     -- TODO(bassosimone): current unified_downloads/unified_uploads tables lack BYOS
-    -- support. We'll eventually need to switch to better tables.
+    -- support. We'll eventually need to switch to ndt7_union.
+    -- See https://github.com/m-lab/iqb/pull/189 for additional context.
     `measurement-lab.ndt.unified_uploads`
 WHERE
     date >= "{START_DATE}" AND date < "{END_DATE}"

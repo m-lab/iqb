@@ -66,7 +66,7 @@ def render_measurement_inputs(state: IQBAppState) -> None:
     else:
         render_advanced_mode_inputs(state, requirements, datasets)
 
-    if st.button("🔄 Reset to Default", use_container_width=True):
+    if st.button("🔄 Reset to Default", width="stretch"):
         reset_manual_entry(state)
         st.rerun()
 
@@ -232,7 +232,7 @@ def render_threshold_editor(state: IQBAppState) -> None:
 
     if st.button(
         "🔄 Reset Thresholds to Default",
-        use_container_width=True,
+        width="stretch",
         key="reset_thresholds_btn",
     ):
         reset_thresholds(state)
@@ -277,7 +277,7 @@ def render_requirement_weights_editor(state: IQBAppState) -> None:
 
     if st.button(
         "🔄 Reset Requirement Weights to Default",
-        use_container_width=True,
+        width="stretch",
         key="reset_req_weights_btn",
     ):
         reset_requirement_weights(state)
@@ -313,7 +313,7 @@ def render_use_case_weights_editor(state: IQBAppState) -> None:
 
     if st.button(
         "🔄 Reset Use Case Weights to Default",
-        use_container_width=True,
+        width="stretch",
         key="reset_uc_weights_btn",
     ):
         reset_use_case_weights(state)
@@ -377,7 +377,7 @@ def render_dataset_weights_editor(state: IQBAppState) -> None:
 
     if st.button(
         "🔄 Reset Dataset Weights to Default",
-        use_container_width=True,
+        width="stretch",
         key="reset_dataset_weights_btn",
     ):
         reset_dataset_weights(state)
@@ -477,4 +477,4 @@ def render_sunburst(
         height=height,
     )
     add_iqb_score_annotation(fig, iqb_score)
-    st.plotly_chart(fig, use_container_width=True, config={"staticPlot": True})
+    st.plotly_chart(fig, width="stretch", config={"staticPlot": True})

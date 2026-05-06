@@ -50,7 +50,7 @@ def load_pipeline_config(
         raise TypeError(f"Cannot coerce {type(value)} to str")
 
     try:
-        content = config_path.read_text()
+        content = config_path.read_text(encoding="utf-8")
     except FileNotFoundError as exc:
         raise click.ClickException(f"Pipeline config not found: {config_path}") from exc
 

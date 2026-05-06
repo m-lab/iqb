@@ -583,7 +583,7 @@ class TestSaveManifest:
         )
 
         save_manifest(manifest, manifest_file)
-        content = manifest_file.read_text()
+        content = manifest_file.read_text(encoding="utf-8")
 
         # Trailing newline
         assert content.endswith("\n")

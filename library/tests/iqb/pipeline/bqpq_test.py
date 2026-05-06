@@ -133,7 +133,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
                 # Get the path that was passed to ParquetWriter
                 temp_path = Path(mock_writer.call_args[0][0])
                 temp_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path.write_text("fake data")
+                temp_path.write_text("fake data", encoding="utf-8")
 
             mock_writer_instance.write_batch.side_effect = create_parquet_file
 
@@ -176,7 +176,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
                 # Get the path that was passed to ParquetWriter
                 temp_path = Path(mock_writer.call_args[0][0])
                 temp_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path.write_text("")
+                temp_path.write_text("", encoding="utf-8")
 
             mock_writer.return_value.__exit__.side_effect = create_parquet_file
 
@@ -238,7 +238,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
                 # Get the path that was passed to ParquetWriter
                 temp_path = Path(mock_writer.call_args[0][0])
                 temp_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path.write_text("fake data")
+                temp_path.write_text("fake data", encoding="utf-8")
 
             mock_writer_instance.write_batch.side_effect = create_parquet_file
 
@@ -281,7 +281,7 @@ class TestPipelineBQPQQueryResultSaveDataParquet:
                 # Get the path that was passed to ParquetWriter
                 temp_path = Path(mock_writer.call_args[0][0])
                 temp_path.parent.mkdir(parents=True, exist_ok=True)
-                temp_path.write_text("fake data")
+                temp_path.write_text("fake data", encoding="utf-8")
 
             mock_writer_instance.write_batch.side_effect = create_parquet_file
 
@@ -331,7 +331,7 @@ class TestPipelineBQPQQueryResultSaveStatsJSON:
         assert stats_path.exists()
 
         # Verify content
-        with stats_path.open() as filep:
+        with stats_path.open(encoding="utf-8") as filep:
             stats = json.load(filep)
 
         assert stats["query_start_time"] == "2024-11-27T10:00:00.000000Z"
@@ -360,7 +360,7 @@ class TestPipelineBQPQQueryResultSaveStatsJSON:
         stats_path = result.save_stats_json()
 
         # Verify content
-        with stats_path.open() as filep:
+        with stats_path.open(encoding="utf-8") as filep:
             stats = json.load(filep)
 
         assert stats["query_start_time"] is None

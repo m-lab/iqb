@@ -33,7 +33,7 @@ _MULTI_CONFIG = {
 def _write_config(path: Path, data: object) -> None:
     """Write a YAML config file."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.dump(data))
+    path.write_text(yaml.dump(data), encoding="utf-8")
 
 
 class TestPipelineRunMissingWorkflow:

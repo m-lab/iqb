@@ -192,7 +192,7 @@ def _load_query_template(
         the SHA256 hash of the original template file.
     """
     query_file = files(queries).joinpath(f"{dataset_name}.sql")
-    template_text = query_file.read_text()
+    template_text = query_file.read_text(encoding="utf-8")
 
     # Compute hash of the query template
     template_hash = hashlib.sha256(template_text.encode("utf-8")).hexdigest()

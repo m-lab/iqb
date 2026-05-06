@@ -33,7 +33,7 @@ _MULTI_CONFIG = {
 def _write_config(path: Path, data: object) -> None:
     """Write a YAML config file."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(yaml.dump(data))
+    path.write_text(yaml.dump(data), encoding="utf-8")
 
 
 class TestPipelineRunMissingWorkflow:
@@ -333,3 +333,42 @@ class TestPipelineRunVerboseFlag:
             ["pipeline", "run", "-d", str(tmp_path), "-v"],
         )
         assert result.exit_code == 0
+
+
+class TestPipelineRunProjectFlag:
+    """--project flag (or IQB_PROJECT envvar) propagates to IQBPipeline.
+    Default is 'measurement-lab'; override lets users billing a different
+    project run the pipeline without patching source."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_default_project_is_measurement_lab(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _VALID_CONFIG)
+        mock_pipeline_cls.return_value = MagicMock()
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["pipeline", "run", "-d", str(tmp_path)])
+        assert result.exit_code == 0
+
+        mock_iqb_pipeline_cls.assert_called_once()
+        assert mock_iqb_pipeline_cls.call_args.kwargs["project"] == "measurement-lab"
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_project_flag_overrides_default(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _VALID_CONFIG)
+        mock_pipeline_cls.return_value = MagicMock()
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["pipeline", "run", "-d", str(tmp_path), "--project", "mlab-sandbox"],
+        )
+        assert result.exit_code == 0
+
+        mock_iqb_pipeline_cls.assert_called_once()
+        assert mock_iqb_pipeline_cls.call_args.kwargs["project"] == "mlab-sandbox"

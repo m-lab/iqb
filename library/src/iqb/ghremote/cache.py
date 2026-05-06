@@ -68,7 +68,7 @@ def load_manifest(manifest_file: Path) -> Manifest:
     if not manifest_file.exists():
         return Manifest(v=0, files={})
 
-    with open(manifest_file) as filep:
+    with open(manifest_file, encoding="utf-8") as filep:
         data = json.load(filep)
 
     return from_dict(Manifest, data)
@@ -82,7 +82,7 @@ def manifest_path_for_data_dir(data_dir: Path) -> Path:
 def save_manifest(manifest: Manifest, manifest_file: Path) -> None:
     """Save manifest to the given file path."""
     manifest_file.parent.mkdir(parents=True, exist_ok=True)
-    with open(manifest_file, "w") as filep:
+    with open(manifest_file, "w", encoding="utf-8") as filep:
         json.dump(asdict(manifest), filep, indent=2, sort_keys=True)
         filep.write("\n")
 

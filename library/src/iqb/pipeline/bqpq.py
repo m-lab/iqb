@@ -86,6 +86,21 @@ class PipelineBQPQQueryResult:
 
         If the query returns no rows, an empty parquet file is written.
 
+        This method downloads results via the `BigQuery Storage Read API
+        <https://cloud.google.com/bigquery/docs/reference/storage>`_, by passing
+        ``bqstorage_client`` to ``RowIterator.to_arrow_iterable``. Relevant
+        documented limits (see `Storage Read API quotas
+        <https://cloud.google.com/bigquery/quotas#storage-limits>`_):
+
+        - Each ``ReadRowsResponse`` message is at most 128 MB serialized; this
+          is per-message framing handled transparently by the client and does
+          not cap total stream size.
+        - Read sessions are guaranteed to live for at least 6 hours from
+          creation.
+        - There is no session-wide total-bytes limit, so the size ceiling for
+          a download is set by the upstream query job (see
+          ``PipelineBQPQClient.execute_query``), not by this method.
+
         Returns:
             Path to the written file.
         """
@@ -157,7 +172,7 @@ class PipelineBQPQQueryResult:
         # of whether there's still a temporary file inside it
         with TemporaryDirectory(dir=stats_path.parent) as tmp_dir:
             tmp_file = Path(tmp_dir) / stats_path.name
-            with tmp_file.open("w") as filep:
+            with tmp_file.open("w", encoding="utf-8") as filep:
                 json.dump(stats, filep, indent=2)
                 filep.write("\n")
             # On Windows, readers may block replace due to missing
@@ -168,7 +183,24 @@ class PipelineBQPQQueryResult:
 
 
 class PipelineBQPQClient:
-    """Client for streaming BigQuery query results to parquet."""
+    """Client for streaming BigQuery query results to parquet.
+
+    This client uses two Google Cloud APIs:
+
+    1. The `BigQuery Query Jobs API
+       <https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs>`_, via
+       ``google.cloud.bigquery.Client.query``, to submit and poll the query
+       (see ``execute_query``).
+
+    2. The `BigQuery Storage Read API
+       <https://cloud.google.com/bigquery/docs/reference/storage>`_, via
+       ``google.cloud.bigquery_storage_v1.BigQueryReadClient``, to stream
+       results as Arrow record batches (see
+       ``PipelineBQPQQueryResult.save_data_parquet``).
+
+    See the docstrings of those methods for the documented limits that apply
+    to each API.
+    """
 
     def __init__(self, project: str):
         """
@@ -206,6 +238,24 @@ class PipelineBQPQClient:
         """
         Execute the given BigQuery query.
 
+        The query is submitted via the `Query Jobs API
+        <https://cloud.google.com/bigquery/docs/reference/rest/v2/jobs>`_ with
+        no ``QueryJobConfig`` and therefore no destination table. Results are
+        materialized into the anonymous results table that BigQuery creates
+        for the job. The relevant documented limits (see `Query jobs quotas
+        <https://cloud.google.com/bigquery/quotas#query_jobs>`_) are:
+
+        - Maximum response size: **10 GB compressed**. Actual uncompressed
+          size may be significantly larger; the cap is on the compressed
+          anonymous results table. A query that exceeds it fails with
+          ``responseTooLarge`` *before* any Storage Read API streaming
+          happens. The cap is **lifted** when the job writes to an explicit
+          destination table (see `Writing query results
+          <https://cloud.google.com/bigquery/docs/writing-results>`_); in
+          GoogleSQL the legacy ``allowLargeResults`` flag is ignored.
+        - Maximum row size: 100 MB (approximate, internal representation).
+        - Statement time limit: 6 hours per statement.
+
         Args:
             template_hash: SHA256 of the query template hash.
             query: The specific query to execute.
@@ -215,6 +265,12 @@ class PipelineBQPQClient:
             A PipelineBQPQQueryResult instance.
         """
         # 1. execute the query and get job
+        # TODO(bassosimone): if we ever need to return more than 10 GB
+        # compressed of results, build a ``bigquery.QueryJobConfig`` with a
+        # ``destination`` table in a dataset that has a short default-table
+        # expiration, and pass it as ``job_config=`` here. With a destination
+        # set, GoogleSQL has no result-size cap; see this method's docstring
+        # for the full rationale and links.
         job = self.client.query(query)
 
         # 2. wait for job to finish with a progress bar

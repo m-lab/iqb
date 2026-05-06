@@ -95,6 +95,7 @@ def load_pipeline_config(
 @click.option(
     "-f",
     "--force",
+    "force_bigquery",
     is_flag=True,
     default=False,
     help="Bypass all caches (local and remote) and re-query BigQuery.",
@@ -110,7 +111,7 @@ def load_pipeline_config(
 def run(
     data_dir: str | None,
     workflow_file: str | None,
-    force: bool,
+    force_bigquery: bool,
     project: str,
     verbose: bool,
 ) -> None:
@@ -133,7 +134,7 @@ def run(
                     enable_bigquery=True,
                     start_date=start,
                     end_date=end,
-                    force=force,
+                    force_bigquery=force_bigquery,
                 )
 
     raise SystemExit(interceptor.exitcode())

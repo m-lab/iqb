@@ -55,14 +55,14 @@ class TestPipelineSyncMlab:
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
-                force=False,
+                force_bigquery=False,
             ),
             call(
                 dataset_name="uploads_by_country",
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
-                force=False,
+                force_bigquery=False,
             ),
         ]
 
@@ -93,7 +93,7 @@ class TestPipelineSyncMlab:
         wrapper.sync_mlab(
             "country",
             enable_bigquery=True,
-            force=True,
+            force_bigquery=True,
             start_date="2024-01-01",
             end_date="2024-02-01",
         )
@@ -106,14 +106,14 @@ class TestPipelineSyncMlab:
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
-                force=True,
+                force_bigquery=True,
             ),
             call(
                 dataset_name="uploads_by_country",
                 enable_bigquery=True,
                 start_date="2024-01-01",
                 end_date="2024-02-01",
-                force=True,
+                force_bigquery=True,
             ),
         ]
 

@@ -342,7 +342,7 @@ class TestIQBPipelineGetCacheEntry:
             enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
-            force=True,
+            force_bigquery=True,
         )
 
         with entry.lock():
@@ -351,6 +351,18 @@ class TestIQBPipelineGetCacheEntry:
         mock_client.return_value.execute_query.assert_called_once()
         mock_result.save_data_parquet.assert_called_once()
         mock_result.save_stats_json.assert_called_once()
+
+    def test_force_bigquery_without_enable_bigquery_raises(self, tmp_path):
+        """force_bigquery=True is incoherent with enable_bigquery=False."""
+        pipeline = IQBPipeline(project="test-project", data_dir=tmp_path / "iqb")
+        with pytest.raises(ValueError, match="force_bigquery=True requires enable_bigquery=True"):
+            pipeline.get_cache_entry(
+                dataset_name="downloads_by_country",
+                enable_bigquery=False,
+                start_date="2024-10-01",
+                end_date="2024-11-01",
+                force_bigquery=True,
+            )
 
     @patch("iqb.pipeline.pipeline.PipelineBQPQClient")
     def test_bq_syncer_failure(self, mock_client, tmp_path):

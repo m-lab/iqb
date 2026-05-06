@@ -193,7 +193,7 @@ class TestPipelineRunDateCoercion:
             enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
-            force=False,
+            force_bigquery=False,
         )
 
 
@@ -220,7 +220,7 @@ class TestPipelineRunValid:
             enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
-            force=False,
+            force_bigquery=False,
         )
 
 
@@ -247,7 +247,7 @@ class TestPipelineRunForceFlag:
             enable_bigquery=True,
             start_date="2024-10-01",
             end_date="2024-11-01",
-            force=True,
+            force_bigquery=True,
         )
 
 

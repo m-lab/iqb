@@ -23,6 +23,9 @@ class IQBCalculator:
         """Sets up configuration parameters. If "None" (default), it gets the parameters from the IQB_CONFIG dict."""
         if config is None:
             self.config = IQB_CONFIG
+            # TODO: check the format of the config is the same of the IQB_CONFIG
+        elif isinstance(config, dict):
+            self.config = config
         else:
             # TODO: load config data from file (json, yaml, or other format) as a dict
             raise NotImplementedError(
@@ -82,7 +85,7 @@ class IQBCalculator:
     def calculate_iqb_score(self, data=None, print_details=False):
         """Calculates IQB score based on given data."""
 
-        # TODO(bassosimone): remove the default data sample in a subsequent interation.
+        # TODO(bassosimone): remove the default data sample in a subsequent iteration.
         sample_data = {
             "m-lab": {
                 "download_throughput_mbps": 15,

@@ -50,6 +50,13 @@ class _ProgressReader:
             self._progress.update(self._task_id, advance=len(data))
         return data
 
+    def __getattr__(self, name: str):
+        # Delegate tell/seek/etc. to the wrapped file so resumable
+        # uploads (google-cloud-storage's path for files above the
+        # ~8 MiB threshold) work; without this, large parquets fail
+        # with "'_ProgressReader' object has no attribute 'tell'".
+        return getattr(self._fp, name)
+
 
 def _upload_one(
     entry: DiffEntry,

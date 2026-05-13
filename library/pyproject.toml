@@ -2,7 +2,7 @@
 name = "mlab-iqb"
 description = "Internet Quality Barometer (IQB) library for calculating composite quality scores"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.12"
 license = {text = "Apache-2.0"}
 authors = [
     {name = "Measurement Lab", email = "support@measurementlab.net"}
@@ -23,6 +23,8 @@ dependencies = [
     "click>=8.1.0",
     "requests>=2.28.0",
     "google-cloud-storage>=2.0.0",
+    "typing-extensions>=4.5.0",
+    "pyyaml>=6.0",
 ]
 
 [project.urls]
@@ -72,7 +74,7 @@ addopts = [
 
 [tool.ruff]
 line-length = 100
-target-version = "py313"
+target-version = "py312"
 
 [tool.ruff.format]
 indent-style = "space"
@@ -105,6 +107,6 @@ known-first-party = ["iqb"]
 [tool.pyright]
 include = ["src", "tests"]
 exclude = ["**/__pycache__", ".venv"]
-pythonVersion = "3.13"
+pythonVersion = "3.12"
 typeCheckingMode = "basic"
 reportMissingTypeStubs = false

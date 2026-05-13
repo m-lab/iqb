@@ -108,6 +108,28 @@ jobs:
         working-directory: library
         run: uv run pytest --tb=short -q
 
+  test-library-py312:
+    name: Test Library on Python 3.12 (standalone install)
+    # Colab runs Python 3.12, so the published library must work there. This
+    # job installs the library outside the workspace context (--no-project)
+    # against a fresh 3.12 interpreter, which doubles as a smoke test that
+    # all runtime dependencies are properly declared in library/pyproject.toml.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12
+        run: uv python install 3.12
+
+      - name: Run library tests against standalone Python 3.12 install
+        working-directory: library
+        run: uv run --no-project --with . --with pytest --python 3.12 pytest --tb=short -q
+
   test-prototype-integration:
     name: Test Streamlit Prototype Integration
     runs-on: ubuntu-latest

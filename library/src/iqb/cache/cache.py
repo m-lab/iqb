@@ -1,11 +1,11 @@
 """Module implementing IQBCache."""
 
-import warnings
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
 from dateutil.relativedelta import relativedelta
+from typing_extensions import deprecated
 
 from ..pipeline.dataset import IQBDatasetGranularity
 from ..pipeline.pipeline import PipelineCacheManager, PipelineRemoteCache
@@ -162,7 +162,7 @@ class IQBCache:
         # 4. Fill the result
         return IQBData(mlab=mlab_data)
 
-    @warnings.deprecated("use get_iqb_data instead")
+    @deprecated("use get_iqb_data instead")
     def get_data(
         self,
         country: str,

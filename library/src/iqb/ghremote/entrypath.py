@@ -16,11 +16,11 @@ class ManifestEntryPath:
 
     start: str
     end: str
-    name: str
+    dataset: str
     filename: str
 
     def __str__(self) -> str:
-        return f"cache/v1/{self.start}/{self.end}/{self.name}/{self.filename}"
+        return f"cache/v1/{self.start}/{self.end}/{self.dataset}/{self.filename}"
 
 
 def parse_entry_path(raw: str) -> ManifestEntryPath:
@@ -41,12 +41,12 @@ def parse_entry_path(raw: str) -> ManifestEntryPath:
     if not _RFC3339_RE.match(parts[3]):
         raise ValueError(f"invalid end timestamp {parts[3]!r}: {raw!r}")
     if not _NAME_RE.match(parts[4]):
-        raise ValueError(f"invalid name {parts[4]!r}: {raw!r}")
+        raise ValueError(f"invalid dataset {parts[4]!r}: {raw!r}")
     if parts[5] not in _VALID_FILENAMES:
         raise ValueError(f"invalid filename {parts[5]!r}: {raw!r}")
     return ManifestEntryPath(
         start=parts[2],
         end=parts[3],
-        name=parts[4],
+        dataset=parts[4],
         filename=parts[5],
     )

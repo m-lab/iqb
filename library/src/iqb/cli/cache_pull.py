@@ -41,7 +41,7 @@ def _get_session() -> requests.Session:
 
 def _short_name(path: ManifestEntryPath) -> str:
     """Extract a short display name from a manifest entry path."""
-    return f"{path.name}/{path.filename}"
+    return f"{path.dataset}/{path.filename}"
 
 
 def _now() -> str:

@@ -33,7 +33,7 @@ _GCS_BASE_URL = "https://storage.googleapis.com"
 
 def _short_name(path: ManifestEntryPath) -> str:
     """Extract a short display name from a manifest entry path."""
-    return f"{path.name}/{path.filename}"
+    return f"{path.dataset}/{path.filename}"
 
 
 class _ProgressReader:

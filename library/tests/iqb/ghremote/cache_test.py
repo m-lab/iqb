@@ -21,9 +21,9 @@ from iqb.ghremote.entrypath import parse_entry_path
 
 _TS1 = "20241001T000000Z"
 _TS2 = "20241031T235959Z"
-_NAME = "test"
-_PARQUET_KEY = f"cache/v1/{_TS1}/{_TS2}/{_NAME}/data.parquet"
-_STATS_KEY = f"cache/v1/{_TS1}/{_TS2}/{_NAME}/stats.json"
+_DATASET = "test"
+_PARQUET_KEY = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/data.parquet"
+_STATS_KEY = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/stats.json"
 
 
 def _compute_test_sha256(content: bytes) -> str:

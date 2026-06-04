@@ -25,9 +25,9 @@ def _make_cache_file(data_dir: Path, rel_path: str, content: bytes) -> Path:
 # Valid cache path components for test fixtures
 _TS1 = "20241001T000000Z"
 _TS2 = "20241031T235959Z"
-_NAME = "downloads"
-_FILE_A = f"cache/v1/{_TS1}/{_TS2}/{_NAME}/data.parquet"
-_FILE_B = f"cache/v1/{_TS1}/{_TS2}/{_NAME}/stats.json"
+_DATASET = "downloads"
+_FILE_A = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/data.parquet"
+_FILE_B = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/stats.json"
 _FILE_C = f"cache/v1/{_TS1}/{_TS2}/uploads/data.parquet"
 _KEY_A = parse_entry_path(_FILE_A)
 _KEY_B = parse_entry_path(_FILE_B)
@@ -94,7 +94,7 @@ class TestDiffOnlyLocal:
     def test_invalid_local_files_excluded(self, tmp_path: Path):
         """Files that don't match cache path format are excluded."""
         # Create a file with invalid cache path (e.g., a .lock file)
-        _make_cache_file(tmp_path, f"cache/v1/{_TS1}/{_TS2}/{_NAME}/.lock", b"")
+        _make_cache_file(tmp_path, f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/.lock", b"")
         # Also create a file outside the cache path structure
         _make_cache_file(tmp_path, "cache/v1/not-a-timestamp/file.txt", b"data")
         manifest = Manifest(v=0, files={})

@@ -302,7 +302,7 @@ def get_available_periods(_manifest_files: tuple) -> list[tuple[str, str, str]]:
     """Parse available periods from manifest files."""
     periods = set()
     for key in _manifest_files:
-        if key.name != "downloads_by_country_city":
+        if key.dataset != "downloads_by_country_city":
             continue
         # Timestamps are in the form YYYYMMDDTHHMMSSZ
         start_date = f"{key.start[:4]}-{key.start[4:6]}-{key.start[6:8]}"

@@ -17,6 +17,13 @@ from iqb.ghremote.cache import (
     manifest_path_for_data_dir,
     save_manifest,
 )
+from iqb.ghremote.entrypath import parse_entry_path
+
+_TS1 = "20241001T000000Z"
+_TS2 = "20241031T235959Z"
+_DATASET = "test"
+_PARQUET_KEY = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/data.parquet"
+_STATS_KEY = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/stats.json"
 
 
 def _compute_test_sha256(content: bytes) -> str:
@@ -67,7 +74,7 @@ class TestIQBRemoteCacheLoadManifest:
         manifest_data = {
             "v": 0,
             "files": {
-                "cache/v1/2024-01-01/2024-01-31/test/data.parquet": {
+                _PARQUET_KEY: {
                     "sha256": "abc123def456",
                     "url": "https://example.com/file.parquet",
                 }
@@ -79,8 +86,9 @@ class TestIQBRemoteCacheLoadManifest:
 
         assert manifest.v == 0
         assert len(manifest.files) == 1
-        assert "cache/v1/2024-01-01/2024-01-31/test/data.parquet" in manifest.files
-        entry = manifest.files["cache/v1/2024-01-01/2024-01-31/test/data.parquet"]
+        key = parse_entry_path(_PARQUET_KEY)
+        assert key in manifest.files
+        entry = manifest.files[key]
         assert entry.sha256 == "abc123def456"
         assert entry.url == "https://example.com/file.parquet"
 
@@ -102,12 +110,12 @@ class TestManifestGetFileEntry:
         entry = FileEntry(sha256="abc123def456", url="https://example.com/file.parquet")
         manifest = Manifest(
             v=0,
-            files={"cache/v1/2024-01-01/2024-01-31/test/data.parquet": entry},
+            files={parse_entry_path(_PARQUET_KEY): entry},
         )
 
         # Set up paths - using tmp_path to ensure they're realistic
         data_dir = tmp_path / "data"
-        full_path = data_dir / "cache/v1/2024-01-01/2024-01-31/test/data.parquet"
+        full_path = data_dir / _PARQUET_KEY
 
         # Get the entry
         result = manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
@@ -117,6 +125,16 @@ class TestManifestGetFileEntry:
         assert result.sha256 == "abc123def456"
         assert result.url == "https://example.com/file.parquet"
 
+    def test_invalid_path_raises_key_error(self, tmp_path):
+        """Verify that an unparseable relative path raises KeyError."""
+        manifest = Manifest(v=0, files={})
+
+        data_dir = tmp_path / "data"
+        full_path = data_dir / "not" / "a" / "cache" / "path.txt"
+
+        with pytest.raises(KeyError, match="no remotely-cached file for"):
+            manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
+
     def test_failure(self, tmp_path):
         """Verify that we raise KeyError when the entry does not exist."""
         # Create an empty manifest
@@ -124,11 +142,10 @@ class TestManifestGetFileEntry:
 
         # Set up paths
         data_dir = tmp_path / "data"
-        full_path = data_dir / "cache/v1/2024-01-01/2024-01-31/test/data.parquet"
+        full_path = data_dir / _PARQUET_KEY
 
         # Should raise KeyError with the relative path in the message
-        expected_key = "cache/v1/2024-01-01/2024-01-31/test/data.parquet"
-        with pytest.raises(KeyError, match=f"no remotely-cached file for {expected_key}"):
+        with pytest.raises(KeyError, match=f"no remotely-cached file for {_PARQUET_KEY}"):
             manifest.get_file_entry(full_path=full_path, data_dir=data_dir)
 
 
@@ -139,8 +156,8 @@ class TestIQBRemoteCacheSync:
         """Helper to create a mock PipelineCacheEntry."""
         entry = Mock()
         entry.data_dir = tmp_path
-        entry.data_parquet_file_path.return_value = tmp_path / "data.parquet"
-        entry.stats_json_file_path.return_value = tmp_path / "stats.json"
+        entry.data_parquet_file_path.return_value = tmp_path / _PARQUET_KEY
+        entry.stats_json_file_path.return_value = tmp_path / _STATS_KEY
         return entry
 
     def _mock_urlopen_with_content(self, json_content, parquet_content):
@@ -171,7 +188,7 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": "abc123",
                         "url": "https://example.com/stats.json",
                     }
@@ -185,7 +202,7 @@ class TestIQBRemoteCacheSync:
 
         assert result is False
         assert "failure" in caplog.text
-        assert "no remotely-cached file for data.parquet" in caplog.text
+        assert f"no remotely-cached file for {_PARQUET_KEY}" in caplog.text
 
     def test_missing_json_entry(self, tmp_path, caplog):
         """Make sure we return False if there's no remote JSON entry."""
@@ -197,7 +214,7 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": "abc123",
                         "url": "https://example.com/data.parquet",
                     }
@@ -211,7 +228,7 @@ class TestIQBRemoteCacheSync:
 
         assert result is False
         assert "failure" in caplog.text
-        assert "no remotely-cached file for stats.json" in caplog.text
+        assert f"no remotely-cached file for {_STATS_KEY}" in caplog.text
 
     def test_download_if_not_exists(self, tmp_path):
         """Ensure that we download the file if it does not exist."""
@@ -227,11 +244,11 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": parquet_sha256,
                         "url": "https://example.com/data.parquet",
                     },
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": json_sha256,
                         "url": "https://example.com/stats.json",
                     },
@@ -262,6 +279,7 @@ class TestIQBRemoteCacheSync:
         entry = self._create_mock_entry(tmp_path)
 
         # Pre-create files with correct content
+        entry.stats_json_file_path().parent.mkdir(parents=True, exist_ok=True)
         entry.stats_json_file_path().write_bytes(json_content)
         entry.data_parquet_file_path().write_bytes(parquet_content)
 
@@ -270,11 +288,11 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": parquet_sha256,
                         "url": "https://example.com/data.parquet",
                     },
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": json_sha256,
                         "url": "https://example.com/stats.json",
                     },
@@ -304,6 +322,7 @@ class TestIQBRemoteCacheSync:
         entry = self._create_mock_entry(tmp_path)
 
         # Pre-create files with WRONG content
+        entry.stats_json_file_path().parent.mkdir(parents=True, exist_ok=True)
         entry.stats_json_file_path().write_bytes(b"wrong content")
         entry.data_parquet_file_path().write_bytes(b"wrong parquet")
 
@@ -312,11 +331,11 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": parquet_sha256,
                         "url": "https://example.com/data.parquet",
                     },
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": json_sha256,
                         "url": "https://example.com/stats.json",
                     },
@@ -349,11 +368,11 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": parquet_sha256,
                         "url": "https://example.com/data.parquet",
                     },
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": json_sha256,
                         "url": "https://example.com/stats.json",
                     },
@@ -388,11 +407,11 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": "abc123",
                         "url": "https://example.com/data.parquet",
                     },
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": "def456",
                         "url": "https://example.com/stats.json",
                     },
@@ -425,11 +444,11 @@ class TestIQBRemoteCacheSync:
             {
                 "v": 0,
                 "files": {
-                    "data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": wrong_sha256,
                         "url": "https://example.com/data.parquet",
                     },
-                    "stats.json": {
+                    _STATS_KEY: {
                         "sha256": wrong_sha256,
                         "url": "https://example.com/stats.json",
                     },
@@ -459,22 +478,20 @@ class TestIQBRemoteCacheSync:
         json_sha256 = _compute_test_sha256(json_content)
         parquet_sha256 = _compute_test_sha256(parquet_content)
 
-        # Create entry with nested paths that don't exist yet
-        entry = Mock()
-        entry.data_dir = tmp_path
-        entry.data_parquet_file_path.return_value = tmp_path / "nested" / "dir" / "data.parquet"
-        entry.stats_json_file_path.return_value = tmp_path / "nested" / "dir" / "stats.json"
+        # Use the standard mock entry — its cache paths are nested enough
+        # that parent directories won't exist yet
+        entry = self._create_mock_entry(tmp_path)
 
         _write_manifest(
             tmp_path,
             {
                 "v": 0,
                 "files": {
-                    "nested/dir/data.parquet": {
+                    _PARQUET_KEY: {
                         "sha256": parquet_sha256,
                         "url": "https://example.com/data.parquet",
                     },
-                    "nested/dir/stats.json": {
+                    _STATS_KEY: {
                         "sha256": json_sha256,
                         "url": "https://example.com/stats.json",
                     },
@@ -524,7 +541,7 @@ class TestLoadManifest:
         manifest_data = {
             "v": 0,
             "files": {
-                "cache/v1/20241001T000000Z/20241031T235959Z/test/data.parquet": {
+                _PARQUET_KEY: {
                     "sha256": "abc123",
                     "url": "https://example.com/data.parquet",
                 }
@@ -535,7 +552,7 @@ class TestLoadManifest:
         manifest = load_manifest(manifest_file)
         assert manifest.v == 0
         assert len(manifest.files) == 1
-        key = "cache/v1/20241001T000000Z/20241031T235959Z/test/data.parquet"
+        key = parse_entry_path(_PARQUET_KEY)
         assert manifest.files[key].sha256 == "abc123"
         assert manifest.files[key].url == "https://example.com/data.parquet"
 
@@ -549,7 +566,7 @@ class TestSaveManifest:
         original = Manifest(
             v=0,
             files={
-                "cache/v1/20241001T000000Z/20241031T235959Z/test/data.parquet": FileEntry(
+                parse_entry_path(_PARQUET_KEY): FileEntry(
                     sha256="abc123",
                     url="https://example.com/data.parquet",
                 )
@@ -574,11 +591,13 @@ class TestSaveManifest:
     def test_output_format(self, tmp_path):
         """Verify output has sorted keys, 2-space indent, trailing newline."""
         manifest_file = manifest_path_for_data_dir(tmp_path)
+        key_a = parse_entry_path(f"cache/v1/{_TS1}/{_TS2}/aaa/data.parquet")
+        key_b = parse_entry_path(f"cache/v1/{_TS1}/{_TS2}/bbb/data.parquet")
         manifest = Manifest(
             v=0,
             files={
-                "b_file": FileEntry(sha256="bbb", url="https://example.com/b"),
-                "a_file": FileEntry(sha256="aaa", url="https://example.com/a"),
+                key_b: FileEntry(sha256="bbb", url="https://example.com/b"),
+                key_a: FileEntry(sha256="aaa", url="https://example.com/a"),
             },
         )
 
@@ -588,9 +607,9 @@ class TestSaveManifest:
         # Trailing newline
         assert content.endswith("\n")
 
-        # Sorted keys: "a_file" should come before "b_file"
-        a_pos = content.index('"a_file"')
-        b_pos = content.index('"b_file"')
+        # Sorted keys: "aaa" should come before "bbb"
+        a_pos = content.index('"cache/v1/' + _TS1 + "/" + _TS2 + "/aaa/")
+        b_pos = content.index('"cache/v1/' + _TS1 + "/" + _TS2 + "/bbb/")
         assert a_pos < b_pos
 
         # 2-space indent

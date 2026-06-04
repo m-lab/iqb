@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
-import re
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from enum import StrEnum
 from pathlib import Path
 
 from .cache import FileEntry, Manifest, compute_sha256
+from .entrypath import ManifestEntryPath, parse_entry_path
 
 log = logging.getLogger("iqb.ghremote.diff")
 
@@ -27,49 +27,16 @@ class DiffState(StrEnum):
 class DiffEntry:
     """Single entry in a manifest-vs-local diff."""
 
-    file: str
+    file: ManifestEntryPath
     url: str | None
     remote_sha256: str | None
     local_sha256: str | None
     state: DiffState
 
 
-def _validate_cache_path(path: str) -> bool:
-    """
-    Validate that a path follows the cache/v1 format.
-
-    Valid format:
-      cache/v1/{rfc3339_timestamp}/{rfc3339_timestamp}/{name}/{file}
-
-    Where:
-      - Component 1: "cache"
-      - Component 2: "v1"
-      - Component 3: RFC3339 timestamp (e.g., 20241001T000000Z)
-      - Component 4: RFC3339 timestamp
-      - Component 5: lowercase letters, numbers, and underscores [a-z0-9_]+
-      - Component 6: "data.parquet" or "stats.json"
-    """
-    parts = path.split("/")
-    if len(parts) != 6:
-        return False
-    if parts[0] != "cache":
-        return False
-    if parts[1] != "v1":
-        return False
-    rfc3339_pattern = re.compile(r"^\d{8}T\d{6}Z$")
-    if not rfc3339_pattern.match(parts[2]):
-        return False
-    if not rfc3339_pattern.match(parts[3]):
-        return False
-    name_pattern = re.compile(r"^[a-z0-9_]+$")
-    if not name_pattern.match(parts[4]):
-        return False
-    return parts[5] in ("data.parquet", "stats.json")
-
-
-def _scan_local_files(data_dir: Path) -> set[str]:
-    """Walk the local cache directory and return validated relative paths."""
-    result: set[str] = set()
+def _scan_local_files(data_dir: Path) -> set[ManifestEntryPath]:
+    """Walk the local cache directory and return parsed entry paths."""
+    result: set[ManifestEntryPath] = set()
     cache_dir = data_dir / "cache" / "v1"
     if not cache_dir.exists():
         return result
@@ -77,8 +44,10 @@ def _scan_local_files(data_dir: Path) -> set[str]:
         if not path.is_file():
             continue
         rel = path.relative_to(data_dir).as_posix()
-        if _validate_cache_path(rel):
-            result.add(rel)
+        try:
+            result.add(parse_entry_path(rel))
+        except ValueError:
+            continue
     return result
 
 
@@ -86,7 +55,7 @@ def diff(
     manifest: Manifest,
     data_dir: Path,
     *,
-    acceptp: Callable[[str], bool] | None = None,
+    acceptp: Callable[[ManifestEntryPath], bool] | None = None,
 ) -> Iterator[DiffEntry]:
     """
     Compare manifest entries against local cache state.
@@ -100,7 +69,7 @@ def diff(
     Args:
         manifest: The loaded manifest to compare against.
         data_dir: Root directory where cache files live on disk.
-        acceptp: Optional predicate applied to relative path strings.
+        acceptp: Optional predicate applied to manifest entry paths.
                  ``None`` means accept everything.
     """
     # Phase 1: scan local files, applying acceptp
@@ -109,16 +78,13 @@ def diff(
         local_files = {f for f in local_files if acceptp(f)}
 
     # Phase 2: iterate accepted manifest keys in sorted order
-    seen: set[str] = set()
-    for key in sorted(manifest.files):
-        if not _validate_cache_path(key):
-            log.warning("skipping invalid manifest key: %s", key)
-            continue
+    seen: set[ManifestEntryPath] = set()
+    for key in sorted(manifest.files, key=str):
         if acceptp is not None and not acceptp(key):
             continue
         seen.add(key)
         entry: FileEntry = manifest.files[key]
-        local_path = data_dir / Path(key)
+        local_path = data_dir / Path(str(key))
         if key not in local_files:
             yield DiffEntry(
                 file=key,
@@ -148,8 +114,8 @@ def diff(
 
     # Phase 3: remaining local files not in manifest
     remaining = local_files - seen
-    for key in sorted(remaining):
-        local_sha256 = compute_sha256(data_dir / Path(key))
+    for key in sorted(remaining, key=str):
+        local_sha256 = compute_sha256(data_dir / Path(str(key)))
         yield DiffEntry(
             file=key,
             url=None,

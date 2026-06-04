@@ -10,7 +10,7 @@ Data sources:
 """
 
 import json
-import re
+
 from datetime import datetime
 from pathlib import Path
 from urllib.request import urlopen
@@ -19,9 +19,13 @@ import pandas as pd
 import plotly.graph_objects as go
 import pycountry
 import streamlit as st
-from dacite import from_dict
 from iqb import IQBCache, IQBDatasetGranularity
-from iqb.ghremote.cache import IQBRemoteCache, Manifest, data_dir_or_default
+from iqb.ghremote.cache import (
+    IQBRemoteCache,
+    Manifest,
+    data_dir_or_default,
+    load_manifest_from_dict,
+)
 from plotly.subplots import make_subplots
 from session_state import initialize_app_state
 from visualizations.sunburst_data import (
@@ -161,7 +165,7 @@ class GitHubURLRemoteCache(IQBRemoteCache):
     def _load_manifest_from_url(self, url: str) -> Manifest:
         with urlopen(url) as resp:
             data = json.load(resp)
-        return from_dict(Manifest, data)
+        return load_manifest_from_dict(data)
 
 
 # --- Session State ---
@@ -298,18 +302,15 @@ def get_available_periods(_manifest_files: tuple) -> list[tuple[str, str, str]]:
     """Parse available periods from manifest files."""
     periods = set()
     for key in _manifest_files:
-        match = re.match(
-            r"cache/v1/(\d{4})(\d{2})(\d{2})T.*/(\d{4})(\d{2})(\d{2})T.*/downloads_by_country_city/",
-            key,
-        )
-        if match:
-            sy, sm, sd, ey, em, ed = match.groups()
-            start_date = f"{sy}-{sm}-{sd}"
-            end_date = f"{ey}-{em}-{ed}"
-            start_label = datetime.strptime(start_date, "%Y-%m-%d").strftime("%b %Y")
-            end_label = datetime.strptime(end_date, "%Y-%m-%d").strftime("%b %Y")
-            label = f"{start_label} - {end_label}"
-            periods.add((label, start_date, end_date))
+        if key.dataset != "downloads_by_country_city":
+            continue
+        # Timestamps are in the form YYYYMMDDTHHMMSSZ
+        start_date = f"{key.start[:4]}-{key.start[4:6]}-{key.start[6:8]}"
+        end_date = f"{key.end[:4]}-{key.end[4:6]}-{key.end[6:8]}"
+        start_label = datetime.strptime(start_date, "%Y-%m-%d").strftime("%b %Y")
+        end_label = datetime.strptime(end_date, "%Y-%m-%d").strftime("%b %Y")
+        label = f"{start_label} - {end_label}"
+        periods.add((label, start_date, end_date))
     return sorted(periods, key=lambda x: x[1], reverse=True)
 
 

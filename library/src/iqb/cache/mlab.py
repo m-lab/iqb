@@ -116,6 +116,23 @@ class MLabDataFramePair:
             loss=float(download_row[loss_col]),
         )
 
+    def to_merged_data_frame(self) -> pd.DataFrame:
+        """Merge download and upload DataFrames into a single DataFrame.
+
+        Joins on all columns common to both DataFrames (geographic identifiers)
+        except ``sample_count``, which appears in both and is suffixed as
+        ``sample_count_down`` and ``sample_count_up``.
+
+        Returns:
+            A merged pandas DataFrame.
+        """
+        on = [
+            c
+            for c in self.download.columns
+            if c in self.upload.columns and c != "sample_count"
+        ]
+        return self.download.merge(self.upload, on=on, suffixes=("_down", "_up"))
+
 
 @dataclass(frozen=True, kw_only=True)
 class MLabCacheEntry:
@@ -246,7 +263,7 @@ class MLabCacheEntry:
     def read_data_frame_pair(
         self,
         *,
-        country_code: str,
+        country_code: str | None = None,
         city: str | None = None,
         asn: int | None = None,
         subdivision1: str | None = None,
@@ -259,7 +276,7 @@ class MLabCacheEntry:
         loaded, allowing for flexible extraction later.
 
         Arguments:
-            country_code: ISO 2-letter country code (e.g., "US", "DE")
+            country_code: either None (all rows) or ISO 2-letter country code (e.g., "US")
             city: Optional city name (required for "country_city" and "country_city_asn" granularity)
             asn: Optional ASN number (required for "country_city_asn" granularity)
             subdivision1: either None or the desired subdivision1 (e.g., "Massachusetts")
@@ -274,9 +291,9 @@ class MLabCacheEntry:
 
         Example:
             >>> entry = cache.get_cache_entry("2024-10-01", "2024-11-01", "country")
-            >>> pair = entry.get_data_frame_pair(country_code="US")
-            >>> data_p95 = pair.to_dict(percentile=95)
-            >>> data_p50 = pair.to_dict(percentile=50)
+            >>> pair = entry.read_data_frame_pair(country_code="US")
+            >>> data_p95 = pair.to_iqb_data(percentile=95)
+            >>> data_p50 = pair.to_iqb_data(percentile=50)
         """
         # 1. Read download data with filtering (all columns for flexibility)
         download_df = self.read_download_data_frame(

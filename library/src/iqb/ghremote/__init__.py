@@ -28,10 +28,12 @@ from .cache import (
     IQBRemoteCache,
     Manifest,
     load_manifest,
+    load_manifest_from_dict,
     manifest_path_for_data_dir,
     save_manifest,
 )
 from .diff import DiffEntry, DiffState, diff
+from .entrypath import ManifestEntryPath, parse_entry_path
 
 # Backward compatibility alias
 IQBGitHubRemoteCache = IQBRemoteCache
@@ -40,11 +42,14 @@ __all__ = [
     "DiffEntry",
     "DiffState",
     "FileEntry",
+    "ManifestEntryPath",
     "IQBGitHubRemoteCache",
     "IQBRemoteCache",
     "Manifest",
     "diff",
     "load_manifest",
+    "load_manifest_from_dict",
     "manifest_path_for_data_dir",
+    "parse_entry_path",
     "save_manifest",
 ]

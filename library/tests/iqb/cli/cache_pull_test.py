@@ -76,10 +76,10 @@ class TestCachePullEmptyManifest:
 
 
 class TestCachePullInvalidManifestKeys:
-    """Invalid manifest keys are ignored for safety."""
+    """Invalid manifest keys are rejected at load time."""
 
     @patch("iqb.cli.cache_pull.requests.Session")
-    def test_traversal_key_is_ignored(self, mock_session_cls: MagicMock, tmp_path: Path):
+    def test_traversal_key_is_rejected(self, mock_session_cls: MagicMock, tmp_path: Path):
         _write_manifest(
             tmp_path,
             {
@@ -93,8 +93,7 @@ class TestCachePullInvalidManifestKeys:
         runner = CliRunner()
         result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
 
-        assert result.exit_code == 0
-        assert "Nothing to download" in result.output
+        assert result.exit_code != 0
         mock_session_cls.assert_not_called()
 
 

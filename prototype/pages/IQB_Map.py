@@ -39,15 +39,6 @@ MANIFEST_URL = (
     "https://raw.githubusercontent.com/m-lab/iqb/main/data/state/ghremote/manifest.json"
 )
 PERCENTILES = ["p1", "p5", "p10", "p25", "p50", "p75", "p90", "p95", "p99"]
-JOIN_COLS = [
-    "country_code",
-    "subdivision1_iso_code",
-    "city",
-    "period_start",
-    "period_end",
-    "period_label",
-]
-
 # Country coordinates: (lat, lon, zoom)
 COUNTRY_COORDS = {
     "USA": (39.8, -98.5, 3.0),
@@ -299,10 +290,9 @@ def fetch_map_data(_cache: IQBCache, start_date: str, end_date: str) -> dict[str
         end_date=end_date,
         granularity=IQBDatasetGranularity.COUNTRY,
     )
-    download_df = entry.mlab.read_download_data_frame()
-    upload_df = entry.mlab.read_upload_data_frame()
-    merged = download_df.merge(upload_df, on="country_code", suffixes=("", "_up"))
-    percentiles = extract_percentiles_from_columns(download_df.columns)
+    pair = entry.mlab.read_data_frame_pair()
+    merged = pair.to_merged_data_frame()
+    percentiles = extract_percentiles_from_columns(merged.columns)
 
     results = {}
     for _, row in merged.iterrows():
@@ -320,8 +310,8 @@ def fetch_map_data(_cache: IQBCache, start_date: str, end_date: str) -> dict[str
             "name": country_info["name"],
             "metrics": metrics,
             "sample_counts": {
-                "downloads": int(row.get("sample_count", 0)),
-                "uploads": int(row.get("sample_count_up", row.get("sample_count", 0))),
+                "downloads": int(row.get("sample_count_down", 0)),
+                "uploads": int(row.get("sample_count_up", 0)),
             },
         }
     return results
@@ -337,17 +327,12 @@ def fetch_subdivision_data(
         end_date=end_date,
         granularity=IQBDatasetGranularity.COUNTRY_CITY,
     )
-    download_df = entry.mlab.read_download_data_frame(country_code=country_code)
-    upload_df = entry.mlab.read_upload_data_frame(country_code=country_code)
-
-    if download_df.empty or upload_df.empty:
+    pair = entry.mlab.read_data_frame_pair(country_code=country_code)
+    if pair.download.empty or pair.upload.empty:
         return {}
 
-    merge_cols = [
-        c for c in JOIN_COLS if c in download_df.columns and c in upload_df.columns
-    ]
-    merged = download_df.merge(upload_df, on=merge_cols, suffixes=("", "_up"))
-    percentiles = extract_percentiles_from_columns(download_df.columns)
+    merged = pair.to_merged_data_frame()
+    percentiles = extract_percentiles_from_columns(merged.columns)
 
     subdivision_data = {}
     for subdivision_code, group in merged.groupby("subdivision1_iso_code"):
@@ -359,8 +344,8 @@ def fetch_subdivision_data(
             if "-" not in str(subdivision_code)
             else subdivision_code
         )
-        total_samples = group["sample_count"].sum()
-        total_samples_up = group.get("sample_count_up", group["sample_count"]).sum()
+        total_samples = group["sample_count_down"].sum()
+        total_samples_up = group["sample_count_up"].sum()
 
         metrics = {
             "download_throughput_mbps": {},
@@ -372,24 +357,21 @@ def fetch_subdivision_data(
             pkey = f"p{p}"
             if total_samples > 0:
                 metrics["download_throughput_mbps"][pkey] = float(
-                    (group[f"download_p{p}"] * group["sample_count"]).sum()
+                    (group[f"download_p{p}"] * group["sample_count_down"]).sum()
                     / total_samples
                 )
                 metrics["latency_ms"][pkey] = float(
-                    (group[f"latency_p{p}"] * group["sample_count"]).sum()
+                    (group[f"latency_p{p}"] * group["sample_count_down"]).sum()
                     / total_samples
                 )
                 metrics["packet_loss"][pkey] = float(
-                    (group[f"loss_p{p}"] * group["sample_count"]).sum() / total_samples
+                    (group[f"loss_p{p}"] * group["sample_count_down"]).sum()
+                    / total_samples
                 )
             if total_samples_up > 0:
-                sample_col = (
-                    "sample_count_up"
-                    if "sample_count_up" in group.columns
-                    else "sample_count"
-                )
                 metrics["upload_throughput_mbps"][pkey] = float(
-                    (group[f"upload_p{p}"] * group[sample_col]).sum() / total_samples_up
+                    (group[f"upload_p{p}"] * group["sample_count_up"]).sum()
+                    / total_samples_up
                 )
 
         subdivision_data[full_code] = {
@@ -417,17 +399,12 @@ def fetch_city_data(
         end_date=end_date,
         granularity=IQBDatasetGranularity.COUNTRY_CITY,
     )
-    download_df = entry.mlab.read_download_data_frame(country_code=country_code)
-    upload_df = entry.mlab.read_upload_data_frame(country_code=country_code)
-
-    if download_df.empty or upload_df.empty:
+    pair = entry.mlab.read_data_frame_pair(country_code=country_code)
+    if pair.download.empty or pair.upload.empty:
         return {}
 
-    merge_cols = [
-        c for c in JOIN_COLS if c in download_df.columns and c in upload_df.columns
-    ]
-    merged = download_df.merge(upload_df, on=merge_cols, suffixes=("", "_up"))
-    percentiles = extract_percentiles_from_columns(download_df.columns)
+    merged = pair.to_merged_data_frame()
+    percentiles = extract_percentiles_from_columns(merged.columns)
 
     results = {}
     for _, row in merged.iterrows():
@@ -441,8 +418,8 @@ def fetch_city_data(
             "subdivision": subdivision,
             "metrics": metrics,
             "sample_counts": {
-                "downloads": int(row.get("sample_count", 0)),
-                "uploads": int(row.get("sample_count_up", row.get("sample_count", 0))),
+                "downloads": int(row.get("sample_count_down", 0)),
+                "uploads": int(row.get("sample_count_up", 0)),
             },
         }
     return results

@@ -164,6 +164,20 @@ class TestMLabCacheManagerIntegration:
         assert "upload_p95" in pair.upload.columns
         assert "upload_p50" in pair.upload.columns
 
+    def test_read_data_frame_pair_unfiltered(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
+
+        pair = entry.read_data_frame_pair()
+
+        assert len(pair.download) == 236
+        assert len(pair.upload) == 237
+
+        assert "country_code" in pair.download.columns
+        assert "download_p95" in pair.download.columns
+        assert "country_code" in pair.upload.columns
+        assert "upload_p95" in pair.upload.columns
+
     def test_read_data_frame_pair_with_subdivision1(self, fake_data_dir):
         manager = _create_manager(fake_data_dir)
         entry = _get_country_city_cache_entry_2024_10(manager)
@@ -357,3 +371,78 @@ class TestMLabDataFramePairExceptions:
         # percentile=95 will be missing
         with pytest.raises(ValueError, match="Percentile column 'download_p95'"):
             pair.to_iqb_data(percentile=95).to_dict()
+
+
+class TestToMergedDataFrame:
+    def test_joins_on_geographic_columns(self):
+        download = pd.DataFrame(
+            {"country_code": ["US", "DE"], "sample_count": [100, 200], "download_p95": [500, 300]}
+        )
+        upload = pd.DataFrame(
+            {"country_code": ["US", "DE"], "sample_count": [80, 150], "upload_p95": [200, 100]}
+        )
+        pair = MLabDataFramePair(download=download, upload=upload)
+
+        merged = pair.to_merged_data_frame()
+
+        assert len(merged) == 2
+        assert "country_code" in merged.columns
+        assert "download_p95" in merged.columns
+        assert "upload_p95" in merged.columns
+        assert "sample_count_down" in merged.columns
+        assert "sample_count_up" in merged.columns
+        assert "sample_count" not in merged.columns
+
+    def test_sample_count_values(self):
+        download = pd.DataFrame(
+            {"country_code": ["US"], "sample_count": [100], "download_p95": [500]}
+        )
+        upload = pd.DataFrame({"country_code": ["US"], "sample_count": [80], "upload_p95": [200]})
+        pair = MLabDataFramePair(download=download, upload=upload)
+
+        merged = pair.to_merged_data_frame()
+
+        assert merged.iloc[0]["sample_count_down"] == 100
+        assert merged.iloc[0]["sample_count_up"] == 80
+
+    def test_city_granularity_join_columns(self):
+        download = pd.DataFrame(
+            {
+                "country_code": ["US", "US"],
+                "subdivision1_iso_code": ["CA", "NY"],
+                "city": ["LA", "NYC"],
+                "sample_count": [10, 20],
+                "download_p95": [500, 400],
+            }
+        )
+        upload = pd.DataFrame(
+            {
+                "country_code": ["US", "US"],
+                "subdivision1_iso_code": ["CA", "NY"],
+                "city": ["LA", "NYC"],
+                "sample_count": [8, 15],
+                "upload_p95": [200, 150],
+            }
+        )
+        pair = MLabDataFramePair(download=download, upload=upload)
+
+        merged = pair.to_merged_data_frame()
+
+        assert len(merged) == 2
+        assert merged.iloc[0]["city"] == "LA"
+        assert merged.iloc[0]["download_p95"] == 500
+        assert merged.iloc[0]["upload_p95"] == 200
+
+    def test_with_real_data(self, real_data_dir):
+        manager = _create_manager(real_data_dir)
+        entry = _get_country_cache_entry_2024_10(manager)
+
+        pair = entry.read_data_frame_pair()
+        merged = pair.to_merged_data_frame()
+
+        assert "download_p95" in merged.columns
+        assert "upload_p95" in merged.columns
+        assert "sample_count_down" in merged.columns
+        assert "sample_count_up" in merged.columns
+        assert "sample_count" not in merged.columns
+        assert len(merged) > 0

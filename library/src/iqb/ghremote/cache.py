@@ -135,6 +135,13 @@ def load_manifest(manifest_file: Path) -> Manifest:
     return load_manifest_from_dict(data)
 
 
+def load_manifest_from_url(url: str) -> Manifest:
+    """Load manifest from the given URL."""
+    with urlopen(url) as resp:
+        data = json.load(resp)
+    return load_manifest_from_dict(data)
+
+
 def manifest_path_for_data_dir(data_dir: Path) -> Path:
     """Return the manifest path under the given data directory."""
     return data_dir / "state" / "ghremote" / "manifest.json"
@@ -165,10 +172,14 @@ class IQBRemoteCache:
         self,
         *,
         data_dir: str | Path | None = None,
+        manifest: Manifest | None = None,
     ) -> None:
         self.data_dir = data_dir_or_default(data_dir)
-        manifest_path = manifest_path_for_data_dir(self.data_dir)
-        self.manifest = load_manifest(manifest_path)
+        if manifest is not None:
+            self.manifest = manifest
+        else:
+            manifest_path = manifest_path_for_data_dir(self.data_dir)
+            self.manifest = load_manifest(manifest_path)
 
     def sync(self, entry: PipelineCacheEntry) -> bool:
         """

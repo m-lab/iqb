@@ -233,3 +233,23 @@ class TestRunForce:
         assert result is not None
         assert result.ok == 1
         assert dest.read_bytes() == remote
+
+
+class TestRunDownloadOneException:
+    """Defensive catch when _download_one raises an unexpected exception."""
+
+    @patch("iqb.scripting.iqb_cache_pull._download_one", side_effect=RuntimeError("boom"))
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
+    def test_exception_recorded_as_failure(
+        self, mock_session_cls: MagicMock, _mock_dl: MagicMock, tmp_path: Path
+    ):
+        content = b"data"
+        sha = _sha256(content)
+        manifest = _make_manifest({_FILE_A: {"sha256": sha, "url": "https://example.com/a"}})
+
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+
+        assert result is not None
+        assert result.ok == 0
+        assert len(result.failed) == 1
+        assert "boom" in result.failed[0][1]

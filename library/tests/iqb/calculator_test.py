@@ -23,6 +23,11 @@ class TestIQBCalculatorInitialization:
         iqb = IQBCalculator()
         assert iqb.config == IQB_CONFIG
 
+    def test_init_with_dict_config(self):
+        """Test that IQBCalculator accepts a dict config."""
+        iqb = IQBCalculator(config=IQB_CONFIG)
+        assert iqb.config is IQB_CONFIG
+
     def test_init_with_invalid_config_raises_error(self):
         """Test that providing a non-existent config file raises NotImplementedError."""
         with pytest.raises(NotImplementedError):

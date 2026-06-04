@@ -139,9 +139,11 @@ class TestLoadManifestFromUrl:
         assert len(manifest.files) == 0
 
     def test_url_error_propagates(self):
-        with patch("iqb.ghremote.cache.urlopen", side_effect=URLError("not found")):
-            with pytest.raises(URLError):
-                load_manifest_from_url("https://example.com/missing.json")
+        with (
+            patch("iqb.ghremote.cache.urlopen", side_effect=URLError("not found")),
+            pytest.raises(URLError),
+        ):
+            load_manifest_from_url("https://example.com/missing.json")
 
 
 class TestIQBRemoteCacheWithManifest:

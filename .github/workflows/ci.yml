@@ -130,6 +130,25 @@ jobs:
         working-directory: library
         run: uv run --no-project --with . --with pytest --python 3.12 pytest --tb=short -q
 
+  test-library-wheel:
+    name: Test Library Wheel Packaging
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        run: uv python install 3.13
+
+      - name: Build wheel and verify SQL queries are packaged
+        run: ./scripts/test-wheel.sh
+
   test-prototype-integration:
     name: Test Streamlit Prototype Integration
     runs-on: ubuntu-latest

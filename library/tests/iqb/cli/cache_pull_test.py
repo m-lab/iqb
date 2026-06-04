@@ -392,7 +392,9 @@ class TestCachePullMetrics:
         assert spans_by_file[_FILE_B]["content_length"] == len(content_b)
 
 
-def _multi_manifest(tmp_path: Path, mock_session_cls: MagicMock) -> tuple[bytes, bytes, bytes, bytes]:
+def _multi_manifest(
+    tmp_path: Path, mock_session_cls: MagicMock
+) -> tuple[bytes, bytes, bytes, bytes]:
     """Set up a manifest with four entries spanning two datasets, two filenames, two date ranges."""
     ca, cb, cc, cd = b"content_a", b"content_b", b"content_c", b"content_d"
     _write_manifest(
@@ -423,9 +425,7 @@ class TestCachePullFilterDataset:
     def test_single_dataset(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads"]
-        )
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads"])
         assert result.exit_code == 0
         assert (tmp_path / _FILE_B).exists()
         assert not (tmp_path / _FILE_A).exists()
@@ -438,7 +438,16 @@ class TestCachePullFilterDataset:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads", "--dataset", "downloads"],
+            [
+                "cache",
+                "pull",
+                "-d",
+                str(tmp_path),
+                "--dataset",
+                "uploads",
+                "--dataset",
+                "downloads",
+            ],
         )
         assert result.exit_code == 0
         assert (tmp_path / _FILE_A).exists()
@@ -454,9 +463,7 @@ class TestCachePullFilterFile:
     def test_stats_only(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["cache", "pull", "-d", str(tmp_path), "--file", "stats.json"]
-        )
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--file", "stats.json"])
         assert result.exit_code == 0
         assert (tmp_path / _FILE_C).exists()
         assert not (tmp_path / _FILE_A).exists()
@@ -471,9 +478,7 @@ class TestCachePullFilterAfterBefore:
     def test_after_filters_old(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2024-01-01"]
-        )
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2024-01-01"])
         assert result.exit_code == 0
         assert (tmp_path / _FILE_A).exists()
         assert (tmp_path / _FILE_B).exists()
@@ -499,7 +504,16 @@ class TestCachePullFilterAfterBefore:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["cache", "pull", "-d", str(tmp_path), "--after", "2023-01-01", "--before", "2024-01-01"],
+            [
+                "cache",
+                "pull",
+                "-d",
+                str(tmp_path),
+                "--after",
+                "2023-01-01",
+                "--before",
+                "2024-01-01",
+            ],
         )
         assert result.exit_code == 0
         assert (tmp_path / _FILE_D).exists()
@@ -509,9 +523,7 @@ class TestCachePullFilterAfterBefore:
     def test_no_matches_shows_nothing(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
-        result = runner.invoke(
-            cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2025-01-01"]
-        )
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2025-01-01"])
         assert result.exit_code == 0
         assert "Nothing to download" in result.output
 
@@ -525,7 +537,16 @@ class TestCachePullFilterCombined:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["cache", "pull", "-d", str(tmp_path), "--dataset", "downloads", "--file", "data.parquet"],
+            [
+                "cache",
+                "pull",
+                "-d",
+                str(tmp_path),
+                "--dataset",
+                "downloads",
+                "--file",
+                "data.parquet",
+            ],
         )
         assert result.exit_code == 0
         assert (tmp_path / _FILE_A).exists()
@@ -539,7 +560,16 @@ class TestCachePullFilterCombined:
         runner = CliRunner()
         result = runner.invoke(
             cli,
-            ["cache", "pull", "-d", str(tmp_path), "--dataset", "downloads", "--after", "2024-01-01"],
+            [
+                "cache",
+                "pull",
+                "-d",
+                str(tmp_path),
+                "--dataset",
+                "downloads",
+                "--after",
+                "2024-01-01",
+            ],
         )
         assert result.exit_code == 0
         assert (tmp_path / _FILE_A).exists()

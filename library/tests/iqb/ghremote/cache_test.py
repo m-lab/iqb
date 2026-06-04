@@ -643,7 +643,7 @@ _DUMMY_ENTRY = FileEntry(sha256="abc", url="https://example.com/x")
 
 
 def _filter_manifest() -> Manifest:
-    return Manifest(v=0, files={k: _DUMMY_ENTRY for k in _FILTER_KEYS.values()})
+    return Manifest(v=0, files=dict.fromkeys(_FILTER_KEYS.values(), _DUMMY_ENTRY))
 
 
 class TestManifestFilter:

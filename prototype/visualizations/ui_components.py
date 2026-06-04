@@ -168,7 +168,7 @@ def render_threshold_editor(state: IQBAppState) -> None:
 
     use_case_tabs = st.tabs(
         [
-            use_case.replace("_", " ").title()
+            use_case.title()
             for use_case in IQB_CONFIG["use cases"].keys()
         ]
     )
@@ -246,7 +246,7 @@ def render_requirement_weights_editor(state: IQBAppState) -> None:
 
     use_case_tabs = st.tabs(
         [
-            use_case.replace("_", " ").title()
+            use_case.title()
             for use_case in IQB_CONFIG["use cases"].keys()
         ]
     )
@@ -292,7 +292,7 @@ def render_use_case_weights_editor(state: IQBAppState) -> None:
     needs_rerun = False
 
     for use_case_name in IQB_CONFIG["use cases"].keys():
-        display_use_case = use_case_name.replace("_", " ").title()
+        display_use_case = use_case_name.title()
         current_weight = state.use_case_weights[use_case_name]
 
         new_weight = st.slider(
@@ -406,7 +406,7 @@ def render_calculation_details(state: IQBAppState) -> None:
             try:
                 config_display = {}
                 for use_case_name in IQB_CONFIG["use cases"].keys():
-                    display_use_case = use_case_name.replace("_", " ").title()
+                    display_use_case = use_case_name.title()
                     config_display[display_use_case] = {
                         "Use Case Weight": state.use_case_weights.get(
                             use_case_name, 1.0

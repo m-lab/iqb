@@ -7,10 +7,7 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
-import pytest
-
-from iqb.ghremote.cache import FileEntry, Manifest, load_manifest_from_dict
-from iqb.ghremote.entrypath import parse_entry_path
+from iqb.ghremote.cache import Manifest, load_manifest_from_dict
 from iqb.scripting import iqb_cache_pull
 
 _TS1 = "20241001T000000Z"
@@ -99,10 +96,12 @@ class TestRunFiltering:
     @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_filter_by_dataset(self, mock_session_cls: MagicMock, tmp_path: Path):
         ca, cb = b"content_a", b"content_b"
-        manifest = _make_manifest({
-            _FILE_A: {"sha256": _sha256(ca), "url": "https://example.com/a"},
-            _FILE_B: {"sha256": _sha256(cb), "url": "https://example.com/b"},
-        })
+        manifest = _make_manifest(
+            {
+                _FILE_A: {"sha256": _sha256(ca), "url": "https://example.com/a"},
+                _FILE_B: {"sha256": _sha256(cb), "url": "https://example.com/b"},
+            }
+        )
 
         mock_session = MagicMock()
         mock_session.get.return_value = _fake_response(cb)
@@ -118,10 +117,12 @@ class TestRunFiltering:
     @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_filter_by_after(self, mock_session_cls: MagicMock, tmp_path: Path):
         ca, cd = b"content_a", b"content_d"
-        manifest = _make_manifest({
-            _FILE_A: {"sha256": _sha256(ca), "url": "https://example.com/a"},
-            _FILE_D: {"sha256": _sha256(cd), "url": "https://example.com/d"},
-        })
+        manifest = _make_manifest(
+            {
+                _FILE_A: {"sha256": _sha256(ca), "url": "https://example.com/a"},
+                _FILE_D: {"sha256": _sha256(cd), "url": "https://example.com/d"},
+            }
+        )
 
         mock_session = MagicMock()
         mock_session.get.return_value = _fake_response(ca)
@@ -160,9 +161,9 @@ class TestRunResult:
     @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_failure_recorded(self, mock_session_cls: MagicMock, tmp_path: Path):
         content = b"data"
-        manifest = _make_manifest({
-            _FILE_A: {"sha256": _sha256(b"different"), "url": "https://example.com/a"}
-        })
+        manifest = _make_manifest(
+            {_FILE_A: {"sha256": _sha256(b"different"), "url": "https://example.com/a"}}
+        )
 
         mock_session = MagicMock()
         mock_session.get.return_value = _fake_response(content)
@@ -202,9 +203,9 @@ class TestRunForce:
     def test_mismatch_skipped_without_force(self, mock_session_cls: MagicMock, tmp_path: Path):
         remote = b"remote"
         local = b"local"
-        manifest = _make_manifest({
-            _FILE_A: {"sha256": _sha256(remote), "url": "https://example.com/a"}
-        })
+        manifest = _make_manifest(
+            {_FILE_A: {"sha256": _sha256(remote), "url": "https://example.com/a"}}
+        )
         dest = tmp_path / _FILE_A
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(local)
@@ -217,9 +218,9 @@ class TestRunForce:
     def test_mismatch_downloaded_with_force(self, mock_session_cls: MagicMock, tmp_path: Path):
         remote = b"remote"
         local = b"local"
-        manifest = _make_manifest({
-            _FILE_A: {"sha256": _sha256(remote), "url": "https://example.com/a"}
-        })
+        manifest = _make_manifest(
+            {_FILE_A: {"sha256": _sha256(remote), "url": "https://example.com/a"}}
+        )
         dest = tmp_path / _FILE_A
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(local)

@@ -24,6 +24,7 @@ from rich.progress import (
 )
 
 from ..pipeline.cache import PipelineCacheEntry, data_dir_or_default
+from .entrypath import ManifestEntryPath, parse_entry_path
 
 log = logging.getLogger("iqb.ghremote.cache")
 
@@ -37,11 +38,19 @@ class FileEntry:
 
 
 @dataclass(kw_only=True)
+class _RawManifest:
+    """JSON-faithful manifest used for (de)serialization only."""
+
+    v: int
+    files: dict[str, FileEntry] = field(default_factory=dict)
+
+
+@dataclass(kw_only=True)
 class Manifest:
     """Manifest for remotely cached files."""
 
     v: int
-    files: dict[str, FileEntry] = field(default_factory=dict)
+    files: dict[ManifestEntryPath, FileEntry] = field(default_factory=dict)
 
     def __post_init__(self):
         if self.v != 0:
@@ -56,11 +65,24 @@ class Manifest:
         """
         # Use .as_posix() to ensure forward slashes for cross-platform compatibility
         # Manifest keys should always use forward slashes regardless of OS
-        key = full_path.relative_to(data_dir).as_posix()
+        key_str = full_path.relative_to(data_dir).as_posix()
+        try:
+            key = parse_entry_path(key_str)
+        except ValueError as exc:
+            raise KeyError(f"no remotely-cached file for {key_str}") from exc
         try:
             return self.files[key]
         except KeyError as exc:
-            raise KeyError(f"no remotely-cached file for {key}") from exc
+            raise KeyError(f"no remotely-cached file for {key_str}") from exc
+
+
+def load_manifest_from_dict(data: dict) -> Manifest:
+    """Parse a manifest from a JSON-decoded dictionary."""
+    raw = from_dict(_RawManifest, data)
+    files: dict[ManifestEntryPath, FileEntry] = {}
+    for raw_key, entry in raw.files.items():
+        files[parse_entry_path(raw_key)] = entry
+    return Manifest(v=raw.v, files=files)
 
 
 def load_manifest(manifest_file: Path) -> Manifest:
@@ -71,7 +93,7 @@ def load_manifest(manifest_file: Path) -> Manifest:
     with open(manifest_file, encoding="utf-8") as filep:
         data = json.load(filep)
 
-    return from_dict(Manifest, data)
+    return load_manifest_from_dict(data)
 
 
 def manifest_path_for_data_dir(data_dir: Path) -> Path:
@@ -81,9 +103,11 @@ def manifest_path_for_data_dir(data_dir: Path) -> Path:
 
 def save_manifest(manifest: Manifest, manifest_file: Path) -> None:
     """Save manifest to the given file path."""
+    raw_files = {str(k): asdict(v) for k, v in manifest.files.items()}
+    raw = {"v": manifest.v, "files": raw_files}
     manifest_file.parent.mkdir(parents=True, exist_ok=True)
     with open(manifest_file, "w", encoding="utf-8") as filep:
-        json.dump(asdict(manifest), filep, indent=2, sort_keys=True)
+        json.dump(raw, filep, indent=2, sort_keys=True)
         filep.write("\n")
 
 

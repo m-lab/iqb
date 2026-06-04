@@ -22,6 +22,7 @@ from ..ghremote import (
     save_manifest,
 )
 from ..ghremote.diff import DiffEntry
+from ..ghremote.entrypath import ManifestEntryPath
 from ..pipeline.cache import data_dir_or_default
 from ..scripting import iqb_logging
 from .cache import cache
@@ -30,10 +31,9 @@ _DEFAULT_BUCKET = "mlab-sandbox-iqb-us-central1"
 _GCS_BASE_URL = "https://storage.googleapis.com"
 
 
-def _short_name(file: str) -> str:
-    """Extract a short display name from a cache path."""
-    parts = file.split("/")
-    return "/".join(parts[-2:]) if len(parts) >= 2 else file
+def _short_name(path: ManifestEntryPath) -> str:
+    """Extract a short display name from a manifest entry path."""
+    return f"{path.dataset}/{path.filename}"
 
 
 class _ProgressReader:
@@ -66,17 +66,17 @@ def _upload_one(
 ) -> str:
     """Upload a single file to GCS with progress tracking. Returns the file path."""
     assert entry.local_sha256 is not None
-    source = data_dir / entry.file
+    source = data_dir / Path(str(entry.file))
     file_size = source.stat().st_size
     task_id = progress.add_task(_short_name(entry.file), total=file_size)
     try:
-        blob = bucket.blob(entry.file)
+        blob = bucket.blob(str(entry.file))
         with open(source, "rb") as fp:
             reader = _ProgressReader(fp, progress, task_id)
             blob.upload_from_file(reader, size=file_size)
     finally:
         progress.remove_task(task_id)
-    return entry.file
+    return str(entry.file)
 
 
 @cache.command()
@@ -117,11 +117,11 @@ def push(data_dir: str | None, bucket: str, force: bool) -> None:
             try:
                 _upload_one(entry, resolved, gcs_bucket, progress)
             except Exception as exc:
-                failed.append((entry.file, str(exc)))
+                failed.append((str(entry.file), str(exc)))
                 continue
             # Update manifest after each successful upload (crash-safe)
             assert entry.local_sha256 is not None
-            url = f"{_GCS_BASE_URL}/{bucket}/{entry.file}"
+            url = f"{_GCS_BASE_URL}/{bucket}/{str(entry.file)}"
             manifest.files[entry.file] = FileEntry(sha256=entry.local_sha256, url=url)
             save_manifest(manifest, manifest_path)
     elapsed = time.monotonic() - t0

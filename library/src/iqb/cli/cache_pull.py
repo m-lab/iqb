@@ -25,6 +25,7 @@ from rich.progress import (
 
 from ..ghremote import DiffState, diff, load_manifest, manifest_path_for_data_dir
 from ..ghremote.diff import DiffEntry
+from ..ghremote.entrypath import ManifestEntryPath
 from ..pipeline.cache import data_dir_or_default
 from .cache import cache
 
@@ -38,10 +39,9 @@ def _get_session() -> requests.Session:
     return _thread_local.session
 
 
-def _short_name(file: str) -> str:
-    """Extract a short display name from a cache path."""
-    parts = file.split("/")
-    return "/".join(parts[-2:]) if len(parts) >= 2 else file
+def _short_name(path: ManifestEntryPath) -> str:
+    """Extract a short display name from a manifest entry path."""
+    return f"{path.dataset}/{path.filename}"
 
 
 def _now() -> str:
@@ -63,7 +63,7 @@ def _download_one(
     error: str | None = None
     assert entry.url is not None
     assert entry.remote_sha256 is not None
-    dest = data_dir / entry.file
+    dest = data_dir / Path(str(entry.file))
     dest.parent.mkdir(parents=True, exist_ok=True)
     task_id = progress.add_task(_short_name(entry.file), total=None)
     try:
@@ -86,7 +86,7 @@ def _download_one(
             got = sha256.hexdigest()
             if got != entry.remote_sha256:
                 raise ValueError(
-                    f"SHA256 mismatch for {entry.file}: expected {entry.remote_sha256}, got {got}"
+                    f"SHA256 mismatch for {str(entry.file)}: expected {entry.remote_sha256}, got {got}"
                 )
             os.replace(tmp_file, dest)
     except Exception as exc:
@@ -98,7 +98,7 @@ def _download_one(
         "t0": t0,
         "t": _now(),
         "worker_id": worker_id,
-        "file": entry.file,
+        "file": str(entry.file),
         "url": entry.url,
         "content_length": content_length,
         "bytes": total_bytes,
@@ -153,7 +153,7 @@ def pull(data_dir: str | None, force: bool, jobs: int) -> None:
                     failed.append((str(span["file"]), str(span["error"] or "unknown")))
             except Exception as exc:
                 # Defensive: bug in _download_one itself
-                failed.append((entry.file, str(exc)))
+                failed.append((str(entry.file), str(exc)))
     elapsed = time.monotonic() - t0
 
     # Write metrics

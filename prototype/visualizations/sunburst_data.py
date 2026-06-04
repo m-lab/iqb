@@ -75,8 +75,7 @@ def _format_dataset_hover(dataset: str, weight: Optional[float], exists: bool) -
 
 def _get_use_case_color_map() -> Dict[str, str]:
     return {
-        uc: USE_CASE_COLORS.get(uc, "#CCCCCC")
-        for uc in IQB_CONFIG["use cases"].keys()
+        uc: USE_CASE_COLORS.get(uc, "#CCCCCC") for uc in IQB_CONFIG["use cases"].keys()
     }
 
 

@@ -2,7 +2,7 @@
 
 import pytest
 
-from iqb import IQB_CONFIG, IQBCalculator
+from iqb import IQB_CONFIG, IQBCalculator, IQBData, IQBDataMLab
 
 
 class TestIQBCalculatorInitialization:
@@ -124,6 +124,35 @@ class TestIQBCalculatorScoreCalculation:
         score1 = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         score2 = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         assert score1 == score2
+
+
+class TestCalculateIQBScoreWithIQBData:
+    """Tests for calculate_iqb_score accepting IQBData."""
+
+    _SAMPLE_MLAB = IQBDataMLab(download=15, upload=20, latency=75, loss=0.007)
+    _SAMPLE_DICT = {
+        "m-lab": {
+            "download_throughput_mbps": 15,
+            "upload_throughput_mbps": 20,
+            "latency_ms": 75,
+            "packet_loss": 0.007,
+        }
+    }
+
+    def test_iqb_data_produces_same_score_as_dict(self):
+        """IQBData input produces the same score as the equivalent dict."""
+        iqb = IQBCalculator()
+        dict_score = iqb.calculate_iqb_score(data=self._SAMPLE_DICT)
+        data_score = iqb.calculate_iqb_score(data=IQBData(mlab=self._SAMPLE_MLAB))
+        assert data_score == dict_score
+
+    def test_iqb_data_to_dict_only_contains_present_datasets(self):
+        """IQBData.to_dict only includes datasets that have data."""
+        data = IQBData(mlab=self._SAMPLE_MLAB)
+        d = data.to_dict()
+        assert "m-lab" in d
+        assert "cloudflare" not in d
+        assert "ookla" not in d
 
 
 class TestIQBCalculatorConfig:

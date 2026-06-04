@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from iqb import IQBCache, IQBDatasetGranularity
+from iqb import IQBCache, IQBData, IQBDataMLab, IQBDatasetGranularity
 from iqb.pipeline.pipeline import PipelineRemoteCache
 
 
@@ -223,6 +223,36 @@ class TestIQBCacheGetCacheEntry:
         assert p50.upload == 17.168405411624306
         assert p50.latency == 17.716
         assert p50.loss == 0.00034476733492527604
+
+
+class TestIQBDataToDict:
+    """Tests for IQBData.to_dict conversion."""
+
+    def test_contains_mlab(self):
+        """to_dict includes the m-lab dataset."""
+        mlab = IQBDataMLab(download=100, upload=50, latency=10, loss=0.001)
+        d = IQBData(mlab=mlab).to_dict()
+        assert d == {"m-lab": mlab.to_dict()}
+
+    def test_omits_absent_datasets(self):
+        """to_dict does not include datasets without data."""
+        mlab = IQBDataMLab(download=100, upload=50, latency=10, loss=0.001)
+        d = IQBData(mlab=mlab).to_dict()
+        assert set(d.keys()) == {"m-lab"}
+
+    def test_roundtrip_with_real_cache(self, real_data_dir):
+        """IQBData from get_iqb_data round-trips through to_dict."""
+        cache = IQBCache(data_dir=real_data_dir)
+        data = cache.get_iqb_data(
+            granularity=IQBDatasetGranularity.COUNTRY,
+            country_code="US",
+            start_date="2024-10-01",
+            end_date="2024-11-01",
+        )
+        d = data.to_dict()
+        assert "m-lab" in d
+        assert d["m-lab"]["download_throughput_mbps"] > 0
+        assert d["m-lab"]["upload_throughput_mbps"] > 0
 
 
 class TestIQBCacheAllFiles:

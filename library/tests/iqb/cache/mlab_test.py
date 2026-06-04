@@ -397,9 +397,7 @@ class TestToMergedDataFrame:
         download = pd.DataFrame(
             {"country_code": ["US"], "sample_count": [100], "download_p95": [500]}
         )
-        upload = pd.DataFrame(
-            {"country_code": ["US"], "sample_count": [80], "upload_p95": [200]}
-        )
+        upload = pd.DataFrame({"country_code": ["US"], "sample_count": [80], "upload_p95": [200]})
         pair = MLabDataFramePair(download=download, upload=upload)
 
         merged = pair.to_merged_data_frame()

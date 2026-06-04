@@ -126,11 +126,7 @@ class MLabDataFramePair:
         Returns:
             A merged pandas DataFrame.
         """
-        on = [
-            c
-            for c in self.download.columns
-            if c in self.upload.columns and c != "sample_count"
-        ]
+        on = [c for c in self.download.columns if c in self.upload.columns and c != "sample_count"]
         return self.download.merge(self.upload, on=on, suffixes=("_down", "_up"))
 
 

@@ -111,11 +111,32 @@ def _download_one(
 @click.option("-d", "--dir", "data_dir", default=None, help="Data directory (default: .iqb)")
 @click.option("-f", "--force", is_flag=True, help="Re-download files with mismatched hashes")
 @click.option("-j", "--jobs", default=8, show_default=True, help="Number of parallel downloads")
-def pull(data_dir: str | None, force: bool, jobs: int) -> None:
+@click.option(
+    "--dataset", "datasets", multiple=True, help="Only pull entries for this dataset (repeatable)"
+)
+@click.option(
+    "--file", "files", multiple=True, help="Only pull entries with this filename (repeatable)"
+)
+@click.option(
+    "--after", default=None, help="Only pull entries starting on or after this date (YYYY-MM-DD)"
+)
+@click.option(
+    "--before", default=None, help="Only pull entries starting before this date (YYYY-MM-DD)"
+)
+def pull(
+    data_dir: str | None,
+    force: bool,
+    jobs: int,
+    datasets: tuple[str, ...],
+    files: tuple[str, ...],
+    after: str | None,
+    before: str | None,
+) -> None:
     """Download missing cache files from the manifest."""
     resolved = data_dir_or_default(data_dir)
     manifest_path = manifest_path_for_data_dir(resolved)
     manifest = load_manifest(manifest_path)
+    manifest = manifest.filter(datasets=datasets, files=files, after=after, before=before)
 
     # Collect entries to download
     targets: list[DiffEntry] = []

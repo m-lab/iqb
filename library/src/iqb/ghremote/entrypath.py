@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from datetime import datetime
+
+from ..pipeline.cache import PIPELINE_CACHE_TS_FORMAT
 
 _RFC3339_RE = re.compile(r"^\d{8}T\d{6}Z$")
 _DATASET_RE = re.compile(r"^[a-z0-9_]+$")
@@ -21,6 +24,12 @@ class ManifestEntryPath:
 
     def __str__(self) -> str:
         return f"cache/v1/{self.start}/{self.end}/{self.dataset}/{self.filename}"
+
+
+def date_to_cache_ts(date_str: str) -> str:
+    """Convert a ``YYYY-MM-DD`` date string to the ``YYYYMMDDTHHMMSSZ`` cache timestamp format."""
+    dt = datetime.strptime(date_str, "%Y-%m-%d")
+    return dt.strftime(PIPELINE_CACHE_TS_FORMAT)
 
 
 def parse_entry_path(raw: str) -> ManifestEntryPath:

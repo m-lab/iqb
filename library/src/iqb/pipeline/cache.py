@@ -15,7 +15,7 @@ from filelock import BaseFileLock, FileLock
 PIPELINE_CACHE_DATA_FILENAME: Final[str] = "data.parquet"
 PIPELINE_CACHE_DOTLOCK_FILENAME: Final[str] = ".lock"
 PIPELINE_CACHE_STATS_FILENAME: Final[str] = "stats.json"
-PIPELINE_CACHE_TS_FORMAT: Final[str] = "%Y%m%dT%H%M%SZ"
+PIPELINE_CACHE_TS_FORMAT: Final[str] = "%Y%m%dT000000Z"
 
 
 class PipelineEntrySyncError(RuntimeError):

@@ -21,11 +21,12 @@ COMPONENT_COLORS = {
 }
 
 USE_CASE_COLORS = {
-    "web_browsing": "#FFB6C1",
-    "video_streaming": "#FF69B4",
-    "video_conferencing": "#FF1493",
-    "cloud_gaming": "#C71585",
-    "file_download": "#DB7093",
+    "web browsing": "#FFB6C1",
+    "video streaming": "#FF69B4",
+    "audio streaming": "#DB7093",
+    "video conferencing": "#FF1493",
+    "online backup": "#E75480",
+    "gaming": "#C71585",
 }
 
 DATASET_COLORS = {

@@ -74,10 +74,9 @@ def _format_dataset_hover(dataset: str, weight: Optional[float], exists: bool) -
 
 
 def _get_use_case_color_map() -> Dict[str, str]:
-    color_list = list(USE_CASE_COLORS.values())
     return {
-        uc: color_list[idx % len(color_list)]
-        for idx, uc in enumerate(sorted(IQB_CONFIG["use cases"].keys()))
+        uc: USE_CASE_COLORS.get(uc, "#CCCCCC")
+        for uc in IQB_CONFIG["use cases"].keys()
     }
 
 
@@ -117,7 +116,7 @@ def iter_use_cases(state: IQBAppState) -> Iterator[UseCaseNode]:
         weight = state.use_case_weights.get(uc_name, 1.0)
         yield UseCaseNode(
             name=uc_name,
-            display_name=uc_name.replace("_", " ").title(),
+            display_name=uc_name.title(),
             weight=weight,
             normalized_weight=_normalize(weight, total_weight),
             color=colors.get(uc_name, "#CCCCCC"),

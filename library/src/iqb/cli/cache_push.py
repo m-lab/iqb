@@ -1,5 +1,10 @@
 """Cache push command."""
 
+# TODO(bassosimone): cache_pull has been refactored so that the core logic
+# lives in scripting.iqb_cache_pull and the CLI is a thin wrapper. We could
+# do the same here, but there is no known use case for pushing cache entries
+# programmatically yet, so the refactoring is deferred until needed.
+
 import time
 from pathlib import Path
 

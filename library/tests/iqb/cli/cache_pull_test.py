@@ -82,7 +82,7 @@ class TestCachePullEmptyManifest:
 class TestCachePullInvalidManifestKeys:
     """Invalid manifest keys are rejected at load time."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_traversal_key_is_rejected(self, mock_session_cls: MagicMock, tmp_path: Path):
         _write_manifest(
             tmp_path,
@@ -104,7 +104,7 @@ class TestCachePullInvalidManifestKeys:
 class TestCachePullOnlyRemote:
     """ONLY_REMOTE entries are downloaded."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_downloads_only_remote(self, mock_session_cls: MagicMock, tmp_path: Path):
         content = b"remote file content"
         sha = _sha256(content)
@@ -140,7 +140,7 @@ class TestCachePullOnlyRemote:
 class TestCachePullMatchingSkipped:
     """MATCHING entries are not downloaded."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_skips_matching(self, mock_session_cls: MagicMock, tmp_path: Path):
         content = b"same content"
         sha = _sha256(content)
@@ -160,7 +160,7 @@ class TestCachePullMatchingSkipped:
 class TestCachePullMismatchSkippedByDefault:
     """SHA256_MISMATCH entries are skipped without --force."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_skips_mismatch(self, mock_session_cls: MagicMock, tmp_path: Path):
         remote_content = b"remote version"
         local_content = b"local version"
@@ -186,7 +186,7 @@ class TestCachePullMismatchSkippedByDefault:
 class TestCachePullMismatchWithForce:
     """SHA256_MISMATCH entries are downloaded with --force."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_downloads_with_force(self, mock_session_cls: MagicMock, tmp_path: Path):
         remote_content = b"remote version"
         local_content = b"local version"
@@ -211,7 +211,7 @@ class TestCachePullMismatchWithForce:
 class TestCachePullSha256Failure:
     """SHA256 verification failure results in exit code 1."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_sha256_failure(self, mock_session_cls: MagicMock, tmp_path: Path):
         expected_content = b"expected content"
         actual_content = b"corrupted content"
@@ -245,7 +245,7 @@ class TestCachePullSha256Failure:
 class TestCachePullMultipleFiles:
     """Multiple ONLY_REMOTE entries are all downloaded."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_downloads_multiple(self, mock_session_cls: MagicMock, tmp_path: Path):
         content_a = b"content a"
         content_b = b"content b"
@@ -288,7 +288,7 @@ class TestCachePullJobsFlag:
 class TestCachePullAtomicWrite:
     """If download fails, no partial file is left on disk."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_no_partial_file_on_failure(self, mock_session_cls: MagicMock, tmp_path: Path):
         content = b"some content"
         _write_manifest(
@@ -331,7 +331,7 @@ class TestCachePullMetrics:
         "error",
     }
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_two_files_produce_two_spans(self, mock_session_cls: MagicMock, tmp_path: Path):
         content_a = b"content a"
         content_b = b"content b"
@@ -421,7 +421,7 @@ def _multi_manifest(
 class TestCachePullFilterDataset:
     """--dataset filters by dataset name."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_single_dataset(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -432,7 +432,7 @@ class TestCachePullFilterDataset:
         assert not (tmp_path / _FILE_C).exists()
         assert not (tmp_path / _FILE_D).exists()
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_multiple_datasets(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -459,7 +459,7 @@ class TestCachePullFilterDataset:
 class TestCachePullFilterFile:
     """--file filters by filename."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_stats_only(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -474,7 +474,7 @@ class TestCachePullFilterFile:
 class TestCachePullFilterAfterBefore:
     """--after and --before filter by start timestamp."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_after_filters_old(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -485,7 +485,7 @@ class TestCachePullFilterAfterBefore:
         assert (tmp_path / _FILE_C).exists()
         assert not (tmp_path / _FILE_D).exists()
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_before_filters_new(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -498,7 +498,7 @@ class TestCachePullFilterAfterBefore:
         assert not (tmp_path / _FILE_B).exists()
         assert not (tmp_path / _FILE_C).exists()
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_after_and_before_range(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -519,7 +519,7 @@ class TestCachePullFilterAfterBefore:
         assert (tmp_path / _FILE_D).exists()
         assert not (tmp_path / _FILE_A).exists()
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_no_matches_shows_nothing(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -531,7 +531,7 @@ class TestCachePullFilterAfterBefore:
 class TestCachePullFilterCombined:
     """Filters compose: --dataset + --file + --after/--before."""
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_dataset_and_file(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
@@ -554,7 +554,7 @@ class TestCachePullFilterCombined:
         assert not (tmp_path / _FILE_B).exists()
         assert not (tmp_path / _FILE_C).exists()
 
-    @patch("iqb.cli.cache_pull.requests.Session")
+    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
     def test_dataset_and_after(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()

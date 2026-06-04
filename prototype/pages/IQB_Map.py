@@ -13,19 +13,13 @@ import json
 
 from datetime import datetime
 from pathlib import Path
-from urllib.request import urlopen
 
 import pandas as pd
 import plotly.graph_objects as go
 import pycountry
 import streamlit as st
-from iqb import IQBCache, IQBDatasetGranularity
-from iqb.ghremote.cache import (
-    IQBRemoteCache,
-    Manifest,
-    data_dir_or_default,
-    load_manifest_from_dict,
-)
+from iqb import IQBCache, IQBDatasetGranularity, IQBRemoteCache
+from iqb.ghremote import Manifest, load_manifest_from_url
 from plotly.subplots import make_subplots
 from session_state import initialize_app_state
 from visualizations.sunburst_data import (
@@ -154,20 +148,6 @@ COUNTRY_COORDS = {
 }
 
 
-# --- Remote Cache ---
-class GitHubURLRemoteCache(IQBRemoteCache):
-    """Remote cache that fetches manifest from a URL."""
-
-    def __init__(self, manifest_url: str, data_dir=None):
-        self.data_dir = data_dir_or_default(data_dir)
-        self.manifest = self._load_manifest_from_url(manifest_url)
-
-    def _load_manifest_from_url(self, url: str) -> Manifest:
-        with urlopen(url) as resp:
-            data = json.load(resp)
-        return load_manifest_from_dict(data)
-
-
 # --- Session State ---
 if "app_state" not in st.session_state:
     st.session_state.app_state = initialize_app_state()
@@ -293,7 +273,8 @@ def update_state_from_cache(state, metrics: dict, percentile: str):
 # --- Cache Functions ---
 @st.cache_resource
 def get_iqb_cache() -> IQBCache:
-    remote_cache = GitHubURLRemoteCache(MANIFEST_URL)
+    manifest = load_manifest_from_url(MANIFEST_URL)
+    remote_cache = IQBRemoteCache(manifest=manifest)
     return IQBCache(remote_cache=remote_cache)
 
 

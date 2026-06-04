@@ -14,6 +14,7 @@ from iqb.ghremote.cache import (
     IQBRemoteCache,
     Manifest,
     load_manifest,
+    load_manifest_from_url,
     manifest_path_for_data_dir,
     save_manifest,
 )
@@ -99,6 +100,98 @@ class TestIQBRemoteCacheLoadManifest:
 
         assert manifest.v == 0
         assert len(manifest.files) == 0
+
+
+class TestLoadManifestFromUrl:
+    """Tests for load_manifest_from_url."""
+
+    def _mock_urlopen(self, manifest_data):
+        response = Mock()
+        response.read.return_value = json.dumps(manifest_data).encode()
+        response.__enter__ = Mock(return_value=response)
+        response.__exit__ = Mock(return_value=False)
+        return response
+
+    def test_loads_valid_manifest(self):
+        manifest_data = {
+            "v": 0,
+            "files": {
+                _PARQUET_KEY: {
+                    "sha256": "abc123",
+                    "url": "https://example.com/data.parquet",
+                }
+            },
+        }
+        with patch("iqb.ghremote.cache.urlopen", return_value=self._mock_urlopen(manifest_data)):
+            manifest = load_manifest_from_url("https://example.com/manifest.json")
+
+        assert manifest.v == 0
+        assert len(manifest.files) == 1
+        key = parse_entry_path(_PARQUET_KEY)
+        assert manifest.files[key].sha256 == "abc123"
+
+    def test_empty_manifest(self):
+        manifest_data = {"v": 0, "files": {}}
+        with patch("iqb.ghremote.cache.urlopen", return_value=self._mock_urlopen(manifest_data)):
+            manifest = load_manifest_from_url("https://example.com/manifest.json")
+
+        assert manifest.v == 0
+        assert len(manifest.files) == 0
+
+    def test_url_error_propagates(self):
+        with (
+            patch("iqb.ghremote.cache.urlopen", side_effect=URLError("not found")),
+            pytest.raises(URLError),
+        ):
+            load_manifest_from_url("https://example.com/missing.json")
+
+
+class TestIQBRemoteCacheWithManifest:
+    """Tests for IQBRemoteCache with a pre-loaded manifest."""
+
+    def test_uses_provided_manifest(self, tmp_path):
+        manifest = Manifest(
+            v=0,
+            files={
+                parse_entry_path(_PARQUET_KEY): FileEntry(
+                    sha256="abc123", url="https://example.com/data.parquet"
+                )
+            },
+        )
+        cache = IQBRemoteCache(data_dir=tmp_path, manifest=manifest)
+
+        assert cache.manifest is manifest
+        assert len(cache.manifest.files) == 1
+
+    def test_ignores_disk_manifest_when_provided(self, tmp_path):
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    _PARQUET_KEY: {"sha256": "on_disk", "url": "https://example.com/disk"},
+                    _STATS_KEY: {"sha256": "on_disk", "url": "https://example.com/disk"},
+                },
+            },
+        )
+        provided = Manifest(v=0, files={})
+        cache = IQBRemoteCache(data_dir=tmp_path, manifest=provided)
+
+        assert len(cache.manifest.files) == 0
+
+    def test_falls_back_to_disk_when_not_provided(self, tmp_path):
+        _write_manifest(
+            tmp_path,
+            {
+                "v": 0,
+                "files": {
+                    _PARQUET_KEY: {"sha256": "abc", "url": "https://example.com/f"},
+                },
+            },
+        )
+        cache = IQBRemoteCache(data_dir=tmp_path)
+
+        assert len(cache.manifest.files) == 1
 
 
 class TestManifestGetFileEntry:

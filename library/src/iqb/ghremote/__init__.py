@@ -29,6 +29,7 @@ from .cache import (
     Manifest,
     load_manifest,
     load_manifest_from_dict,
+    load_manifest_from_url,
     manifest_path_for_data_dir,
     save_manifest,
 )
@@ -51,6 +52,7 @@ __all__ = [
     "diff",
     "load_manifest",
     "load_manifest_from_dict",
+    "load_manifest_from_url",
     "manifest_path_for_data_dir",
     "parse_entry_path",
     "save_manifest",

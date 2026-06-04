@@ -33,8 +33,12 @@ def _make_cache_file(data_dir: Path, rel_path: str, content: bytes) -> Path:
 
 _TS1 = "20241001T000000Z"
 _TS2 = "20241101T000000Z"
+_TS3 = "20230601T000000Z"
+_TS4 = "20230701T000000Z"
 _FILE_A = f"cache/v1/{_TS1}/{_TS2}/downloads/data.parquet"
 _FILE_B = f"cache/v1/{_TS1}/{_TS2}/uploads/data.parquet"
+_FILE_C = f"cache/v1/{_TS1}/{_TS2}/downloads/stats.json"
+_FILE_D = f"cache/v1/{_TS3}/{_TS4}/downloads/data.parquet"
 
 
 def _find_log_file(data_dir: Path) -> Path | None:
@@ -386,3 +390,159 @@ class TestCachePullMetrics:
         assert spans_by_file[_FILE_A]["content_length"] == len(content_a)
         assert spans_by_file[_FILE_B]["bytes"] == len(content_b)
         assert spans_by_file[_FILE_B]["content_length"] == len(content_b)
+
+
+def _multi_manifest(tmp_path: Path, mock_session_cls: MagicMock) -> tuple[bytes, bytes, bytes, bytes]:
+    """Set up a manifest with four entries spanning two datasets, two filenames, two date ranges."""
+    ca, cb, cc, cd = b"content_a", b"content_b", b"content_c", b"content_d"
+    _write_manifest(
+        tmp_path,
+        {
+            _FILE_A: {"sha256": _sha256(ca), "url": "https://example.com/a"},
+            _FILE_B: {"sha256": _sha256(cb), "url": "https://example.com/b"},
+            _FILE_C: {"sha256": _sha256(cc), "url": "https://example.com/c"},
+            _FILE_D: {"sha256": _sha256(cd), "url": "https://example.com/d"},
+        },
+    )
+    contents = {"a": ca, "b": cb, "c": cc, "d": cd}
+    mock_session = MagicMock()
+
+    def side_effect(url: str, **kwargs):
+        letter = url.rsplit("/", 1)[-1]
+        return _fake_response(contents[letter])
+
+    mock_session.get.side_effect = side_effect
+    mock_session_cls.return_value = mock_session
+    return ca, cb, cc, cd
+
+
+class TestCachePullFilterDataset:
+    """--dataset filters by dataset name."""
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_single_dataset(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads"]
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_B).exists()
+        assert not (tmp_path / _FILE_A).exists()
+        assert not (tmp_path / _FILE_C).exists()
+        assert not (tmp_path / _FILE_D).exists()
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_multiple_datasets(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads", "--dataset", "downloads"],
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_A).exists()
+        assert (tmp_path / _FILE_B).exists()
+        assert (tmp_path / _FILE_C).exists()
+        assert (tmp_path / _FILE_D).exists()
+
+
+class TestCachePullFilterFile:
+    """--file filters by filename."""
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_stats_only(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "--file", "stats.json"]
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_C).exists()
+        assert not (tmp_path / _FILE_A).exists()
+        assert not (tmp_path / _FILE_B).exists()
+        assert not (tmp_path / _FILE_D).exists()
+
+
+class TestCachePullFilterAfterBefore:
+    """--after and --before filter by start timestamp."""
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_after_filters_old(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2024-01-01"]
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_A).exists()
+        assert (tmp_path / _FILE_B).exists()
+        assert (tmp_path / _FILE_C).exists()
+        assert not (tmp_path / _FILE_D).exists()
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_before_filters_new(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "--before", "2024-01-01"]
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_D).exists()
+        assert not (tmp_path / _FILE_A).exists()
+        assert not (tmp_path / _FILE_B).exists()
+        assert not (tmp_path / _FILE_C).exists()
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_after_and_before_range(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["cache", "pull", "-d", str(tmp_path), "--after", "2023-01-01", "--before", "2024-01-01"],
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_D).exists()
+        assert not (tmp_path / _FILE_A).exists()
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_no_matches_shows_nothing(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2025-01-01"]
+        )
+        assert result.exit_code == 0
+        assert "Nothing to download" in result.output
+
+
+class TestCachePullFilterCombined:
+    """Filters compose: --dataset + --file + --after/--before."""
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_dataset_and_file(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["cache", "pull", "-d", str(tmp_path), "--dataset", "downloads", "--file", "data.parquet"],
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_A).exists()
+        assert (tmp_path / _FILE_D).exists()
+        assert not (tmp_path / _FILE_B).exists()
+        assert not (tmp_path / _FILE_C).exists()
+
+    @patch("iqb.cli.cache_pull.requests.Session")
+    def test_dataset_and_after(self, mock_session_cls: MagicMock, tmp_path: Path):
+        _multi_manifest(tmp_path, mock_session_cls)
+        runner = CliRunner()
+        result = runner.invoke(
+            cli,
+            ["cache", "pull", "-d", str(tmp_path), "--dataset", "downloads", "--after", "2024-01-01"],
+        )
+        assert result.exit_code == 0
+        assert (tmp_path / _FILE_A).exists()
+        assert (tmp_path / _FILE_C).exists()
+        assert not (tmp_path / _FILE_B).exists()
+        assert not (tmp_path / _FILE_D).exists()

@@ -6,13 +6,13 @@ import re
 from dataclasses import dataclass
 
 _RFC3339_RE = re.compile(r"^\d{8}T\d{6}Z$")
-_NAME_RE = re.compile(r"^[a-z0-9_]+$")
+_DATASET_RE = re.compile(r"^[a-z0-9_]+$")
 _VALID_FILENAMES = frozenset(("data.parquet", "stats.json"))
 
 
 @dataclass(frozen=True, kw_only=True)
 class ManifestEntryPath:
-    """Parsed cache path of the form ``cache/v1/{start}/{end}/{name}/{filename}``."""
+    """Parsed cache path of the form ``cache/v1/{start}/{end}/{dataset}/{filename}``."""
 
     start: str
     end: str
@@ -40,7 +40,7 @@ def parse_entry_path(raw: str) -> ManifestEntryPath:
         raise ValueError(f"invalid start timestamp {parts[2]!r}: {raw!r}")
     if not _RFC3339_RE.match(parts[3]):
         raise ValueError(f"invalid end timestamp {parts[3]!r}: {raw!r}")
-    if not _NAME_RE.match(parts[4]):
+    if not _DATASET_RE.match(parts[4]):
         raise ValueError(f"invalid dataset {parts[4]!r}: {raw!r}")
     if parts[5] not in _VALID_FILENAMES:
         raise ValueError(f"invalid filename {parts[5]!r}: {raw!r}")

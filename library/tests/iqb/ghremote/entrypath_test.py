@@ -2,7 +2,7 @@
 
 import pytest
 
-from iqb.ghremote.entrypath import ManifestEntryPath, parse_entry_path
+from iqb.ghremote.entrypath import ManifestEntryPath, cache_ts_to_date, parse_entry_path
 
 _TS1 = "20241001T000000Z"
 _TS2 = "20241031T235959Z"
@@ -83,6 +83,22 @@ class TestManifestEntryPathStr:
         raw = f"cache/v1/{_TS1}/{_TS2}/{_DATASET}/stats.json"
         result = parse_entry_path(raw)
         assert str(result) == raw
+
+
+class TestCacheTsToDate:
+    """Tests for cache_ts_to_date."""
+
+    def test_midnight_timestamp(self):
+        assert cache_ts_to_date("20241001T000000Z") == "2024-10-01"
+
+    def test_non_midnight_timestamp(self):
+        assert cache_ts_to_date("20241031T235959Z") == "2024-10-31"
+
+    def test_round_trip_with_date_to_cache_ts(self):
+        from iqb.ghremote.entrypath import date_to_cache_ts
+
+        date_str = "2023-06-15"
+        assert cache_ts_to_date(date_to_cache_ts(date_str)) == date_str
 
 
 class TestManifestEntryPathAsKey:

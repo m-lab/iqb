@@ -692,3 +692,42 @@ class TestManifestFilter:
     def test_filter_preserves_version(self):
         result = _filter_manifest().filter(datasets=("uploads",))
         assert result.v == 0
+
+
+class TestManifestDatasets:
+    """Tests for Manifest.datasets()."""
+
+    def test_empty_manifest(self):
+        m = Manifest(v=0, files={})
+        assert m.datasets() == frozenset()
+
+    def test_returns_unique_datasets(self):
+        result = _filter_manifest().datasets()
+        assert result == frozenset({"downloads", "uploads"})
+
+    def test_single_dataset_after_filter(self):
+        result = _filter_manifest().filter(datasets=("uploads",)).datasets()
+        assert result == frozenset({"uploads"})
+
+
+class TestManifestPeriods:
+    """Tests for Manifest.periods()."""
+
+    def test_empty_manifest(self):
+        m = Manifest(v=0, files={})
+        assert m.periods() == ()
+
+    def test_returns_sorted_unique_periods(self):
+        result = _filter_manifest().periods()
+        assert result == (
+            ("2023-06-01", "2023-07-01"),
+            ("2024-10-01", "2024-11-01"),
+        )
+
+    def test_single_period_after_filter(self):
+        result = _filter_manifest().filter(before="2024-01-01").periods()
+        assert result == (("2023-06-01", "2023-07-01"),)
+
+    def test_composes_with_dataset_filter(self):
+        result = _filter_manifest().filter(datasets=("uploads",)).periods()
+        assert result == (("2024-10-01", "2024-11-01"),)

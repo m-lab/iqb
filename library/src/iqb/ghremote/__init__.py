@@ -33,7 +33,7 @@ from .cache import (
     save_manifest,
 )
 from .diff import DiffEntry, DiffState, diff
-from .entrypath import ManifestEntryPath, date_to_cache_ts, parse_entry_path
+from .entrypath import ManifestEntryPath, cache_ts_to_date, date_to_cache_ts, parse_entry_path
 
 # Backward compatibility alias
 IQBGitHubRemoteCache = IQBRemoteCache
@@ -46,6 +46,7 @@ __all__ = [
     "IQBGitHubRemoteCache",
     "IQBRemoteCache",
     "Manifest",
+    "cache_ts_to_date",
     "date_to_cache_ts",
     "diff",
     "load_manifest",

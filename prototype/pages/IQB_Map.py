@@ -298,20 +298,15 @@ def get_iqb_cache() -> IQBCache:
 
 
 @st.cache_data
-def get_available_periods(_manifest_files: tuple) -> list[tuple[str, str, str]]:
-    """Parse available periods from manifest files."""
-    periods = set()
-    for key in _manifest_files:
-        if key.dataset != "downloads_by_country_city":
-            continue
-        # Timestamps are in the form YYYYMMDDTHHMMSSZ
-        start_date = f"{key.start[:4]}-{key.start[4:6]}-{key.start[6:8]}"
-        end_date = f"{key.end[:4]}-{key.end[4:6]}-{key.end[6:8]}"
+def get_available_periods(_manifest: Manifest) -> list[tuple[str, str, str]]:
+    """Return available periods from the manifest as ``(label, start, end)`` tuples."""
+    periods = _manifest.filter(datasets=("downloads_by_country_city",)).periods()
+    result = []
+    for start_date, end_date in periods:
         start_label = datetime.strptime(start_date, "%Y-%m-%d").strftime("%b %Y")
         end_label = datetime.strptime(end_date, "%Y-%m-%d").strftime("%b %Y")
-        label = f"{start_label} - {end_label}"
-        periods.add((label, start_date, end_date))
-    return sorted(periods, key=lambda x: x[1], reverse=True)
+        result.append((f"{start_label} - {end_label}", start_date, end_date))
+    return list(reversed(result))
 
 
 # --- Data Fetching ---
@@ -1479,8 +1474,7 @@ cache = get_iqb_cache()
 # Sidebar
 with st.sidebar:
     st.header("Data Selection")
-    manifest_files = tuple(cache.manager.remote_cache.manifest.files.keys())
-    available_periods = get_available_periods(manifest_files)
+    available_periods = get_available_periods(cache.manager.remote_cache.manifest)
 
     if not available_periods:
         st.error("No data periods available in manifest")

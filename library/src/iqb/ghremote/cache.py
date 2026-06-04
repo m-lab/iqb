@@ -24,7 +24,7 @@ from rich.progress import (
 )
 
 from ..pipeline.cache import PipelineCacheEntry, data_dir_or_default
-from .entrypath import ManifestEntryPath, date_to_cache_ts, parse_entry_path
+from .entrypath import ManifestEntryPath, cache_ts_to_date, date_to_cache_ts, parse_entry_path
 
 log = logging.getLogger("iqb.ghremote.cache")
 
@@ -83,6 +83,17 @@ class Manifest:
             and (not before_ts or k.start < before_ts)
         }
         return Manifest(v=self.v, files=filtered)
+
+    def datasets(self) -> frozenset[str]:
+        """Return the set of unique dataset names present in this manifest."""
+        return frozenset(k.dataset for k in self.files)
+
+    def periods(self) -> tuple[tuple[str, str], ...]:
+        """Return sorted unique ``(start_date, end_date)`` pairs as ``YYYY-MM-DD`` strings."""
+        seen: set[tuple[str, str]] = set()
+        for k in self.files:
+            seen.add((cache_ts_to_date(k.start), cache_ts_to_date(k.end)))
+        return tuple(sorted(seen))
 
     def get_file_entry(self, *, full_path: Path, data_dir: Path) -> FileEntry:
         """

@@ -26,6 +26,11 @@ class ManifestEntryPath:
         return f"cache/v1/{self.start}/{self.end}/{self.dataset}/{self.filename}"
 
 
+def cache_ts_to_date(ts: str) -> str:
+    """Convert a ``YYYYMMDDTHHMMSSZ`` cache timestamp to a ``YYYY-MM-DD`` date string."""
+    return f"{ts[:4]}-{ts[4:6]}-{ts[6:8]}"
+
+
 def date_to_cache_ts(date_str: str) -> str:
     """Convert a ``YYYY-MM-DD`` date string to the ``YYYYMMDDTHHMMSSZ`` cache timestamp format."""
     dt = datetime.strptime(date_str, "%Y-%m-%d")

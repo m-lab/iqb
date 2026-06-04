@@ -7,6 +7,8 @@ network measurement data, weight matrices, and quality thresholds.
 from importlib.metadata import PackageNotFoundError, version
 
 from .cache import IQBCache
+from .cache.cache import IQBData
+from .cache.mlab import IQBDataMLab
 from .calculator import IQBCalculator
 from .config import IQB_CONFIG
 from .ghremote import IQBGitHubRemoteCache, IQBRemoteCache
@@ -29,6 +31,8 @@ __all__ = [
     "IQB",
     "IQBCalculator",
     "IQBCache",
+    "IQBData",
+    "IQBDataMLab",
     "IQB_CONFIG",
     "IQBGitHubRemoteCache",
     "IQBRemoteCache",

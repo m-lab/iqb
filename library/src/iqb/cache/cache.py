@@ -37,6 +37,12 @@ class IQBData:
 
     mlab: IQBDataMLab
 
+    def to_dict(self) -> dict[str, dict[str, float]]:
+        """Convert to the nested dict expected by ``IQBCalculator.calculate_iqb_score``."""
+        result: dict[str, dict[str, float]] = {}
+        result["m-lab"] = self.mlab.to_dict()
+        return result
+
 
 class IQBCache:
     """Component for fetching IQB measurement data from cache."""

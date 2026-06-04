@@ -2,6 +2,7 @@
 
 from pprint import pprint
 
+from .cache.cache import IQBData
 from .config import IQB_CONFIG
 
 
@@ -82,8 +83,11 @@ class IQBCalculator:
                 f"The binary requirement score method is not implemented for the network_requirement: {network_requirement}"
             )
 
-    def calculate_iqb_score(self, data: dict, print_details=False):
+    def calculate_iqb_score(self, data: dict | IQBData, print_details=False):
         """Calculates IQB score based on given data."""
+
+        if isinstance(data, IQBData):
+            data = data.to_dict()
 
         # TODO(bassosimone): remove printing from the current function and instead
         # add more tests to gain better confidence about it being WAI
@@ -105,6 +109,8 @@ class IQBCalculator:
                 # updated with weighted average of scores per dataset.
                 ds_s = []
                 for ds in self.config["use cases"][uc]["network requirements"][nr]["datasets"]:
+                    if ds not in data:
+                        continue
                     ds_w = self.config["use cases"][uc]["network requirements"][nr]["datasets"][ds][
                         "w"
                     ]

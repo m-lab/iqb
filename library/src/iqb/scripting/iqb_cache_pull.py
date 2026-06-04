@@ -29,7 +29,6 @@ from ..ghremote import DiffState, Manifest, diff, load_manifest, manifest_path_f
 from ..ghremote.diff import DiffEntry
 from ..ghremote.entrypath import ManifestEntryPath
 from ..pipeline.cache import data_dir_or_default
-from .iqb_logging import log
 
 _thread_local = threading.local()
 
@@ -153,7 +152,6 @@ def run(
             targets.append(entry)
 
     if not targets:
-        log.info("nothing to download")
         return None
 
     failed: list[tuple[str, str]] = []
@@ -193,10 +191,6 @@ def run(
             fp.write(json.dumps(span) + "\n")
 
     ok_count = len(targets) - len(failed)
-    log.info("downloaded %d/%d file(s) in %.1fs", ok_count, len(targets), elapsed)
-    if failed:
-        for file, reason in failed:
-            log.warning("failed: %s: %s", file, reason)
 
     return PullResult(
         total=len(targets),

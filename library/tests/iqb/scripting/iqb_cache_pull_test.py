@@ -83,6 +83,7 @@ class TestRunWithProvidedManifest:
         mock_session.get.return_value = _fake_response(content)
         mock_session_cls.return_value = mock_session
 
+        # No manifest on disk — uses provided manifest directly
         result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
 
         assert result is not None
@@ -90,21 +91,6 @@ class TestRunWithProvidedManifest:
         assert result.ok == 1
         assert result.failed == []
         assert (tmp_path / _FILE_A).read_bytes() == content
-
-    @patch("iqb.scripting.iqb_cache_pull.requests.Session")
-    def test_no_disk_manifest_needed(self, mock_session_cls: MagicMock, tmp_path: Path):
-        content = b"data"
-        sha = _sha256(content)
-        manifest = _make_manifest({_FILE_A: {"sha256": sha, "url": "https://example.com/a"}})
-
-        mock_session = MagicMock()
-        mock_session.get.return_value = _fake_response(content)
-        mock_session_cls.return_value = mock_session
-
-        # No manifest on disk — should not raise
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
-        assert result is not None
-        assert result.ok == 1
 
 
 class TestRunFiltering:

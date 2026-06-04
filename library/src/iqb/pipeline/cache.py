@@ -15,6 +15,7 @@ from filelock import BaseFileLock, FileLock
 PIPELINE_CACHE_DATA_FILENAME: Final[str] = "data.parquet"
 PIPELINE_CACHE_DOTLOCK_FILENAME: Final[str] = ".lock"
 PIPELINE_CACHE_STATS_FILENAME: Final[str] = "stats.json"
+PIPELINE_CACHE_TS_FORMAT: Final[str] = "%Y%m%dT%H%M%SZ"
 
 
 class PipelineEntrySyncError(RuntimeError):
@@ -42,9 +43,8 @@ class PipelineCacheEntry:
 
     def dir_path(self) -> Path:
         """Returns the directory path where to write files."""
-        fs_date_format = "%Y%m%dT000000Z"
-        start_dir = self.start_time.strftime(fs_date_format)
-        end_dir = self.end_time.strftime(fs_date_format)
+        start_dir = self.start_time.strftime(PIPELINE_CACHE_TS_FORMAT)
+        end_dir = self.end_time.strftime(PIPELINE_CACHE_TS_FORMAT)
         return self.data_dir / "cache" / "v1" / start_dir / end_dir / self.dataset_name
 
     def data_parquet_file_path(self) -> Path:

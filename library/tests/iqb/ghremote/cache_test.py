@@ -616,3 +616,79 @@ class TestSaveManifest:
         parsed = json.loads(content)
         re_dumped = json.dumps(parsed, indent=2, sort_keys=True) + "\n"
         assert content == re_dumped
+
+
+# Timestamps and keys for filter tests
+_FILTER_TS_2023_START = "20230601T000000Z"
+_FILTER_TS_2023_END = "20230701T000000Z"
+_FILTER_TS_2024_START = "20241001T000000Z"
+_FILTER_TS_2024_END = "20241101T000000Z"
+
+_FILTER_KEYS = {
+    "dl_parquet_2024": parse_entry_path(
+        f"cache/v1/{_FILTER_TS_2024_START}/{_FILTER_TS_2024_END}/downloads/data.parquet"
+    ),
+    "ul_parquet_2024": parse_entry_path(
+        f"cache/v1/{_FILTER_TS_2024_START}/{_FILTER_TS_2024_END}/uploads/data.parquet"
+    ),
+    "dl_stats_2024": parse_entry_path(
+        f"cache/v1/{_FILTER_TS_2024_START}/{_FILTER_TS_2024_END}/downloads/stats.json"
+    ),
+    "dl_parquet_2023": parse_entry_path(
+        f"cache/v1/{_FILTER_TS_2023_START}/{_FILTER_TS_2023_END}/downloads/data.parquet"
+    ),
+}
+
+_DUMMY_ENTRY = FileEntry(sha256="abc", url="https://example.com/x")
+
+
+def _filter_manifest() -> Manifest:
+    return Manifest(v=0, files={k: _DUMMY_ENTRY for k in _FILTER_KEYS.values()})
+
+
+class TestManifestFilter:
+    """Tests for Manifest.filter()."""
+
+    def test_no_filters_returns_all(self):
+        m = _filter_manifest()
+        result = m.filter()
+        assert len(result.files) == 4
+
+    def test_filter_by_dataset(self):
+        result = _filter_manifest().filter(datasets=("uploads",))
+        assert set(result.files.keys()) == {_FILTER_KEYS["ul_parquet_2024"]}
+
+    def test_filter_by_multiple_datasets(self):
+        result = _filter_manifest().filter(datasets=("uploads", "downloads"))
+        assert len(result.files) == 4
+
+    def test_filter_by_file(self):
+        result = _filter_manifest().filter(files=("stats.json",))
+        assert set(result.files.keys()) == {_FILTER_KEYS["dl_stats_2024"]}
+
+    def test_filter_after(self):
+        result = _filter_manifest().filter(after="2024-01-01")
+        assert _FILTER_KEYS["dl_parquet_2023"] not in result.files
+        assert len(result.files) == 3
+
+    def test_filter_before(self):
+        result = _filter_manifest().filter(before="2024-01-01")
+        assert set(result.files.keys()) == {_FILTER_KEYS["dl_parquet_2023"]}
+
+    def test_filter_after_and_before(self):
+        result = _filter_manifest().filter(after="2023-01-01", before="2024-01-01")
+        assert set(result.files.keys()) == {_FILTER_KEYS["dl_parquet_2023"]}
+
+    def test_filter_combined(self):
+        result = _filter_manifest().filter(
+            datasets=("downloads",), files=("data.parquet",), after="2024-01-01"
+        )
+        assert set(result.files.keys()) == {_FILTER_KEYS["dl_parquet_2024"]}
+
+    def test_filter_no_matches(self):
+        result = _filter_manifest().filter(after="2025-01-01")
+        assert len(result.files) == 0
+
+    def test_filter_preserves_version(self):
+        result = _filter_manifest().filter(datasets=("uploads",))
+        assert result.v == 0

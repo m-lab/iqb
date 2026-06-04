@@ -29,7 +29,19 @@ all the query results already cached at GCS. Run:
 uv run iqb cache pull -d .
 ```
 
-to sync files from GCS to the local copy.
+to sync all files from GCS to the local copy.
+
+To pull only a subset of the data, use the filtering flags:
+
+```bash
+# Only downloads from 2024
+uv run iqb cache pull -d . --dataset downloads --after 2024-01-01 --before 2025-01-01
+
+# Only stats.json files (small metadata, no parquet)
+uv run iqb cache pull -d . --file stats.json
+```
+
+Flags can be combined and repeated (e.g., `--dataset downloads --dataset uploads`).
 
 Omit `-d .` if running from the top-level directory.
 

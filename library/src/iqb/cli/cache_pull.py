@@ -23,17 +23,11 @@ from rich.progress import (
     TransferSpeedColumn,
 )
 
-from ..ghremote import DiffState, Manifest, diff, load_manifest, manifest_path_for_data_dir
+from ..ghremote import DiffState, diff, load_manifest, manifest_path_for_data_dir
 from ..ghremote.diff import DiffEntry
 from ..ghremote.entrypath import ManifestEntryPath
 from ..pipeline.cache import data_dir_or_default
 from .cache import cache
-
-
-def _date_to_ts(date_str: str) -> str:
-    """Convert a YYYY-MM-DD date string to the YYYYMMDDTHHMMSSZ timestamp format."""
-    dt = datetime.strptime(date_str, "%Y-%m-%d")
-    return dt.strftime("%Y%m%dT%H%M%SZ")
 
 _thread_local = threading.local()
 
@@ -113,26 +107,6 @@ def _download_one(
     }
 
 
-def _filter_manifest(
-    manifest: Manifest,
-    *,
-    datasets: tuple[str, ...],
-    files: tuple[str, ...],
-    after: str | None,
-    before: str | None,
-) -> Manifest:
-    """Return a new manifest containing only the entries that match the filters."""
-    filtered = {
-        k: v
-        for k, v in manifest.files.items()
-        if (not datasets or k.dataset in datasets)
-        and (not files or k.filename in files)
-        and (not after or k.start >= _date_to_ts(after))
-        and (not before or k.start < _date_to_ts(before))
-    }
-    return Manifest(v=manifest.v, files=filtered)
-
-
 @cache.command()
 @click.option("-d", "--dir", "data_dir", default=None, help="Data directory (default: .iqb)")
 @click.option("-f", "--force", is_flag=True, help="Re-download files with mismatched hashes")
@@ -154,7 +128,7 @@ def pull(
     resolved = data_dir_or_default(data_dir)
     manifest_path = manifest_path_for_data_dir(resolved)
     manifest = load_manifest(manifest_path)
-    manifest = _filter_manifest(manifest, datasets=datasets, files=files, after=after, before=before)
+    manifest = manifest.filter(datasets=datasets, files=files, after=after, before=before)
 
     # Collect entries to download
     targets: list[DiffEntry] = []

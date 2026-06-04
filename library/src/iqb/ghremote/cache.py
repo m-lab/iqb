@@ -24,7 +24,7 @@ from rich.progress import (
 )
 
 from ..pipeline.cache import PipelineCacheEntry, data_dir_or_default
-from .entrypath import ManifestEntryPath, parse_entry_path
+from .entrypath import ManifestEntryPath, date_to_cache_ts, parse_entry_path
 
 log = logging.getLogger("iqb.ghremote.cache")
 
@@ -55,6 +55,34 @@ class Manifest:
     def __post_init__(self):
         if self.v != 0:
             raise ValueError(f"Unsupported manifest version: {self.v} (only v=0 supported)")
+
+    def filter(
+        self,
+        *,
+        datasets: tuple[str, ...] = (),
+        files: tuple[str, ...] = (),
+        after: str | None = None,
+        before: str | None = None,
+    ) -> Manifest:
+        """Return a new manifest containing only the entries that match the filters.
+
+        Args:
+            datasets: keep only entries whose dataset is in this set.
+            files: keep only entries whose filename is in this set.
+            after: keep only entries whose start is >= this date (YYYY-MM-DD).
+            before: keep only entries whose start is < this date (YYYY-MM-DD).
+        """
+        after_ts = date_to_cache_ts(after) if after else None
+        before_ts = date_to_cache_ts(before) if before else None
+        filtered = {
+            k: v
+            for k, v in self.files.items()
+            if (not datasets or k.dataset in datasets)
+            and (not files or k.filename in files)
+            and (not after_ts or k.start >= after_ts)
+            and (not before_ts or k.start < before_ts)
+        }
+        return Manifest(v=self.v, files=filtered)
 
     def get_file_entry(self, *, full_path: Path, data_dir: Path) -> FileEntry:
         """

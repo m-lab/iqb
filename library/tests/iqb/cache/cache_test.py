@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from iqb import IQBCache, IQBDatasetGranularity, IQBData, IQBDataMLab
+from iqb import IQBCache, IQBData, IQBDataMLab, IQBDatasetGranularity
 from iqb.pipeline.pipeline import PipelineRemoteCache
 
 

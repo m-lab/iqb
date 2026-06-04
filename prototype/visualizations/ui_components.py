@@ -167,10 +167,7 @@ def render_threshold_editor(state: IQBAppState) -> None:
     st.caption("Edit the threshold values for each requirement per use case")
 
     use_case_tabs = st.tabs(
-        [
-            use_case.title()
-            for use_case in IQB_CONFIG["use cases"].keys()
-        ]
+        [use_case.title() for use_case in IQB_CONFIG["use cases"].keys()]
     )
 
     needs_rerun = False
@@ -245,10 +242,7 @@ def render_requirement_weights_editor(state: IQBAppState) -> None:
     st.caption("Edit the weights for each requirement per use case (0-5 scale)")
 
     use_case_tabs = st.tabs(
-        [
-            use_case.title()
-            for use_case in IQB_CONFIG["use cases"].keys()
-        ]
+        [use_case.title() for use_case in IQB_CONFIG["use cases"].keys()]
     )
 
     needs_rerun = False

@@ -109,13 +109,9 @@ class TestIQBCacheGetData:
         cache = IQBCache(data_dir=real_data_dir)
 
         with pytest.deprecated_call():
-            data_p95 = cache.get_data(
-                country="US", start_date=datetime(2024, 10, 1), percentile=95
-            )
+            data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
         with pytest.deprecated_call():
-            data_p50 = cache.get_data(
-                country="US", start_date=datetime(2024, 10, 1), percentile=50
-            )
+            data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data_p95
@@ -168,9 +164,12 @@ class TestIQBCacheGetData:
         cache = IQBCache(data_dir=real_data_dir)
 
         # Use a fictional country code that won't exist
-        with pytest.deprecated_call(), pytest.raises(
-            ValueError,
-            match="Expected exactly 1 row in download DataFrame, but got 0 rows",
+        with (
+            pytest.deprecated_call(),
+            pytest.raises(
+                ValueError,
+                match="Expected exactly 1 row in download DataFrame, but got 0 rows",
+            ),
         ):
             cache.get_data(country="ZZ", start_date=datetime(2024, 10, 1))
 
@@ -178,8 +177,9 @@ class TestIQBCacheGetData:
         """Test that requesting data for unavailable date raises FileNotFoundError."""
         cache = IQBCache(data_dir=real_data_dir)
 
-        with pytest.deprecated_call(), pytest.raises(
-            FileNotFoundError, match=r"Cache entry not found"
+        with (
+            pytest.deprecated_call(),
+            pytest.raises(FileNotFoundError, match=r"Cache entry not found"),
         ):
             cache.get_data(country="US", start_date=datetime(2024, 11, 1))
 

@@ -58,20 +58,16 @@ class IQBCalculator:
                 f"The binary requirement score method is not implemented for the network_requirement: {network_requirement}"
             )
 
-    def calculate_iqb_score(self, data: dict | IQBData, print_details=False):
+    def calculate_iqb_score(self, data: dict | IQBData):
         """Calculates IQB score based on given data."""
 
         if isinstance(data, IQBData):
             data = data.to_dict()
 
-        # TODO(bassosimone): remove printing from the current function and instead
-        # add more tests to gain better confidence about it being WAI
-        doprint = print if print_details else lambda *args, **kwargs: None
-
         uc_scores = []
         uc_weights = []
 
-        for uc_name, uc_cfg in self.config.use_cases.items():
+        for _uc_name, uc_cfg in self.config.use_cases.items():
             nr_scores = []
             nr_weights = []
             for nr_name, nr_cfg in uc_cfg.network_requirements.items():
@@ -87,24 +83,17 @@ class IQBCalculator:
                             nr_name, data[ds_name][nr_name], nr_cfg.threshold_min
                         )
                         ds_s.append(brs)
-                        doprint(
-                            f"Binary score: {uc_name},{nr_name},{ds_name},"
-                            f"{nr_cfg.threshold_min},{data[ds_name][nr_name]}-->{brs}"
-                        )
 
                 # requirement agreement score (all datasets for this requirement)
                 ras = sum(ds_s) / len(ds_s)
-                doprint(f"\t Agreement score: {uc_name},{nr_name}-->{ras}")
 
                 nr_scores.append(ras * nr_cfg.weight)
                 nr_weights.append(nr_cfg.weight)
 
             # use case score (all requirements for this use case)
             ucs = sum(nr_scores) / sum(nr_weights)
-            doprint(f"\t\t Net requirement score: {nr_scores},{nr_weights}-->{ucs}\n")
             uc_scores.append(ucs * uc_cfg.weight)
             uc_weights.append(uc_cfg.weight)
 
         iqb_score = sum(uc_scores) / sum(uc_weights)
-        doprint(f"\t\t\t IQB score: {uc_scores},{uc_weights}-->{iqb_score}")
         return iqb_score

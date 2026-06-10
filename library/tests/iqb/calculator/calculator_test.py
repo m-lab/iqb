@@ -136,12 +136,6 @@ class TestIQBCalculatorScoreCalculation:
         score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         assert score == pytest.approx(4 / 7)
 
-    def test_calculate_iqb_score_print_details(self):
-        """Test that IQBCalculator score calculation works with print_details=True."""
-        iqb = IQBCalculator()
-        score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA, print_details=True)
-        assert score == pytest.approx(4 / 7)
-
     def test_calculate_iqb_score_consistency(self):
         """Test that IQBCalculator score calculation is consistent across calls."""
         iqb = IQBCalculator()

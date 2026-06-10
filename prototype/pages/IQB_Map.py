@@ -244,7 +244,7 @@ def calculate_iqb_score_from_metrics(
             percentile
         ]
         iqb_data = build_iqb_data_from_cache(metrics, percentile)
-        return temp_state.iqb.calculate_iqb_score(data=iqb_data, print_details=False)
+        return temp_state.iqb.calculate_iqb_score(data=iqb_data)
     except Exception:
         return None
 
@@ -1579,9 +1579,7 @@ if (
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
             try:
                 iqb_data = build_iqb_data_from_cache(metrics, percentile)
-                iqb_score = state.iqb.calculate_iqb_score(
-                    data=iqb_data, print_details=False
-                )
+                iqb_score = state.iqb.calculate_iqb_score(data=iqb_data)
                 with tab1:
                     render_sunburst(
                         prepare_requirements_sunburst_data(state),
@@ -1713,9 +1711,7 @@ if (
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
             try:
                 iqb_data = build_iqb_data_from_cache(metrics, percentile)
-                iqb_score = state.iqb.calculate_iqb_score(
-                    data=iqb_data, print_details=False
-                )
+                iqb_score = state.iqb.calculate_iqb_score(data=iqb_data)
                 with tab1:
                     render_sunburst(
                         prepare_requirements_sunburst_data(state),

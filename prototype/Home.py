@@ -69,9 +69,7 @@ def main():
     with right_col:
         try:
             data_for_calculation = build_data_for_calculate(state)
-            iqb_score = state.iqb.calculate_iqb_score(
-                data=data_for_calculation, print_details=False
-            )
+            iqb_score = state.iqb.calculate_iqb_score(data=data_for_calculation)
 
             tab1, tab2, tab3 = st.tabs(["Requirements", "Use Cases", "Full Hierarchy"])
 

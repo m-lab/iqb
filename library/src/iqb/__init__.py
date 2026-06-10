@@ -9,7 +9,16 @@ from importlib.metadata import PackageNotFoundError, version
 from .cache import IQBCache
 from .cache.cache import IQBData
 from .cache.mlab import IQBDataMLab
-from .calculator import IQB_CONFIG, IQBCalculator
+from .calculator import (
+    IQB_CONFIG,
+    IQB_DEFAULT_CONFIG,
+    IQBCalculator,
+    IQBConfig,
+    IQBConfigDataset,
+    IQBConfigNetworkRequirement,
+    IQBConfigUseCase,
+    iqb_config_from_legacy,
+)
 from .ghremote import IQBGitHubRemoteCache, IQBRemoteCache
 from .pipeline import (
     IQBDatasetGranularity,
@@ -30,14 +39,20 @@ __all__ = [
     "IQB",
     "IQBCalculator",
     "IQBCache",
+    "IQBConfig",
+    "IQBConfigDataset",
+    "IQBConfigNetworkRequirement",
+    "IQBConfigUseCase",
     "IQBData",
     "IQBDataMLab",
     "IQB_CONFIG",
+    "IQB_DEFAULT_CONFIG",
     "IQBGitHubRemoteCache",
     "IQBRemoteCache",
     "IQBPipeline",
     "IQBDatasetGranularity",
     "IQBDatasetMLabTable",
+    "iqb_config_from_legacy",
     "iqb_dataset_name_for_mlab",
     "__version__",
 ]

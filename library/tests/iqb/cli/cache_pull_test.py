@@ -68,6 +68,13 @@ def _fake_response(content: bytes) -> MagicMock:
     return resp
 
 
+class TestFindLogFile:
+    """Tests for the _find_log_file helper."""
+
+    def test_returns_none_when_log_dir_missing(self, tmp_path: Path):
+        assert _find_log_file(tmp_path) is None
+
+
 class TestCachePullEmptyManifest:
     """Empty manifest produces 'Nothing to download.'."""
 

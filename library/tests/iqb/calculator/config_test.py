@@ -83,7 +83,7 @@ class TestIQBDefaultConfigIsDerivedFromLegacy:
     def test_default_equals_from_legacy(self):
         """IQB_DEFAULT_CONFIG equals a fresh conversion of IQB_CONFIG."""
         fresh = iqb_config_from_legacy(IQB_CONFIG)
-        assert IQB_DEFAULT_CONFIG == fresh
+        assert fresh == IQB_DEFAULT_CONFIG
 
     def test_idempotent_conversion(self):
         """Converting IQB_CONFIG twice yields equal results."""

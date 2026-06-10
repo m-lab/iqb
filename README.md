@@ -84,7 +84,7 @@ scores <- [IQBCalculator] <- [IQBCache] <- localCache <- [IQBRemoteCache] <- GCS
 More in detail:
 
 1. the `IQBRemoteCache` downloads [Parquet](https://parquet.apache.org/) files
-from Measurement Lab GCS and stores them in the local cache
+from Measurement Lab GCS (Google Cloud Storage) and stores them in the local cache
 
 2. the `IQBCache` reads [Parquet](https://parquet.apache.org/) files from
 the local cache (allowing for filtering) and return data structures

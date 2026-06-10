@@ -67,7 +67,7 @@ class IQBCalculator:
         uc_scores = []
         uc_weights = []
 
-        for uc_name, uc_cfg in self.config.use_cases.items():
+        for _uc_name, uc_cfg in self.config.use_cases.items():
             nr_scores = []
             nr_weights = []
             for nr_name, nr_cfg in uc_cfg.network_requirements.items():

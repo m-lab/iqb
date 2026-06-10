@@ -85,6 +85,30 @@ class TestBinaryRequirementScore:
         score = iqb.calculate_binary_requirement_score("packet_loss", 0.02, 0.01)
         assert score == 0
 
+    def test_download_throughput_at_threshold_scores_zero(self):
+        """Download throughput exactly at threshold scores 0 (strict >)."""
+        iqb = IQBCalculator()
+        score = iqb.calculate_binary_requirement_score("download_throughput_mbps", 25, 25)
+        assert score == 0
+
+    def test_upload_throughput_at_threshold_scores_zero(self):
+        """Upload throughput exactly at threshold scores 0 (strict >)."""
+        iqb = IQBCalculator()
+        score = iqb.calculate_binary_requirement_score("upload_throughput_mbps", 10, 10)
+        assert score == 0
+
+    def test_latency_at_threshold_scores_zero(self):
+        """Latency exactly at threshold scores 0 (strict <)."""
+        iqb = IQBCalculator()
+        score = iqb.calculate_binary_requirement_score("latency_ms", 100, 100)
+        assert score == 0
+
+    def test_packet_loss_at_threshold_scores_zero(self):
+        """Packet loss exactly at threshold scores 0 (strict <)."""
+        iqb = IQBCalculator()
+        score = iqb.calculate_binary_requirement_score("packet_loss", 0.01, 0.01)
+        assert score == 0
+
     def test_invalid_network_requirement_raises_error(self):
         """Test that an invalid network requirement raises ValueError."""
         iqb = IQBCalculator()
@@ -108,15 +132,13 @@ class TestIQBCalculatorScoreCalculation:
         """Test that IQBCalculator score can be calculated with custom data."""
         iqb = IQBCalculator()
         score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
-        assert isinstance(score, (int, float))
-        assert 0 <= score <= 1
+        assert score == pytest.approx(4 / 7)
 
     def test_calculate_iqb_score_print_details(self):
         """Test that IQBCalculator score calculation works with print_details=True."""
         iqb = IQBCalculator()
         score = iqb.calculate_iqb_score(data=self._SAMPLE_DATA, print_details=True)
-        assert isinstance(score, (int, float))
-        assert 0 <= score <= 1
+        assert score == pytest.approx(4 / 7)
 
     def test_calculate_iqb_score_consistency(self):
         """Test that IQBCalculator score calculation is consistent across calls."""
@@ -124,6 +146,201 @@ class TestIQBCalculatorScoreCalculation:
         score1 = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         score2 = iqb.calculate_iqb_score(data=self._SAMPLE_DATA)
         assert score1 == score2
+
+
+class TestIQBCalculatorScoreExtremes:
+    """Tests for IQB score at the extremes (all-pass and all-fail)."""
+
+    def test_all_pass_scores_one(self):
+        """Data exceeding every threshold across all use cases scores 1.0."""
+        data = {
+            "m-lab": {
+                "download_throughput_mbps": 100,
+                "upload_throughput_mbps": 100,
+                "latency_ms": 1,
+                "packet_loss": 0.001,
+            }
+        }
+        iqb = IQBCalculator()
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(1.0)
+
+    def test_all_fail_scores_zero(self):
+        """Data failing every threshold across all use cases scores 0.0."""
+        data = {
+            "m-lab": {
+                "download_throughput_mbps": 1,
+                "upload_throughput_mbps": 1,
+                "latency_ms": 200,
+                "packet_loss": 0.1,
+            }
+        }
+        iqb = IQBCalculator()
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(0.0)
+
+
+class TestIQBCalculatorCustomConfig:
+    """Tests using minimal custom configs to isolate the aggregation math."""
+
+    _MINIMAL_CONFIG = {
+        "use cases": {
+            "test": {
+                "w": 1,
+                "network requirements": {
+                    "download_throughput_mbps": {
+                        "w": 1,
+                        "threshold min": 10,
+                        "datasets": {"m-lab": {"w": 1}},
+                    },
+                },
+            },
+        },
+    }
+
+    def test_minimal_config_pass(self):
+        """Minimal config with passing data scores 1.0."""
+        data = {"m-lab": {"download_throughput_mbps": 50}}
+        iqb = IQBCalculator(config=self._MINIMAL_CONFIG)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(1.0)
+
+    def test_minimal_config_fail(self):
+        """Minimal config with failing data scores 0.0."""
+        data = {"m-lab": {"download_throughput_mbps": 5}}
+        iqb = IQBCalculator(config=self._MINIMAL_CONFIG)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(0.0)
+
+    def test_weighted_average_across_requirements(self):
+        """Two requirements with weights 3 and 1: pass/fail → 0.75."""
+        config = {
+            "use cases": {
+                "test": {
+                    "w": 1,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 3,
+                            "threshold min": 10,
+                            "datasets": {"m-lab": {"w": 1}},
+                        },
+                        "latency_ms": {
+                            "w": 1,
+                            "threshold min": 50,
+                            "datasets": {"m-lab": {"w": 1}},
+                        },
+                    },
+                },
+            },
+        }
+        data = {"m-lab": {"download_throughput_mbps": 50, "latency_ms": 100}}
+        iqb = IQBCalculator(config=config)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(3 / 4)
+
+    def test_weighted_average_across_use_cases(self):
+        """Two use cases with weights 3 and 1: pass/fail → 0.75."""
+        config = {
+            "use cases": {
+                "important": {
+                    "w": 3,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 1,
+                            "threshold min": 10,
+                            "datasets": {"m-lab": {"w": 1}},
+                        },
+                    },
+                },
+                "minor": {
+                    "w": 1,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 1,
+                            "threshold min": 100,
+                            "datasets": {"m-lab": {"w": 1}},
+                        },
+                    },
+                },
+            },
+        }
+        data = {"m-lab": {"download_throughput_mbps": 50}}
+        iqb = IQBCalculator(config=config)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(3 / 4)
+
+
+class TestIQBCalculatorDatasetAgreement:
+    """Tests for the dataset agreement score (averaging across datasets)."""
+
+    def test_two_datasets_one_pass_one_fail(self):
+        """Two datasets both with weight=1: one passes, one fails → score 0.5."""
+        config = {
+            "use cases": {
+                "test": {
+                    "w": 1,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 1,
+                            "threshold min": 10,
+                            "datasets": {"m-lab": {"w": 1}, "ookla": {"w": 1}},
+                        },
+                    },
+                },
+            },
+        }
+        data = {
+            "m-lab": {"download_throughput_mbps": 50},
+            "ookla": {"download_throughput_mbps": 5},
+        }
+        iqb = IQBCalculator(config=config)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(0.5)
+
+    def test_absent_dataset_is_skipped_not_counted_as_failure(self):
+        """A dataset in config but absent from data is excluded, not scored 0."""
+        config = {
+            "use cases": {
+                "test": {
+                    "w": 1,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 1,
+                            "threshold min": 10,
+                            "datasets": {"m-lab": {"w": 1}, "ookla": {"w": 1}},
+                        },
+                    },
+                },
+            },
+        }
+        data = {"m-lab": {"download_throughput_mbps": 50}}
+        iqb = IQBCalculator(config=config)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(1.0)
+
+    def test_zero_weight_dataset_is_skipped(self):
+        """A dataset with weight=0 is not counted in the agreement average."""
+        config = {
+            "use cases": {
+                "test": {
+                    "w": 1,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 1,
+                            "threshold min": 10,
+                            "datasets": {"m-lab": {"w": 1}, "ookla": {"w": 0}},
+                        },
+                    },
+                },
+            },
+        }
+        data = {
+            "m-lab": {"download_throughput_mbps": 50},
+            "ookla": {"download_throughput_mbps": 5},
+        }
+        iqb = IQBCalculator(config=config)
+        score = iqb.calculate_iqb_score(data=data)
+        assert score == pytest.approx(1.0)
 
 
 class TestCalculateIQBScoreWithIQBData:

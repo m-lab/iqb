@@ -1,8 +1,10 @@
 """Tests for the IQBCalculator score calculation module."""
 
+import json
+
 import pytest
 
-from iqb import IQB_CONFIG, IQBCalculator, IQBData, IQBDataMLab
+from iqb import IQB_CONFIG, IQB_DEFAULT_CONFIG, IQBCalculator, IQBData, IQBDataMLab
 
 
 class TestIQBCalculatorInitialization:
@@ -21,12 +23,12 @@ class TestIQBCalculatorInitialization:
     def test_init_uses_default_config(self):
         """Test that IQBCalculator uses default config when none provided."""
         iqb = IQBCalculator()
-        assert iqb.config == IQB_CONFIG
+        assert iqb.config == IQB_DEFAULT_CONFIG
 
     def test_init_with_dict_config(self):
-        """Test that IQBCalculator accepts a dict config."""
+        """Test that IQBCalculator converts a dict config to IQBConfig."""
         iqb = IQBCalculator(config=IQB_CONFIG)
-        assert iqb.config is IQB_CONFIG
+        assert iqb.config == IQB_DEFAULT_CONFIG
 
     def test_init_with_invalid_config_raises_error(self):
         """Test that providing a non-existent config file raises NotImplementedError."""
@@ -378,50 +380,69 @@ class TestIQBCalculatorConfig:
     def test_config_has_use_cases(self):
         """Test that config contains use cases."""
         iqb = IQBCalculator()
-        assert "use cases" in iqb.config
-        assert len(iqb.config["use cases"]) > 0
+        assert len(iqb.config.use_cases) > 0
 
     def test_config_use_cases_have_network_requirements(self):
         """Test that each use case has network requirements."""
         iqb = IQBCalculator()
-        for use_case in iqb.config["use cases"].values():
-            assert "network requirements" in use_case
-            assert len(use_case["network requirements"]) > 0
+        for use_case in iqb.config.use_cases.values():
+            assert len(use_case.network_requirements) > 0
 
     def test_config_network_requirements_have_weights(self):
         """Test that each network requirement has weights."""
         iqb = IQBCalculator()
-        for use_case in iqb.config["use cases"].values():
-            for nr in use_case["network requirements"].values():
-                assert "w" in nr
-                assert isinstance(nr["w"], (int, float))
+        for use_case in iqb.config.use_cases.values():
+            for nr in use_case.network_requirements.values():
+                assert isinstance(nr.weight, (int, float))
 
     def test_config_network_requirements_have_thresholds(self):
         """Test that each network requirement has thresholds."""
         iqb = IQBCalculator()
-        for use_case in iqb.config["use cases"].values():
-            for nr in use_case["network requirements"].values():
-                assert "threshold min" in nr
+        for use_case in iqb.config.use_cases.values():
+            for nr in use_case.network_requirements.values():
+                assert isinstance(nr.threshold_min, (int, float))
 
 
 class TestIQBCalculatorMethods:
     """Tests for IQBCalculator utility methods."""
 
-    def test_print_config_runs_without_error(self, capsys):
-        """Test that print_config method runs without errors."""
+    def test_print_config_outputs_valid_json(self, capsys):
+        """Test that print_config outputs valid JSON matching the config."""
         iqb = IQBCalculator()
         iqb.print_config()
         captured = capsys.readouterr()
-        assert "### IQB formula weights and thresholds" in captured.out
-        assert "### Use cases" in captured.out
-        assert "### Network requirements" in captured.out
-        assert "### Weights & Thresholds" in captured.out
+        parsed = json.loads(captured.out)
+        assert "use_cases" in parsed
+        assert "web browsing" in parsed["use_cases"]
+        assert "gaming" in parsed["use_cases"]
+
+    def test_print_config_uses_instance_config(self, capsys):
+        """Test that print_config prints the instance's config, not the global."""
+        config = {
+            "use cases": {
+                "test": {
+                    "w": 1,
+                    "network requirements": {
+                        "download_throughput_mbps": {
+                            "w": 1,
+                            "threshold min": 10,
+                            "datasets": {"m-lab": {"w": 1}},
+                        },
+                    },
+                },
+            },
+        }
+        iqb = IQBCalculator(config=config)
+        iqb.print_config()
+        captured = capsys.readouterr()
+        parsed = json.loads(captured.out)
+        assert list(parsed["use_cases"].keys()) == ["test"]
 
     def test_set_config_with_none(self):
         """Test that set_config works with None."""
         iqb = IQBCalculator()
         iqb.set_config(None)
-        assert iqb.config == IQB_CONFIG
+        assert iqb.config == IQB_DEFAULT_CONFIG
 
     def test_set_config_with_file_raises_error(self):
         """Test that set_config raises error for file paths."""

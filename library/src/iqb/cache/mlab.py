@@ -34,6 +34,22 @@ class IQBMetrics:
     latency: float
     loss: float
 
+    @property
+    def download_throughput_mbps(self) -> float:
+        return self.download
+
+    @property
+    def upload_throughput_mbps(self) -> float:
+        return self.upload
+
+    @property
+    def latency_ms(self) -> float:
+        return self.latency
+
+    @property
+    def packet_loss(self) -> float:
+        return self.loss
+
     def to_dict(self) -> dict[str, float]:
         """Convert to standard dict used to compute IQB score."""
         return {

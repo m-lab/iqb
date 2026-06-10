@@ -4,6 +4,7 @@ import dataclasses
 import json
 
 from ..cache.cache import IQBData
+from ..cache.mlab import IQBMetrics
 from .config import (
     IQB_DEFAULT_CONFIG,
     IQBConfig,
@@ -11,6 +12,28 @@ from .config import (
     IQBConfigUseCase,
     iqb_config_from_legacy,
 )
+
+
+def _iqb_data_from_dict(data: dict[str, dict[str, float]]) -> IQBData:
+    """Convert the legacy nested-dict format to IQBData."""
+
+    def _metrics_from_dict(d: dict[str, float]) -> IQBMetrics:
+        return IQBMetrics(
+            download=d.get("download_throughput_mbps", 0),
+            upload=d.get("upload_throughput_mbps", 0),
+            latency=d.get("latency_ms", 0),
+            loss=d.get("packet_loss", 0),
+        )
+
+    mlab_dict = data.get("m-lab")
+    cloudflare_dict = data.get("cloudflare")
+    ookla_dict = data.get("ookla")
+
+    return IQBData(
+        mlab=_metrics_from_dict(mlab_dict) if mlab_dict else None,
+        cloudflare=_metrics_from_dict(cloudflare_dict) if cloudflare_dict else None,
+        ookla=_metrics_from_dict(ookla_dict) if ookla_dict else None,
+    )
 
 
 def _calculate_binary_requirement_score(
@@ -42,25 +65,24 @@ def _calculate_requirement_agreement_score(
     *,
     nr_name: str,
     nr_cfg: IQBConfigNetworkRequirement,
-    data: dict[str, dict[str, float]],
+    data: IQBData,
 ) -> float:
     """Calculates requirement agreement score across all datasets for one network requirement."""
     ds_scores: list[float] = []
     ds_weights: list[float] = []
 
-    datasets: list[tuple[str, float]] = [
-        ("m-lab", nr_cfg.dataset_weights.mlab),
-        ("cloudflare", nr_cfg.dataset_weights.cloudflare),
-        ("ookla", nr_cfg.dataset_weights.ookla),
+    datasets: list[tuple[IQBMetrics | None, float]] = [
+        (data.mlab, nr_cfg.dataset_weights.mlab),
+        (data.cloudflare, nr_cfg.dataset_weights.cloudflare),
+        (data.ookla, nr_cfg.dataset_weights.ookla),
     ]
-    for ds_name, weight in datasets:
-        if ds_name not in data:
-            continue
-        if weight > 0:
+
+    for metrics, weight in datasets:
+        if metrics is not None and weight > 0:
             # binary requirement score (dataset, network requirement)
             brs = _calculate_binary_requirement_score(
                 network_requirement=nr_name,
-                value=data[ds_name][nr_name],
+                value=getattr(metrics, nr_name),
                 threshold=nr_cfg.threshold_min,
             )
             ds_scores.append(brs * weight)
@@ -70,34 +92,28 @@ def _calculate_requirement_agreement_score(
     return sum(ds_scores) / sum(ds_weights)
 
 
-_NR_NAMES = (
-    "download_throughput_mbps",
-    "upload_throughput_mbps",
-    "latency_ms",
-    "packet_loss",
-)
-
-
 def _calculate_use_case_score(
     *,
     uc_cfg: IQBConfigUseCase,
-    data: dict[str, dict[str, float]],
+    data: IQBData,
 ) -> float:
     """Calculates use case score across all network requirements for one use case."""
     nrs = uc_cfg.network_requirements
     nr_scores: list[float] = []
     nr_weights: list[float] = []
-    for nr_name in _NR_NAMES:
-        nr_cfg = getattr(nrs, nr_name)
+
+    for field in dataclasses.fields(nrs):
+        nr_cfg = getattr(nrs, field.name)
         if nr_cfg is None:
             continue
         ras = _calculate_requirement_agreement_score(
-            nr_name=nr_name,
+            nr_name=field.name,
             nr_cfg=nr_cfg,
             data=data,
         )
         nr_scores.append(ras * nr_cfg.weight)
         nr_weights.append(nr_cfg.weight)
+
     # use case score (weighted average of all requirements for this use case)
     return sum(nr_scores) / sum(nr_weights)
 
@@ -105,8 +121,8 @@ def _calculate_use_case_score(
 def _calculate_iqb_score(*, config: IQBConfig, data: dict | IQBData) -> float:
     """Calculates IQB score based on given config and data."""
 
-    if isinstance(data, IQBData):
-        data = data.to_dict()
+    if isinstance(data, dict):
+        data = _iqb_data_from_dict(data)
 
     uc_scores: list[float] = []
     uc_weights: list[float] = []

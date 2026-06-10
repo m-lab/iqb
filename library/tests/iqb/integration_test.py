@@ -15,8 +15,9 @@ class TestIntegration:
         # Instantiate the cache with the global cache dir
         cache = IQBCache(data_dir=real_data_dir)
 
-        # Read the data from the cache
-        data = cache.get_data("US", start_date=datetime.strptime("2024-10-01", "%Y-%m-%d"))
+        # Read the data from the cache (deprecated API)
+        with pytest.deprecated_call():
+            data = cache.get_data("US", start_date=datetime.strptime("2024-10-01", "%Y-%m-%d"))
 
         # Create the calculator
         calculator = IQBCalculator()

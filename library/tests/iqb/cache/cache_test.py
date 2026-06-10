@@ -38,10 +38,11 @@ class TestIQBCacheGetData:
     def test_get_data_us_october_2024(self, real_data_dir):
         """Test fetching US data for October 2024."""
         cache = IQBCache(data_dir=real_data_dir)
-        data = cache.get_data(
-            country="US",
-            start_date=datetime(2024, 10, 1),
-        )
+        with pytest.deprecated_call():
+            data = cache.get_data(
+                country="US",
+                start_date=datetime(2024, 10, 1),
+            )
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data
@@ -62,10 +63,11 @@ class TestIQBCacheGetData:
     def test_get_data_de_october_2024(self, real_data_dir):
         """Test fetching Germany data for October 2024."""
         cache = IQBCache(data_dir=real_data_dir)
-        data = cache.get_data(
-            country="DE",
-            start_date=datetime(2024, 10, 1),
-        )
+        with pytest.deprecated_call():
+            data = cache.get_data(
+                country="DE",
+                start_date=datetime(2024, 10, 1),
+            )
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data
@@ -77,10 +79,11 @@ class TestIQBCacheGetData:
     def test_get_data_br_october_2024(self, real_data_dir):
         """Test fetching Brazil data for October 2024."""
         cache = IQBCache(data_dir=real_data_dir)
-        data = cache.get_data(
-            country="BR",
-            start_date=datetime(2024, 10, 1),
-        )
+        with pytest.deprecated_call():
+            data = cache.get_data(
+                country="BR",
+                start_date=datetime(2024, 10, 1),
+            )
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data
@@ -93,8 +96,10 @@ class TestIQBCacheGetData:
         """Test that country code is case-insensitive."""
         cache = IQBCache(data_dir=real_data_dir)
 
-        data_upper = cache.get_data(country="US", start_date=datetime(2024, 10, 1))
-        data_lower = cache.get_data(country="us", start_date=datetime(2024, 10, 1))
+        with pytest.deprecated_call():
+            data_upper = cache.get_data(country="US", start_date=datetime(2024, 10, 1))
+        with pytest.deprecated_call():
+            data_lower = cache.get_data(country="us", start_date=datetime(2024, 10, 1))
 
         # Should return same data regardless of case
         assert data_upper == data_lower
@@ -103,8 +108,10 @@ class TestIQBCacheGetData:
         """Test extracting different percentile values."""
         cache = IQBCache(data_dir=real_data_dir)
 
-        data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
-        data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
+        with pytest.deprecated_call():
+            data_p95 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=95)
+        with pytest.deprecated_call():
+            data_p50 = cache.get_data(country="US", start_date=datetime(2024, 10, 1), percentile=50)
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data_p95
@@ -123,10 +130,11 @@ class TestIQBCacheGetData:
     def test_get_data_france_october_2024(self, real_data_dir):
         """Test fetching France data for October 2024."""
         cache = IQBCache(data_dir=real_data_dir)
-        data = cache.get_data(
-            country="FR",
-            start_date=datetime(2024, 10, 1),
-        )
+        with pytest.deprecated_call():
+            data = cache.get_data(
+                country="FR",
+                start_date=datetime(2024, 10, 1),
+            )
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data
@@ -138,10 +146,11 @@ class TestIQBCacheGetData:
     def test_get_data_canada_october_2024(self, real_data_dir):
         """Test fetching Canada data for October 2024."""
         cache = IQBCache(data_dir=real_data_dir)
-        data = cache.get_data(
-            country="CA",
-            start_date=datetime(2024, 10, 1),
-        )
+        with pytest.deprecated_call():
+            data = cache.get_data(
+                country="CA",
+                start_date=datetime(2024, 10, 1),
+            )
 
         # Unwrap the `m-lab` part
         assert "m-lab" in data
@@ -155,9 +164,12 @@ class TestIQBCacheGetData:
         cache = IQBCache(data_dir=real_data_dir)
 
         # Use a fictional country code that won't exist
-        with pytest.raises(
-            ValueError,
-            match="Expected exactly 1 row in download DataFrame, but got 0 rows",
+        with (
+            pytest.deprecated_call(),
+            pytest.raises(
+                ValueError,
+                match="Expected exactly 1 row in download DataFrame, but got 0 rows",
+            ),
         ):
             cache.get_data(country="ZZ", start_date=datetime(2024, 10, 1))
 
@@ -165,7 +177,10 @@ class TestIQBCacheGetData:
         """Test that requesting data for unavailable date raises FileNotFoundError."""
         cache = IQBCache(data_dir=real_data_dir)
 
-        with pytest.raises(FileNotFoundError, match=r"Cache entry not found"):
+        with (
+            pytest.deprecated_call(),
+            pytest.raises(FileNotFoundError, match=r"Cache entry not found"),
+        ):
             cache.get_data(country="US", start_date=datetime(2024, 11, 1))
 
 

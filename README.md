@@ -13,19 +13,8 @@ IQB (Internet Quality Barometer) is an open-source research project
 initiated by [Measurement Lab (M-Lab)](https://www.measurementlab.net/).
 
 IQB computes a 0-to-1 composite score (the "IQB Score") that (currently)
-rates Internet quality across six use cases:
-
-1. web browsing
-
-2. video streaming
-
-3. audio streaming
-
-4. gaming
-
-5. video conferencing
-
-6. online backup
+rates Internet quality across six use cases: (1) web browsing; (2) video streaming;
+(3) audio streaming; (4) gaming; (5) video conferencing; (6) online backup.
 
 Each use case defines minimum thresholds for
 network metrics (download and upload speed, latency, packet

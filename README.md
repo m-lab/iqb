@@ -4,22 +4,31 @@
 
 This repository contains the source code for the Internet Quality Barometer (IQB)
 [library](./library), [notebook templates](./analysis), and [prototype](./prototype).
-
 The prototype is available online at: https://iqb.mlab-staging.measurementlab.net.
 
 ## About IQB
 
-IQB is an open-source project initiated by
-[Measurement Lab (M-Lab)](https://www.measurementlab.net/).
+IQB (Internet Quality Barometer) is an open-source research project
+run by [Measurement Lab (M-Lab)](https://www.measurementlab.net/).
 
-IQB is motivated by the need to redefine how we measure and understand Internet
-performance to keep pace with evolving technological demands and user
-expectations. IQB is a comprehensive framework for collecting data and
-calculating a composite score, the “IQB Score”, which reflects
-the quality of Internet experience. IQB takes a more holistic approach
-than “speed tests” and evaluates Internet performance across various
-use cases (web browsing, video streaming, online gaming, etc.),
-each with its own specific network requirements (latency, throughput, etc.).
+IQB computes a 0-to-1 composite score (the "IQB Score") that
+rates Internet quality across six use cases: (1) web browsing; (2) video streaming;
+(3) audio streaming; (4) gaming; (5) video conferencing; (6) online backup.
+
+Each use case defines minimum thresholds for
+network metrics (download and upload speed, latency, packet
+loss rate) weighted by importance.
+The input used to compute the IQB Score consists of the results
+collected by publicly available speedtests, such as
+[NDT](https://www.measurementlab.net/tests/ndt/).
+IQB aggregates per-metric binary scores (pass/fail for each
+metric) into a single number. Higher scores indicate better
+quality for the specific use case.
+
+In other words, IQB seeks to capture the quality available to
+perform activities that people use Internet for, thus using a
+multi-faceted definition of quality that goes beyond just using
+speed as the only metric.
 
 Read more about the IQB framework in:
 

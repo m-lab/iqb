@@ -8,7 +8,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .cache import IQBCache
 from .cache.cache import IQBData
-from .cache.mlab import IQBDataMLab
+from .cache.mlab import IQBDataMLab, IQBMetrics
 from .calculator import (
     IQB_CONFIG,
     IQB_DEFAULT_CONFIG,
@@ -45,6 +45,7 @@ __all__ = [
     "IQBConfigUseCase",
     "IQBData",
     "IQBDataMLab",
+    "IQBMetrics",
     "IQB_CONFIG",
     "IQB_DEFAULT_CONFIG",
     "IQBGitHubRemoteCache",

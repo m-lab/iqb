@@ -4,7 +4,13 @@ import dataclasses
 import json
 
 from ..cache.cache import IQBData
-from .config import IQB_DEFAULT_CONFIG, IQBConfig, iqb_config_from_legacy
+from .config import (
+    IQB_DEFAULT_CONFIG,
+    IQBConfig,
+    IQBConfigNetworkRequirement,
+    IQBConfigUseCase,
+    iqb_config_from_legacy,
+)
 
 
 def _calculate_binary_requirement_score(
@@ -32,42 +38,62 @@ def _calculate_binary_requirement_score(
         )
 
 
+def _calculate_requirement_agreement_score(
+    *,
+    nr_name: str,
+    nr_cfg: IQBConfigNetworkRequirement,
+    data: dict[str, dict[str, float]],
+) -> float:
+    """Calculates requirement agreement score across all datasets for one network requirement."""
+    # TODO: TEMP method for calculating binary requirement scores. To be
+    # updated with weighted average of scores per dataset.
+    ds_s: list[int] = []
+    for ds_name, ds_cfg in nr_cfg.datasets.items():
+        if ds_name not in data:
+            continue
+        if ds_cfg.weight > 0:
+            # binary requirement score (dataset, network requirement)
+            brs = _calculate_binary_requirement_score(
+                network_requirement=nr_name,
+                value=data[ds_name][nr_name],
+                threshold=nr_cfg.threshold_min,
+            )
+            ds_s.append(brs)
+    # requirement agreement score (all datasets for this requirement)
+    return sum(ds_s) / len(ds_s)
+
+
+def _calculate_use_case_score(
+    *,
+    uc_cfg: IQBConfigUseCase,
+    data: dict[str, dict[str, float]],
+) -> float:
+    """Calculates use case score across all network requirements for one use case."""
+    nr_scores: list[float] = []
+    nr_weights: list[float] = []
+    for nr_name, nr_cfg in uc_cfg.network_requirements.items():
+        ras = _calculate_requirement_agreement_score(
+            nr_name=nr_name,
+            nr_cfg=nr_cfg,
+            data=data,
+        )
+        nr_scores.append(ras * nr_cfg.weight)
+        nr_weights.append(nr_cfg.weight)
+    # use case score (weighted average of all requirements for this use case)
+    return sum(nr_scores) / sum(nr_weights)
+
+
 def _calculate_iqb_score(*, config: IQBConfig, data: dict | IQBData) -> float:
     """Calculates IQB score based on given config and data."""
 
     if isinstance(data, IQBData):
         data = data.to_dict()
 
-    uc_scores = []
-    uc_weights = []
+    uc_scores: list[float] = []
+    uc_weights: list[float] = []
 
     for _uc_name, uc_cfg in config.use_cases.items():
-        nr_scores = []
-        nr_weights = []
-        for nr_name, nr_cfg in uc_cfg.network_requirements.items():
-            # TODO: TEMP method for calculating binary requirement scores. To be
-            # updated with weighted average of scores per dataset.
-            ds_s = []
-            for ds_name, ds_cfg in nr_cfg.datasets.items():
-                if ds_name not in data:
-                    continue
-                if ds_cfg.weight > 0:
-                    # binary requirement score (dataset, network requirement)
-                    brs = _calculate_binary_requirement_score(
-                        network_requirement=nr_name,
-                        value=data[ds_name][nr_name],
-                        threshold=nr_cfg.threshold_min,
-                    )
-                    ds_s.append(brs)
-
-            # requirement agreement score (all datasets for this requirement)
-            ras = sum(ds_s) / len(ds_s)
-
-            nr_scores.append(ras * nr_cfg.weight)
-            nr_weights.append(nr_cfg.weight)
-
-        # use case score (all requirements for this use case)
-        ucs = sum(nr_scores) / sum(nr_weights)
+        ucs = _calculate_use_case_score(uc_cfg=uc_cfg, data=data)
         uc_scores.append(ucs * uc_cfg.weight)
         uc_weights.append(uc_cfg.weight)
 

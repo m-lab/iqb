@@ -30,6 +30,11 @@ class TestIQBCalculatorInitialization:
         iqb = IQBCalculator(config=IQB_CONFIG)
         assert iqb.config == IQB_DEFAULT_CONFIG
 
+    def test_init_with_iqb_config(self):
+        """Test that IQBCalculator accepts an IQBConfig dataclass directly."""
+        iqb = IQBCalculator(config=IQB_DEFAULT_CONFIG)
+        assert iqb.config is IQB_DEFAULT_CONFIG
+
     def test_init_with_invalid_config_raises_error(self):
         """Test that providing a non-existent config file raises NotImplementedError."""
         with pytest.raises(NotImplementedError):

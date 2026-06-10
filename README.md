@@ -122,14 +122,15 @@ queries and storing their results on the local disk as
 [Parquet](https://parquet.apache.org/) files to
 GCS (Google Cloud Storage)
 
-Both commands internally use the `IQBPipeline` class.
+The `iqb pipeline run` command internally uses the `IQBPipeline` class.
 
 Directories of interest:
 
 - [data](./data): default configuration of the pipeline and temporary
 storage ahead of submitting the data to GCS
 
-- [library](./library): implementation of the CLI and of `IQBPipeline`
+- [library](./library): implementation of the CLI and of the
+`IQBPipeline` class
 
 ## Understanding the Codebase
 

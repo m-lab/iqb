@@ -5,8 +5,7 @@ import warnings
 from .calculator.config import IQB_CONFIG
 
 warnings.warn(
-    "Importing from iqb.config is deprecated. "
-    "Use 'from iqb import IQB_CONFIG' instead.",
+    "Importing from iqb.config is deprecated. Use 'from iqb import IQB_CONFIG' instead.",
     DeprecationWarning,
     stacklevel=2,
 )

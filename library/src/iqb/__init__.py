@@ -9,8 +9,7 @@ from importlib.metadata import PackageNotFoundError, version
 from .cache import IQBCache
 from .cache.cache import IQBData
 from .cache.mlab import IQBDataMLab
-from .calculator import IQBCalculator
-from .config import IQB_CONFIG
+from .calculator import IQB_CONFIG, IQBCalculator
 from .ghremote import IQBGitHubRemoteCache, IQBRemoteCache
 from .pipeline import (
     IQBDatasetGranularity,

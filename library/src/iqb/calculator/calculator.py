@@ -2,7 +2,7 @@
 
 from pprint import pprint
 
-from .cache.cache import IQBData
+from ..cache.cache import IQBData
 from .config import IQB_CONFIG
 
 

@@ -65,23 +65,71 @@ that we use to develop the IQB framework.
 - [uv.lock](./uv.lock): the [uv](https://github.com/astral-sh/uv) lockfile
 declaring the dependencies used in this workspace.
 
-## Data Flow
+## Data Flow by Use Case
 
-The components above connect as follows:
+The IQB framework computes IQB scores from
+[Parquet](https://parquet.apache.org/) files obtained by querying
+[BigQuery](https://www.measurementlab.net/data/docs/bq/quickstart/).
+
+### IQB Users
+
+As a user of the IQB framework, you use the IQB [library](./library) and
+more specifically the `IQBCache` and `IQBRemoteCache` classes to get the
+relevant Parquet files and compute the IQB score using the `IQBCalculator`.
 
 ```
-BigQuery → [iqb pipeline run] → local cache/ → [IQBCache] → [IQBCalculator] → scores
-                                      ↕
-                              [iqb cache pull/push] ↔ GCS
+scores <- [IQBCalculator] <- [IQBCache] <- localCache <- [IQBRemoteCache] <- GCS
 ```
 
-The **pipeline** queries BigQuery for M-Lab NDT measurements and stores
-percentile summaries as Parquet files in the local cache. To avoid expensive
-re-queries, **`iqb cache pull`** can download pre-computed results from GCS
-instead. The **`IQBCache`** API reads cached data, and **`IQBCalculator`**
-applies quality thresholds and weights to produce IQB scores. The
-**prototype** and **analysis notebooks** both consume scores through
-these library APIs.
+More in detail:
+
+1. the `IQBRemoteCache` downloads [Parquet](https://parquet.apache.org/) files
+from Measurement Lab GCS and stores them in the local cache
+
+2. the `IQBCache` reads [Parquet](https://parquet.apache.org/) files from
+the local cache (allowing for filtering) and return data structures
+compatible with the `IQBCalculator`
+
+3. the `IQBCalculator` class computes the IQB scores
+
+Directories of interest:
+
+- [library](./library) for the IQB library source code
+
+- [analysis](./analysis) for example usage via Jupyter notebooks
+
+- [prototype](./prototype) for usage in the Streamlit prototype
+
+### IQB Developers
+
+As a developer of the IQB framework, you use the `IQBPipeline` class to run
+[BigQuery](https://www.measurementlab.net/data/docs/bq/quickstart/) queries
+and produce the related [Parquet](https://parquet.apache.org/) files. You
+typically do this _indirectly_ via the `iqb` command line tool.
+
+```
+GCS <- [iqb cache push] <- parquet <- [iqb pipeline run] <- BigQuery
+```
+
+More in detail:
+
+1. the `iqb pipeline run` command runs the IQB pipeline performing
+[BigQuery](https://www.measurementlab.net/data/docs/bq/quickstart/)
+queries and storing their results on the local disk as
+[Parquet](https://parquet.apache.org/) files
+
+2. the `iqb cache push` pushes the
+[Parquet](https://parquet.apache.org/) files to
+GCS (Google Cloud Storage)
+
+Both commands internally use the `IQBPipeline` class.
+
+Directories of interest:
+
+- [data](./data): default configuration of the pipeline and temporary
+storage ahead of submitting the data to GCS
+
+- [library](./library): implementation of the CLI and of `IQBPipeline`
 
 ## Understanding the Codebase
 
@@ -113,3 +161,9 @@ uv run streamlit run Home.py
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for full development environment
 setup, VSCode configuration, and component-specific workflows.
+
+## License
+
+```
+SPDX-License-Identifier: Apache-2.0
+```

@@ -8,7 +8,10 @@ from .config import IQB_DEFAULT_CONFIG, IQBConfig, iqb_config_from_legacy
 
 
 def _calculate_binary_requirement_score(
-    network_requirement: str, value: float, threshold: float
+    *,
+    network_requirement: str,
+    value: float,
+    threshold: float,
 ) -> int:
     """
     Calculates binary requirement score for the given network requirement, value (i.e., data), and threshold (of the net requirement).
@@ -29,7 +32,7 @@ def _calculate_binary_requirement_score(
         )
 
 
-def _calculate_iqb_score(config: IQBConfig, data: dict | IQBData) -> float:
+def _calculate_iqb_score(*, config: IQBConfig, data: dict | IQBData) -> float:
     """Calculates IQB score based on given config and data."""
 
     if isinstance(data, IQBData):
@@ -51,7 +54,9 @@ def _calculate_iqb_score(config: IQBConfig, data: dict | IQBData) -> float:
                 if ds_cfg.weight > 0:
                     # binary requirement score (dataset, network requirement)
                     brs = _calculate_binary_requirement_score(
-                        nr_name, data[ds_name][nr_name], nr_cfg.threshold_min
+                        network_requirement=nr_name,
+                        value=data[ds_name][nr_name],
+                        threshold=nr_cfg.threshold_min,
                     )
                     ds_s.append(brs)
 
@@ -102,14 +107,23 @@ class IQBCalculator:
         """Prints the current IQB configuration as JSON."""
         print(json.dumps(dataclasses.asdict(self.config), indent=2))
 
-    def calculate_binary_requirement_score(self, network_requirement, value, threshold):
+    def calculate_binary_requirement_score(
+        self,
+        network_requirement: str,
+        value: float,
+        threshold: float,
+    ) -> int:
         """
         Calculates binary requirement score for the given network requirement, value (i.e., data), and threshold (of the net requirement).
         - If the requirement is **throughput**, then the score is 1 if the given value is **larger** than the given threshold, and otherwise 0.
         - If the requirement is **latency or packet loss**, then the score is 1 if the given value is **smaller** than the given threshold, and otherwise 0.
         """
-        return _calculate_binary_requirement_score(network_requirement, value, threshold)
+        return _calculate_binary_requirement_score(
+            network_requirement=network_requirement,
+            value=value,
+            threshold=threshold,
+        )
 
     def calculate_iqb_score(self, data: dict | IQBData) -> float:
         """Calculates IQB score based on given data."""
-        return _calculate_iqb_score(self.config, data)
+        return _calculate_iqb_score(config=self.config, data=data)

@@ -30,11 +30,9 @@ rates Internet quality across six use cases:
 Each use case defines minimum thresholds for
 network metrics (download and upload speed, latency, packet
 loss rate) weighted by importance.
-
 The input used to compute the IQB Score consists of the results
 collected by publicly available speedtests, such as
 [NDT](https://www.measurementlab.net/tests/ndt/).
-
 IQB aggregates per-metric binary scores (pass/fail for each
 metric) into a single number. Higher scores indicate better
 quality for the specific use case.

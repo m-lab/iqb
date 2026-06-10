@@ -43,8 +43,8 @@ https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf).
 
 ## Repository Architecture
 
-- [analysis](./analysis): Jupyter notebooks templates showing how to use
-the IQB library for exploration and research. See
+- [analysis](./analysis): Jupyter notebooks showing how to use
+IQB for exploration and research. See
 [analysis/README.md](analysis/README.md) for more information.
 
 - [data](./data): Workspace containing the default pipeline configuration,
@@ -144,12 +144,14 @@ storage ahead of submitting the data to GCS
 ## Understanding the Codebase
 
 - To learn **how the data pipeline works**, read the
-[internals guide](docs/internals/README.md) — it walks through queries,
-the pipeline, the remote cache, and the researcher API in sequence.
+[internals guide](docs/internals/README.md) — it walks through
+queries, the pipeline, the remote cache, and the researcher
+API in sequence.
 
-- To understand **why specific technical decisions were made**, see the
-[design documents](docs/design/README.md) — architecture decision records
-covering cache design, data distribution, and more.
+- To understand **why specific technical decisions were made**,
+see the [design documents](docs/design/README.md) — architecture
+decision records covering cache design, data distribution,
+and more.
 
 ## Quick Start
 

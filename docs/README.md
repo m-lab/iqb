@@ -1,4 +1,4 @@
-## Documentation and Presentations
+# Documentation and Presentations
 
 - [design/](design/): Architecture decision records explaining **why**
 the system was built this way — cache format, remote cache strategy,

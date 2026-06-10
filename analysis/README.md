@@ -67,23 +67,6 @@ verify successful execution.
 
 ## Notebook Outputs and Version Control
 
-**Current practice:** Clear notebook outputs before committing
-to avoid merge conflicts.
-
-In Jupyter or VSCode:
-
-- Select "Clear All Outputs" before committing changes
-
-**Future improvement:** Consider adding pre-commit hooks with `nbstripout`
-to automatically strip outputs. This would:
-
-- Prevent accidentally committing outputs
-
-- Keep diffs clean and focused on code changes
-
-- Reduce repository size
-
-- Ensure reproducibility (forces execution on fresh checkout)
-
-For now, manual clearing is sufficient for the small
-number of notebooks in this repository.
+Clear notebook outputs before committing to avoid merge
+conflicts. In Jupyter or VSCode, select "Clear All Outputs"
+before committing changes.

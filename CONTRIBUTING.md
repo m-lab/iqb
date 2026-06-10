@@ -23,18 +23,7 @@ On other platforms, see the [uv installation guide](https://docs.astral.sh/uv/ge
 
 ### Quick Start
 
-```bash
-# Clone the repository
-git clone git@github.com:m-lab/iqb.git
-cd iqb
-
-# Sync all dependencies (creates .venv automatically)
-uv sync --dev
-
-# Run the Streamlit prototype
-cd prototype
-uv run streamlit run Home.py
-```
+See [Quick Start in the README](README.md#quick-start).
 
 ### Updating Dependencies
 
@@ -122,6 +111,4 @@ Each component has its own README with specific development instructions:
 
 ## Understanding the Codebase
 
-- [docs/internals/](docs/internals/README.md) — sequential guide to how the data pipeline works
-
-- [docs/design/](docs/design/README.md) — architecture decision records explaining why things were built this way
+See [Understanding the Codebase in the README](README.md#understanding-the-codebase).

@@ -174,35 +174,9 @@ uv run pyright
 uv run pyright --verbose
 ```
 
-**Verifying Pyright is Working:**
-
-Pyright can be silent if misconfigured. To verify it's actually
-checking your code:
-
-```bash
-# This should show which files are being analyzed
-uv run pyright --verbose
-
-# Expected output should include:
-# - "Loading pyproject.toml file at ..."
-# - "Found X source files" (should be ~5 files)
-# - Python version and search paths
-# - "X errors, Y warnings, Z information"
-```
-
-If you see `"Found 0 source files"`, the configuration is wrong.
-
-To test that Pyright catches errors, temporarily introduce a type error:
-
-```python
-# In src/iqb/iqb_score.py, add:
-x: int = "this should fail"  # Pyright should catch this!
-```
-
-If Pyright reports an error, it's working correctly. Remove the
-test line afterwards.
-
-Pyright configuration is in `pyproject.toml` under `[tool.pyright]`.
+If `uv run pyright --verbose` shows `"Found 0 source files"`,
+the configuration is wrong — check `pyproject.toml` under
+`[tool.pyright]`.
 
 ## Development
 

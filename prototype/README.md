@@ -21,7 +21,7 @@ with a colleague for feedback.
 gcloud builds list --project=mlab-sandbox --limit=10
 ```
 
-**To see a build logs:**
+**To see build logs:**
 
 ```bash
 gcloud builds log {BUILD_ID} --project=mlab-sandbox

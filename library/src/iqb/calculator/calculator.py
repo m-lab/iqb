@@ -45,9 +45,9 @@ def _calculate_requirement_agreement_score(
     data: dict[str, dict[str, float]],
 ) -> float:
     """Calculates requirement agreement score across all datasets for one network requirement."""
-    # TODO: TEMP method for calculating binary requirement scores. To be
-    # updated with weighted average of scores per dataset.
-    ds_s: list[int] = []
+    ds_scores: list[float] = []
+    ds_weights: list[float] = []
+
     for ds_name, ds_cfg in nr_cfg.datasets.items():
         if ds_name not in data:
             continue
@@ -58,9 +58,11 @@ def _calculate_requirement_agreement_score(
                 value=data[ds_name][nr_name],
                 threshold=nr_cfg.threshold_min,
             )
-            ds_s.append(brs)
-    # requirement agreement score (all datasets for this requirement)
-    return sum(ds_s) / len(ds_s)
+            ds_scores.append(brs * ds_cfg.weight)
+            ds_weights.append(ds_cfg.weight)
+
+    # requirement agreement score (weighted average across datasets)
+    return sum(ds_scores) / sum(ds_weights)
 
 
 def _calculate_use_case_score(

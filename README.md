@@ -28,7 +28,7 @@ quality for the specific use case.
 In other words, IQB seeks to capture the quality available to
 perform activities that people use Internet for, thus using a
 multi-faceted definition of quality that goes beyond just using
-speed as the only metrics.
+speed as the only metric.
 
 Read more about the IQB framework in:
 

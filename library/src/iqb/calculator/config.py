@@ -13,12 +13,31 @@ class IQBConfigDataset:
 
 
 @dataclass(frozen=True, kw_only=True)
+class IQBConfigDatasetWeights:
+    """Per-dataset weights for a network requirement."""
+
+    mlab: float = 0.0
+    cloudflare: float = 0.0
+    ookla: float = 0.0
+
+
+@dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirement:
     """Configuration for a single network requirement within a use case."""
 
     weight: float
     threshold_min: float
-    datasets: dict[str, IQBConfigDataset]
+    dataset_weights: IQBConfigDatasetWeights
+
+
+@dataclass(frozen=True, kw_only=True)
+class IQBConfigNetworkRequirements:
+    """All network requirements for a use case."""
+
+    download_throughput_mbps: IQBConfigNetworkRequirement | None = None
+    upload_throughput_mbps: IQBConfigNetworkRequirement | None = None
+    latency_ms: IQBConfigNetworkRequirement | None = None
+    packet_loss: IQBConfigNetworkRequirement | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -26,7 +45,7 @@ class IQBConfigUseCase:
     """Configuration for a single use case."""
 
     weight: float
-    network_requirements: dict[str, IQBConfigNetworkRequirement]
+    network_requirements: IQBConfigNetworkRequirements
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -45,19 +64,25 @@ def iqb_config_from_legacy(legacy: dict) -> IQBConfig:
     """
     use_cases: dict[str, IQBConfigUseCase] = {}
     for uc_name, uc_dict in legacy["use cases"].items():
-        network_requirements: dict[str, IQBConfigNetworkRequirement] = {}
+        nr_configs: dict[str, IQBConfigNetworkRequirement] = {}
         for nr_name, nr_dict in uc_dict["network requirements"].items():
-            datasets: dict[str, IQBConfigDataset] = {}
+            ds_weights: dict[str, float] = {}
             for ds_name, ds_dict in nr_dict["datasets"].items():
-                datasets[ds_name] = IQBConfigDataset(weight=ds_dict["w"])
-            network_requirements[nr_name] = IQBConfigNetworkRequirement(
+                ds_weights[ds_name] = ds_dict["w"]
+            nr_configs[nr_name] = IQBConfigNetworkRequirement(
                 weight=nr_dict["w"],
                 threshold_min=nr_dict["threshold min"],
-                datasets=datasets,
+                dataset_weights=IQBConfigDatasetWeights(
+                    mlab=ds_weights.get("m-lab", 0.0),
+                    cloudflare=ds_weights.get("cloudflare", 0.0),
+                    ookla=ds_weights.get("ookla", 0.0),
+                ),
             )
         use_cases[uc_name] = IQBConfigUseCase(
             weight=uc_dict["w"],
-            network_requirements=network_requirements,
+            network_requirements=IQBConfigNetworkRequirements(
+                **nr_configs,
+            ),
         )
     return IQBConfig(use_cases=use_cases)
 

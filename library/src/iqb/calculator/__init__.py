@@ -6,7 +6,9 @@ from .config import (
     IQB_DEFAULT_CONFIG,
     IQBConfig,
     IQBConfigDataset,
+    IQBConfigDatasetWeights,
     IQBConfigNetworkRequirement,
+    IQBConfigNetworkRequirements,
     IQBConfigUseCase,
     iqb_config_from_legacy,
 )
@@ -17,7 +19,9 @@ __all__ = [
     "IQBCalculator",
     "IQBConfig",
     "IQBConfigDataset",
+    "IQBConfigDatasetWeights",
     "IQBConfigNetworkRequirement",
+    "IQBConfigNetworkRequirements",
     "IQBConfigUseCase",
     "iqb_config_from_legacy",
 ]

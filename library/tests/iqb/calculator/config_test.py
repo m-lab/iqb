@@ -6,8 +6,9 @@ from iqb import (
     IQB_CONFIG,
     IQB_DEFAULT_CONFIG,
     IQBConfig,
-    IQBConfigDataset,
+    IQBConfigDatasetWeights,
     IQBConfigNetworkRequirement,
+    IQBConfigNetworkRequirements,
     IQBConfigUseCase,
     iqb_config_from_legacy,
 )
@@ -25,39 +26,54 @@ class TestIQBConfigFromLegacyPreservesAllData:
     def test_all_network_requirements_present(self):
         """Every network requirement in each legacy use case appears in the dataclass."""
         for uc_name, uc_dict in IQB_CONFIG["use cases"].items():
-            legacy_nrs = set(uc_dict["network requirements"].keys())
-            config_nrs = set(IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements.keys())
-            assert config_nrs == legacy_nrs, f"mismatch in use case {uc_name!r}"
+            nrs = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements
+            for nr_name in uc_dict["network requirements"]:
+                assert getattr(nrs, nr_name) is not None, (
+                    f"missing {nr_name!r} in use case {uc_name!r}"
+                )
 
     def test_all_datasets_present(self):
         """Every dataset in each legacy network requirement appears in the dataclass."""
+        ds_name_to_field = {
+            "m-lab": "mlab",
+            "cloudflare": "cloudflare",
+            "ookla": "ookla",
+        }
         for uc_name, uc_dict in IQB_CONFIG["use cases"].items():
             for nr_name, nr_dict in uc_dict["network requirements"].items():
-                legacy_ds = set(nr_dict["datasets"].keys())
-                config_ds = set(
-                    IQB_DEFAULT_CONFIG.use_cases[uc_name]
-                    .network_requirements[nr_name]
-                    .datasets.keys()
-                )
-                assert config_ds == legacy_ds, f"mismatch in {uc_name!r}/{nr_name!r}"
+                nrs = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements
+                nr_cfg = getattr(nrs, nr_name)
+                for ds_name, ds_dict in nr_dict["datasets"].items():
+                    actual = getattr(nr_cfg.dataset_weights, ds_name_to_field[ds_name])
+                    assert actual == ds_dict["w"], (
+                        f"weight mismatch in {uc_name!r}/{nr_name!r}/{ds_name!r}"
+                    )
 
     def test_use_case_weights_match(self):
         """Use case weights match the legacy dict values."""
         for uc_name, uc_dict in IQB_CONFIG["use cases"].items():
             assert IQB_DEFAULT_CONFIG.use_cases[uc_name].weight == uc_dict["w"]
 
+    _DS_NAME_TO_FIELD: dict[str, str] = {
+        "m-lab": "mlab",
+        "cloudflare": "cloudflare",
+        "ookla": "ookla",
+    }
+
     def test_network_requirement_weights_match(self):
         """Network requirement weights match the legacy dict values."""
         for uc_name, uc_dict in IQB_CONFIG["use cases"].items():
+            nrs = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements
             for nr_name, nr_dict in uc_dict["network requirements"].items():
-                nr = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements[nr_name]
+                nr = getattr(nrs, nr_name)
                 assert nr.weight == nr_dict["w"], f"weight mismatch in {uc_name!r}/{nr_name!r}"
 
     def test_network_requirement_thresholds_match(self):
         """Network requirement threshold_min values match the legacy dict values."""
         for uc_name, uc_dict in IQB_CONFIG["use cases"].items():
+            nrs = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements
             for nr_name, nr_dict in uc_dict["network requirements"].items():
-                nr = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements[nr_name]
+                nr = getattr(nrs, nr_name)
                 assert nr.threshold_min == nr_dict["threshold min"], (
                     f"threshold mismatch in {uc_name!r}/{nr_name!r}"
                 )
@@ -65,14 +81,12 @@ class TestIQBConfigFromLegacyPreservesAllData:
     def test_dataset_weights_match(self):
         """Dataset weights match the legacy dict values."""
         for uc_name, uc_dict in IQB_CONFIG["use cases"].items():
+            nrs = IQB_DEFAULT_CONFIG.use_cases[uc_name].network_requirements
             for nr_name, nr_dict in uc_dict["network requirements"].items():
+                nr = getattr(nrs, nr_name)
                 for ds_name, ds_dict in nr_dict["datasets"].items():
-                    ds = (
-                        IQB_DEFAULT_CONFIG.use_cases[uc_name]
-                        .network_requirements[nr_name]
-                        .datasets[ds_name]
-                    )
-                    assert ds.weight == ds_dict["w"], (
+                    actual = getattr(nr.dataset_weights, self._DS_NAME_TO_FIELD[ds_name])
+                    assert actual == ds_dict["w"], (
                         f"weight mismatch in {uc_name!r}/{nr_name!r}/{ds_name!r}"
                     )
 
@@ -109,17 +123,18 @@ class TestIQBConfigDataclasses:
     def test_iqb_config_network_requirement_is_frozen(self):
         """IQBConfigNetworkRequirement instances are immutable."""
         uc = next(iter(IQB_DEFAULT_CONFIG.use_cases.values()))
-        nr = next(iter(uc.network_requirements.values()))
+        nr = uc.network_requirements.download_throughput_mbps
+        assert nr is not None
         with pytest.raises(AttributeError):
             nr.weight = 99  # type: ignore[misc]
 
-    def test_iqb_config_dataset_is_frozen(self):
-        """IQBConfigDataset instances are immutable."""
+    def test_iqb_config_dataset_weights_is_frozen(self):
+        """IQBConfigDatasetWeights instances are immutable."""
         uc = next(iter(IQB_DEFAULT_CONFIG.use_cases.values()))
-        nr = next(iter(uc.network_requirements.values()))
-        ds = next(iter(nr.datasets.values()))
+        nr = uc.network_requirements.download_throughput_mbps
+        assert nr is not None
         with pytest.raises(AttributeError):
-            ds.weight = 99  # type: ignore[misc]
+            nr.dataset_weights.mlab = 99  # type: ignore[misc]
 
     def test_construct_programmatically(self):
         """Verify that configs can be built manually without the legacy loader."""
@@ -127,21 +142,22 @@ class TestIQBConfigDataclasses:
             use_cases={
                 "test": IQBConfigUseCase(
                     weight=1.0,
-                    network_requirements={
-                        "download_throughput_mbps": IQBConfigNetworkRequirement(
+                    network_requirements=IQBConfigNetworkRequirements(
+                        download_throughput_mbps=IQBConfigNetworkRequirement(
                             weight=3.0,
                             threshold_min=10.0,
-                            datasets={"m-lab": IQBConfigDataset(weight=1.0)},
+                            dataset_weights=IQBConfigDatasetWeights(mlab=1.0),
                         ),
-                    },
+                    ),
                 ),
             },
         )
         assert config.use_cases["test"].weight == 1.0
-        nr = config.use_cases["test"].network_requirements["download_throughput_mbps"]
+        nr = config.use_cases["test"].network_requirements.download_throughput_mbps
+        assert nr is not None
         assert nr.weight == 3.0
         assert nr.threshold_min == 10.0
-        assert nr.datasets["m-lab"].weight == 1.0
+        assert nr.dataset_weights.mlab == 1.0
 
 
 class TestIQBConfigFromLegacyErrors:

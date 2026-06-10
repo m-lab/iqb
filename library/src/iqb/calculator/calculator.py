@@ -48,21 +48,34 @@ def _calculate_requirement_agreement_score(
     ds_scores: list[float] = []
     ds_weights: list[float] = []
 
-    for ds_name, ds_cfg in nr_cfg.datasets.items():
+    datasets: list[tuple[str, float]] = [
+        ("m-lab", nr_cfg.dataset_weights.mlab),
+        ("cloudflare", nr_cfg.dataset_weights.cloudflare),
+        ("ookla", nr_cfg.dataset_weights.ookla),
+    ]
+    for ds_name, weight in datasets:
         if ds_name not in data:
             continue
-        if ds_cfg.weight > 0:
+        if weight > 0:
             # binary requirement score (dataset, network requirement)
             brs = _calculate_binary_requirement_score(
                 network_requirement=nr_name,
                 value=data[ds_name][nr_name],
                 threshold=nr_cfg.threshold_min,
             )
-            ds_scores.append(brs * ds_cfg.weight)
-            ds_weights.append(ds_cfg.weight)
+            ds_scores.append(brs * weight)
+            ds_weights.append(weight)
 
     # requirement agreement score (weighted average across datasets)
     return sum(ds_scores) / sum(ds_weights)
+
+
+_NR_NAMES = (
+    "download_throughput_mbps",
+    "upload_throughput_mbps",
+    "latency_ms",
+    "packet_loss",
+)
 
 
 def _calculate_use_case_score(
@@ -71,9 +84,13 @@ def _calculate_use_case_score(
     data: dict[str, dict[str, float]],
 ) -> float:
     """Calculates use case score across all network requirements for one use case."""
+    nrs = uc_cfg.network_requirements
     nr_scores: list[float] = []
     nr_weights: list[float] = []
-    for nr_name, nr_cfg in uc_cfg.network_requirements.items():
+    for nr_name in _NR_NAMES:
+        nr_cfg = getattr(nrs, nr_name)
+        if nr_cfg is None:
+            continue
         ras = _calculate_requirement_agreement_score(
             nr_name=nr_name,
             nr_cfg=nr_cfg,

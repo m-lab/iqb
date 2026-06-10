@@ -2,8 +2,10 @@
 
 [![Build Status](https://github.com/m-lab/iqb/actions/workflows/ci.yml/badge.svg)](https://github.com/m-lab/iqb/actions) [![codecov](https://codecov.io/gh/m-lab/iqb/branch/main/graph/badge.svg)](https://codecov.io/gh/m-lab/iqb) [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/m-lab/iqb)
 
-This repository contains the source for code the Internet Quality Barometer (IQB)
-library, and related applications and notebooks.
+This repository contains the source code for the Internet Quality Barometer (IQB)
+[library](./library), [notebook templates](./analysis), and [prototype](./prototype).
+
+The prototype is available online at: https://iqb.mlab-staging.measurementlab.net.
 
 ## About IQB
 
@@ -32,41 +34,36 @@ https://www.measurementlab.net/publications/IQB_executive_summary_2025.pdf).
 
 ## Repository Architecture
 
-### **`docs/`**
+- [analysis](./analysis): Jupyter notebooks templates showing how to use
+the IQB library for exploration and research. See
+[analysis/README.md](analysis/README.md) for more information.
 
-Documentation, tutorials, design documents, and presentations.
+- [data](./data): Workspace containing the default pipeline configuration,
+the default cache directory, and instructions for generating new
+data using the pipeline. See [data/README.md](data/README.md) for details.
 
-See [docs/README.md](docs/README.md) for details.
+- [docs](./docs): Documentation, tutorials, design documents, and
+presentations. See [docs/README.md](docs/README.md) for details.
 
-### **`library/`**
+- [library](./library): The IQB library containing methods for calculating
+the IQB score and data collection. See
+[library/README.md](library/README.md) for details.
 
-The IQB library containing methods for calculating the IQB score and data collection.
+- [prototype](./prototype): A [Streamlit](https://streamlit.io/) web application for applying
+and parametrizing the IQB framework in different use cases. See
+[prototype/README.md](prototype/README.md) for how to run it locally.
 
-See [library/README.md](library/README.md) for details.
+- [.iqb](./.iqb): Symbolic link to [data](data) that simplifies running
+the pipeline on Unix-like systems.
 
-### **`prototype/`**
+- [.python-version](./.python-version): declaration of the Python version
+that we use to develop the IQB framework.
 
-A Streamlit web application for applying and parametrizing the IQB framework
-in different use cases.
+- [pyproject.toml](./pyproject.toml): repository configuration declaring the
+[uv](https://github.com/astral-sh/uv) workspace and its members.
 
-See [prototype/README.md](prototype/README.md) for how to run it locally.
-
-### **`analysis/`**
-
-Jupyter notebooks for exploratory data analysis, experimentation, and research.
-
-See [analysis/README.md](analysis/README.md) for more information.
-
-### **`data/`**
-
-Workspace containing the default pipeline configuration, the default cache directory,
-and instructions for generating new data using the pipeline.
-
-See [data/README.md](data/README.md) for details.
-
-### **`.iqb`**
-
-Symbolic link to [data](data) that simplifies running the pipeline on Unix.
+- [uv.lock](./uv.lock): the [uv](https://github.com/astral-sh/uv) lockfile
+declaring the dependencies used in this workspace.
 
 ## Data Flow
 
@@ -97,6 +94,9 @@ the pipeline, the remote cache, and the researcher API in sequence.
 covering cache design, data distribution, and more.
 
 ## Quick Start
+
+You need a supported Python version (see [.python-version](./.python-version)),
+[uv](https://github.com/astral-sh/uv), and [git](https://git-scm.com/):
 
 ```bash
 # Clone the repository

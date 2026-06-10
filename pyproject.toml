@@ -1,3 +1,6 @@
+# This repository contains an `uv` monorepository workspace consisting
+# of all the components of the IQB framework. See the toplevel README.md
+# for more information about each component of the framework.
 [tool.uv.workspace]
 members = ["library", "prototype", "analysis", "docs/internals"]
 
@@ -13,12 +16,14 @@ testpaths = [
 python_files = ["*_test.py", "test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
+
 # Add workspace member directories to Python path so tests can import from them
 pythonpath = [
     "library/src",
     "prototype",
     "analysis",
 ]
+
 # Use importlib mode to handle workspace structure correctly
 addopts = [
     "-v",

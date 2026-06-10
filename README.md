@@ -4,7 +4,6 @@
 
 This repository contains the source code for the Internet Quality Barometer (IQB)
 [library](./library), [notebook templates](./analysis), and [prototype](./prototype).
-
 The prototype is available online at: https://iqb.mlab-staging.measurementlab.net.
 
 ## About IQB

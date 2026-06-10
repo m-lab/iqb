@@ -3,13 +3,15 @@
 import dataclasses
 import json
 
+from typing_extensions import deprecated
+
 from ..cache.cache import IQBData
 from ..cache.mlab import IQBMetrics
 from .config import (
     IQB_DEFAULT_CONFIG,
     IQBConfig,
-    IQBConfigNetworkRequirement,
     IQBConfigUseCase,
+    NetworkRequirement,
     iqb_config_from_legacy,
 )
 
@@ -64,7 +66,7 @@ def _calculate_binary_requirement_score(
 def _calculate_requirement_agreement_score(
     *,
     nr_name: str,
-    nr_cfg: IQBConfigNetworkRequirement,
+    nr_cfg: NetworkRequirement,
     data: IQBData,
 ) -> float:
     """Calculates requirement agreement score across all datasets for one network requirement."""
@@ -79,12 +81,7 @@ def _calculate_requirement_agreement_score(
 
     for metrics, weight in datasets:
         if metrics is not None and weight > 0:
-            # binary requirement score (dataset, network requirement)
-            brs = _calculate_binary_requirement_score(
-                network_requirement=nr_name,
-                value=getattr(metrics, nr_name),
-                threshold=nr_cfg.threshold_min,
-            )
+            brs = nr_cfg.binary_requirement_score(getattr(metrics, nr_name))
             ds_scores.append(brs * weight)
             ds_weights.append(weight)
 
@@ -168,17 +165,13 @@ class IQBCalculator:
         """Prints the current IQB configuration as JSON."""
         print(json.dumps(dataclasses.asdict(self.config), indent=2))
 
+    @deprecated("Use IQBConfigNetworkRequirementSpeed or IQBConfigNetworkRequirementLatency.binary_requirement_score instead")
     def calculate_binary_requirement_score(
         self,
         network_requirement: str,
         value: float,
         threshold: float,
     ) -> int:
-        """
-        Calculates binary requirement score for the given network requirement, value (i.e., data), and threshold (of the net requirement).
-        - If the requirement is **throughput**, then the score is 1 if the given value is **larger** than the given threshold, and otherwise 0.
-        - If the requirement is **latency or packet loss**, then the score is 1 if the given value is **smaller** than the given threshold, and otherwise 0.
-        """
         return _calculate_binary_requirement_score(
             network_requirement=network_requirement,
             value=value,

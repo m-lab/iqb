@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Protocol
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -21,23 +22,56 @@ class IQBConfigDatasetWeights:
     ookla: float = 0.0
 
 
-@dataclass(frozen=True, kw_only=True)
-class IQBConfigNetworkRequirement:
-    """Configuration for a single network requirement within a use case."""
+class NetworkRequirement(Protocol):
 
     weight: float
     threshold_min: float
     dataset_weights: IQBConfigDatasetWeights
+
+    def binary_requirement_score(self, value: float) -> int: ...
+
+
+@dataclass(frozen=True, kw_only=True)
+class IQBConfigNetworkRequirementSpeed:
+
+    weight: float
+    threshold_min: float
+    dataset_weights: IQBConfigDatasetWeights
+
+    def binary_requirement_score(self, value: float) -> int:
+        return 1 if value > self.threshold_min else 0
+
+
+@dataclass(frozen=True, kw_only=True)
+class IQBConfigNetworkRequirementLatency:
+
+    weight: float
+    threshold_min: float
+    dataset_weights: IQBConfigDatasetWeights
+
+    def binary_requirement_score(self, value: float) -> int:
+        return 1 if value < self.threshold_min else 0
+
+
+@dataclass(frozen=True, kw_only=True)
+class IQBConfigNetworkRequirementLoss:
+
+    weight: float
+    threshold_min: float
+    dataset_weights: IQBConfigDatasetWeights
+
+    def binary_requirement_score(self, value: float) -> int:
+        return 1 if value < self.threshold_min else 0
 
 
 @dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirements:
     """All network requirements for a use case."""
 
-    download_throughput_mbps: IQBConfigNetworkRequirement | None = None
-    upload_throughput_mbps: IQBConfigNetworkRequirement | None = None
-    latency_ms: IQBConfigNetworkRequirement | None = None
-    packet_loss: IQBConfigNetworkRequirement | None = None
+    download_throughput_mbps: IQBConfigNetworkRequirementSpeed | None = None
+    upload_throughput_mbps: IQBConfigNetworkRequirementSpeed | None = None
+    latency_ms: IQBConfigNetworkRequirementLatency | None = None
+    packet_loss: IQBConfigNetworkRequirementLoss | None = None
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -55,6 +89,14 @@ class IQBConfig:
     use_cases: dict[str, IQBConfigUseCase]
 
 
+_NR_NAME_TO_CLASS = {
+    "download_throughput_mbps": IQBConfigNetworkRequirementSpeed,
+    "upload_throughput_mbps": IQBConfigNetworkRequirementSpeed,
+    "latency_ms": IQBConfigNetworkRequirementLatency,
+    "packet_loss": IQBConfigNetworkRequirementLoss,
+}
+
+
 def iqb_config_from_legacy(legacy: dict) -> IQBConfig:
     """Load an IQBConfig from the legacy nested-dict format.
 
@@ -64,12 +106,18 @@ def iqb_config_from_legacy(legacy: dict) -> IQBConfig:
     """
     use_cases: dict[str, IQBConfigUseCase] = {}
     for uc_name, uc_dict in legacy["use cases"].items():
-        nr_configs: dict[str, IQBConfigNetworkRequirement] = {}
+        nr_configs: dict[
+            str,
+            IQBConfigNetworkRequirementSpeed
+            | IQBConfigNetworkRequirementLatency
+            | IQBConfigNetworkRequirementLoss,
+        ] = {}
         for nr_name, nr_dict in uc_dict["network requirements"].items():
             ds_weights: dict[str, float] = {}
             for ds_name, ds_dict in nr_dict["datasets"].items():
                 ds_weights[ds_name] = ds_dict["w"]
-            nr_configs[nr_name] = IQBConfigNetworkRequirement(
+            nr_class = _NR_NAME_TO_CLASS[nr_name]
+            nr_configs[nr_name] = nr_class(
                 weight=nr_dict["w"],
                 threshold_min=nr_dict["threshold min"],
                 dataset_weights=IQBConfigDatasetWeights(
@@ -81,7 +129,7 @@ def iqb_config_from_legacy(legacy: dict) -> IQBConfig:
         use_cases[uc_name] = IQBConfigUseCase(
             weight=uc_dict["w"],
             network_requirements=IQBConfigNetworkRequirements(
-                **nr_configs,
+                **nr_configs,  # type: ignore[arg-type]
             ),
         )
     return IQBConfig(use_cases=use_cases)

@@ -7,8 +7,8 @@ from iqb import (
     IQB_DEFAULT_CONFIG,
     IQBConfig,
     IQBConfigDatasetWeights,
-    IQBConfigNetworkRequirement,
     IQBConfigNetworkRequirements,
+    IQBConfigNetworkRequirementSpeed,
     IQBConfigUseCase,
     iqb_config_from_legacy,
 )
@@ -120,8 +120,8 @@ class TestIQBConfigDataclasses:
         with pytest.raises(AttributeError):
             uc.weight = 99  # type: ignore[misc]
 
-    def test_iqb_config_network_requirement_is_frozen(self):
-        """IQBConfigNetworkRequirement instances are immutable."""
+    def test_iqb_config_network_requirement_speed_is_frozen(self):
+        """IQBConfigNetworkRequirementSpeed instances are immutable."""
         uc = next(iter(IQB_DEFAULT_CONFIG.use_cases.values()))
         nr = uc.network_requirements.download_throughput_mbps
         assert nr is not None
@@ -143,7 +143,7 @@ class TestIQBConfigDataclasses:
                 "test": IQBConfigUseCase(
                     weight=1.0,
                     network_requirements=IQBConfigNetworkRequirements(
-                        download_throughput_mbps=IQBConfigNetworkRequirement(
+                        download_throughput_mbps=IQBConfigNetworkRequirementSpeed(
                             weight=3.0,
                             threshold_min=10.0,
                             dataset_weights=IQBConfigDatasetWeights(mlab=1.0),

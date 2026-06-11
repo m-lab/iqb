@@ -30,8 +30,6 @@ class NetworkRequirement(Protocol):
     @property
     def higher_is_better(self) -> bool: ...
 
-    def binary_requirement_score(self, value: float) -> int: ...
-
 
 @dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirementSpeed:
@@ -42,9 +40,6 @@ class IQBConfigNetworkRequirementSpeed:
     @property
     def higher_is_better(self) -> bool:
         return True
-
-    def binary_requirement_score(self, value: float) -> int:
-        return 1 if value > self.threshold_min else 0
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -57,9 +52,6 @@ class IQBConfigNetworkRequirementLatency:
     def higher_is_better(self) -> bool:
         return False
 
-    def binary_requirement_score(self, value: float) -> int:
-        return 1 if value < self.threshold_min else 0
-
 
 @dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirementLoss:
@@ -70,9 +62,6 @@ class IQBConfigNetworkRequirementLoss:
     @property
     def higher_is_better(self) -> bool:
         return False
-
-    def binary_requirement_score(self, value: float) -> int:
-        return 1 if value < self.threshold_min else 0
 
 
 @dataclass(frozen=True, kw_only=True)

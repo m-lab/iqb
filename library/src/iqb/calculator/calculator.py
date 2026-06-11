@@ -81,7 +81,12 @@ def _calculate_requirement_agreement_score(
 
     for metrics, weight in datasets:
         if metrics is not None and weight > 0:
-            brs = nr_cfg.binary_requirement_score(getattr(metrics, nr_name))
+            value = getattr(metrics, nr_name)
+            brs = int(
+                value > nr_cfg.threshold_min
+                if nr_cfg.higher_is_better
+                else value < nr_cfg.threshold_min
+            )
             ds_scores.append(brs * weight)
             ds_weights.append(weight)
 

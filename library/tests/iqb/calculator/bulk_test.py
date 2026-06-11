@@ -95,7 +95,7 @@ class TestBulkMatchesScalar:
         for p in _PERCENTILES:
             for idx in range(len(df)):
                 expected = _scalar_iqb(df.iloc[idx], p)
-                actual = result.iloc[idx][f"iqb_p{p}"]
+                actual = result.iloc[idx][f"mlab_iqb_p{p}"]
                 assert actual == pytest.approx(expected), (
                     f"row {idx}, p{p}: bulk={actual} != scalar={expected}"
                 )
@@ -110,7 +110,7 @@ class TestBulkMatchesScalar:
                 row = df.iloc[idx]
                 for uc_name in IQB_DEFAULT_CONFIG.use_cases:
                     expected = _scalar_use_case(row, p, uc_name)
-                    col = f"{uc_name.replace(' ', '_')}_p{p}"
+                    col = f"mlab_{uc_name.replace(' ', '_')}_p{p}"
                     actual = result.iloc[idx][col]
                     assert actual == pytest.approx(expected), (
                         f"row {idx}, p{p}, {uc_name}: bulk={actual} != scalar={expected}"
@@ -131,8 +131,8 @@ class TestBulkMatchesScalar:
     def test_default_percentile_is_95(self):
         df = _make_test_dataframe()
         result = iqb_bulk_calculate_score_mlab(data=df)
-        assert "iqb_p95" in result.columns
-        assert "iqb_p50" not in result.columns
+        assert "mlab_iqb_p95" in result.columns
+        assert "mlab_iqb_p50" not in result.columns
 
 
 class TestBulkAcceptsDataFramePair:
@@ -145,6 +145,6 @@ class TestBulkAcceptsDataFramePair:
         result_df = iqb_bulk_calculate_score_mlab(data=df, percentiles=_PERCENTILES)
         result_pair = iqb_bulk_calculate_score_mlab(data=pair, percentiles=_PERCENTILES)
 
-        score_cols = [c for c in result_df.columns if c.startswith("iqb_")]
+        score_cols = [c for c in result_df.columns if c.startswith("mlab_")]
         for col in score_cols:
             pd.testing.assert_series_equal(result_pair[col], result_df[col], check_names=False)

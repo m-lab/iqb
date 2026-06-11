@@ -45,8 +45,8 @@ def iqb_bulk_calculate_score_mlab(
     Returns:
         A copy of the input DataFrame with additional columns:
 
-        - ``{use_case}_p{N}`` for each use case and percentile
-        - ``iqb_p{N}`` for the overall IQB score at each percentile
+        - ``mlab_{use_case}_p{N}`` for each use case and percentile
+        - ``mlab_iqb_p{N}`` for the overall IQB score at each percentile
     """
     df = (
         data.read_data_frame_pair().to_merged_data_frame()
@@ -83,7 +83,7 @@ def iqb_bulk_calculate_score_mlab(
                 weight_total += nr_cfg.weight
 
             uc_score = weighted_sum / weight_total
-            result[f"{uc_name.replace(' ', '_')}_p{p}"] = uc_score
+            result[f"mlab_{uc_name.replace(' ', '_')}_p{p}"] = uc_score
             uc_scores[uc_name] = uc_score
 
         iqb_num = pd.Series(0.0, index=df.index)
@@ -92,6 +92,6 @@ def iqb_bulk_calculate_score_mlab(
             w = config.use_cases[uc_name].weight
             iqb_num += uc_score * w
             iqb_den += w
-        result[f"iqb_p{p}"] = iqb_num / iqb_den
+        result[f"mlab_iqb_p{p}"] = iqb_num / iqb_den
 
     return result

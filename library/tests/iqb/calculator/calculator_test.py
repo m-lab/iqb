@@ -392,10 +392,7 @@ class TestIQBCalculatorConfig:
                 "latency_ms",
                 "packet_loss",
             )
-            has_any = any(
-                getattr(nrs, f) is not None
-                for f in nr_names
-            )
+            has_any = any(getattr(nrs, f) is not None for f in nr_names)
             assert has_any
 
     def test_config_network_requirements_have_weights(self):

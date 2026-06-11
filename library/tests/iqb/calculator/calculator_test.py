@@ -382,24 +382,50 @@ class TestIQBCalculatorConfig:
         assert len(iqb.config.use_cases) > 0
 
     def test_config_use_cases_have_network_requirements(self):
-        """Test that each use case has network requirements."""
+        """Test that each use case has at least one network requirement."""
         iqb = IQBCalculator()
         for use_case in iqb.config.use_cases.values():
-            assert len(use_case.network_requirements) > 0
+            nrs = use_case.network_requirements
+            nr_names = (
+                "download_throughput_mbps",
+                "upload_throughput_mbps",
+                "latency_ms",
+                "packet_loss",
+            )
+            has_any = any(getattr(nrs, f) is not None for f in nr_names)
+            assert has_any
 
     def test_config_network_requirements_have_weights(self):
         """Test that each network requirement has weights."""
+        nr_names = (
+            "download_throughput_mbps",
+            "upload_throughput_mbps",
+            "latency_ms",
+            "packet_loss",
+        )
         iqb = IQBCalculator()
         for use_case in iqb.config.use_cases.values():
-            for nr in use_case.network_requirements.values():
-                assert isinstance(nr.weight, (int, float))
+            nrs = use_case.network_requirements
+            for f in nr_names:
+                nr = getattr(nrs, f)
+                if nr is not None:
+                    assert isinstance(nr.weight, (int, float))
 
     def test_config_network_requirements_have_thresholds(self):
         """Test that each network requirement has thresholds."""
+        nr_names = (
+            "download_throughput_mbps",
+            "upload_throughput_mbps",
+            "latency_ms",
+            "packet_loss",
+        )
         iqb = IQBCalculator()
         for use_case in iqb.config.use_cases.values():
-            for nr in use_case.network_requirements.values():
-                assert isinstance(nr.threshold_min, (int, float))
+            nrs = use_case.network_requirements
+            for f in nr_names:
+                nr = getattr(nrs, f)
+                if nr is not None:
+                    assert isinstance(nr.threshold_min, (int, float))
 
 
 class TestIQBCalculatorMethods:

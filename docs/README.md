@@ -10,3 +10,5 @@ data pipeline works — start here if you are new to the codebase.
 - [2025-12-11-pulse-slides.pdf](2025-12-11-pulse-slides.pdf): slides
 of [@sermpezis](https://github.com/sermpezis) during the [ISOC
 Pulse Research Week 2025](https://www.internetsociety.org/events/internet-society-pulse-research-week/).
+
+- Research report: "Internet Quality Barometer (IQB): A preliminary data-driven evaluation of the IQB framework", arXiv, June 2026, [https://arxiv.org/abs/2606.11040](https://arxiv.org/abs/2606.11040)

@@ -23,20 +23,25 @@ class IQBConfigDatasetWeights:
 
 
 class NetworkRequirement(Protocol):
-
     weight: float
     threshold_min: float
     dataset_weights: IQBConfigDatasetWeights
+
+    @property
+    def higher_is_better(self) -> bool: ...
 
     def binary_requirement_score(self, value: float) -> int: ...
 
 
 @dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirementSpeed:
-
     weight: float
     threshold_min: float
     dataset_weights: IQBConfigDatasetWeights
+
+    @property
+    def higher_is_better(self) -> bool:
+        return True
 
     def binary_requirement_score(self, value: float) -> int:
         return 1 if value > self.threshold_min else 0
@@ -44,10 +49,13 @@ class IQBConfigNetworkRequirementSpeed:
 
 @dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirementLatency:
-
     weight: float
     threshold_min: float
     dataset_weights: IQBConfigDatasetWeights
+
+    @property
+    def higher_is_better(self) -> bool:
+        return False
 
     def binary_requirement_score(self, value: float) -> int:
         return 1 if value < self.threshold_min else 0
@@ -55,10 +63,13 @@ class IQBConfigNetworkRequirementLatency:
 
 @dataclass(frozen=True, kw_only=True)
 class IQBConfigNetworkRequirementLoss:
-
     weight: float
     threshold_min: float
     dataset_weights: IQBConfigDatasetWeights
+
+    @property
+    def higher_is_better(self) -> bool:
+        return False
 
     def binary_requirement_score(self, value: float) -> int:
         return 1 if value < self.threshold_min else 0

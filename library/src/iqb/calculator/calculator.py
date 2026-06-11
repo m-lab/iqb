@@ -165,7 +165,9 @@ class IQBCalculator:
         """Prints the current IQB configuration as JSON."""
         print(json.dumps(dataclasses.asdict(self.config), indent=2))
 
-    @deprecated("Use IQBConfigNetworkRequirementSpeed or IQBConfigNetworkRequirementLatency.binary_requirement_score instead")
+    @deprecated(
+        "Use IQBConfigNetworkRequirementSpeed or IQBConfigNetworkRequirementLatency.binary_requirement_score instead"
+    )
     def calculate_binary_requirement_score(
         self,
         network_requirement: str,

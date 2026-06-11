@@ -135,6 +135,10 @@ def iqb_config_from_legacy(legacy: dict) -> IQBConfig:
     return IQBConfig(use_cases=use_cases)
 
 
+# TODO(bassosimone): the use case names contain spaces (e.g., "web browsing"),
+# which forces downstream code to sanitize them for use as DataFrame column
+# names or identifiers. We should normalize these to underscored names
+# (e.g., "web_browsing") and update iqb_config_from_legacy accordingly.
 IQB_CONFIG = {
     "use cases": {
         "web browsing": {

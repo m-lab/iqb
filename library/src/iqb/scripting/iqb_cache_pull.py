@@ -108,6 +108,14 @@ def _download_one(
     }
 
 
+class MissingDateBoundError(Exception):
+    """Raised by run() when neither *after* nor *before* is given.
+
+    Carries no message: the type itself is the signal. Callers such as the
+    CLI decide how to present this to a human (wording, examples, etc.).
+    """
+
+
 @dataclass(frozen=True, kw_only=True)
 class PullResult:
     """Result of a cache pull operation."""
@@ -135,8 +143,17 @@ def run(
     When *manifest* is provided it is used directly; otherwise the manifest
     is loaded from disk under *data_dir*.
 
+    Requires at least one of *after* or *before*, so a bare invocation
+    doesn't silently download the entire remote cache.
+
     Returns ``None`` when there is nothing to download.
+
+    Raises:
+        MissingDateBoundError: if both *after* and *before* are omitted.
     """
+    if after is None and before is None:
+        raise MissingDateBoundError()
+
     resolved = data_dir_or_default(data_dir)
     if manifest is None:
         manifest_path = manifest_path_for_data_dir(resolved)

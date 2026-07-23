@@ -23,15 +23,9 @@ list](https://groups.google.com/a/measurementlab.net/g/discuss).
 ## `iqb cache pull` - Getting GCS-Cached Data
 
 The [state/ghremote/manifest.json](state/ghremote/manifest.json) file lists
-all the query results already cached at GCS. Run:
-
-```bash
-uv run iqb cache pull -d .
-```
-
-to sync all files from GCS to the local copy.
-
-To pull only a subset of the data, use the filtering flags:
+all the query results already cached at GCS. `iqb cache pull` requires
+at least one of `--after`/`--before`: it refuses to run without a bound,
+so you never accidentally download the entire remote cache:
 
 ```bash
 # Only downloads from 2024

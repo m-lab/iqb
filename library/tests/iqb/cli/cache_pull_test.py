@@ -81,9 +81,23 @@ class TestCachePullEmptyManifest:
     def test_nothing_to_download(self, tmp_path: Path):
         _write_manifest(tmp_path, {})
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 0
         assert "Nothing to download" in result.output
+
+
+class TestCachePullRequiresBound:
+    """Bare `pull` (no --after/--before) is rejected as a usage error."""
+
+    def test_no_bound_is_rejected(self, tmp_path: Path):
+        _write_manifest(tmp_path, {})
+        runner = CliRunner()
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        assert result.exit_code == 2
+        assert "Usage:" in result.output
+        assert "Error: " in result.output
+        assert "--after" in result.output
+        assert "--before" in result.output
 
 
 class TestCachePullInvalidManifestKeys:
@@ -102,7 +116,7 @@ class TestCachePullInvalidManifestKeys:
         )
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
 
         assert result.exit_code != 0
         mock_session_cls.assert_not_called()
@@ -123,7 +137,7 @@ class TestCachePullOnlyRemote:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 0
 
         # File should exist on disk with correct content
@@ -158,7 +172,7 @@ class TestCachePullMatchingSkipped:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 0
         assert "Nothing to download" in result.output
         mock_session.get.assert_not_called()
@@ -181,7 +195,7 @@ class TestCachePullMismatchSkippedByDefault:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 0
         assert "Nothing to download" in result.output
         mock_session.get.assert_not_called()
@@ -208,7 +222,9 @@ class TestCachePullMismatchWithForce:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--force"])
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "--force", "--after", "2000-01-01"]
+        )
         assert result.exit_code == 0
 
         # File should be replaced with remote content
@@ -232,7 +248,7 @@ class TestCachePullSha256Failure:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 1
         assert "download(s) failed" in result.output
 
@@ -275,7 +291,7 @@ class TestCachePullMultipleFiles:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 0
         assert (tmp_path / _FILE_A).read_bytes() == content_a
         assert (tmp_path / _FILE_B).read_bytes() == content_b
@@ -287,7 +303,9 @@ class TestCachePullJobsFlag:
     def test_jobs_flag_accepted(self, tmp_path: Path):
         _write_manifest(tmp_path, {})
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "-j", "4"])
+        result = runner.invoke(
+            cli, ["cache", "pull", "-d", str(tmp_path), "-j", "4", "--after", "2000-01-01"]
+        )
         assert result.exit_code == 0
         assert "Nothing to download" in result.output
 
@@ -308,7 +326,7 @@ class TestCachePullAtomicWrite:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 1
 
         # No partial file should exist
@@ -363,7 +381,7 @@ class TestCachePullMetrics:
         mock_session_cls.return_value = mock_session
 
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path)])
+        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--after", "2000-01-01"])
         assert result.exit_code == 0
 
         log_file = _find_log_file(tmp_path)
@@ -432,7 +450,10 @@ class TestCachePullFilterDataset:
     def test_single_dataset(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads"])
+        result = runner.invoke(
+            cli,
+            ["cache", "pull", "-d", str(tmp_path), "--dataset", "uploads", "--after", "2000-01-01"],
+        )
         assert result.exit_code == 0
         assert (tmp_path / _FILE_B).exists()
         assert not (tmp_path / _FILE_A).exists()
@@ -454,6 +475,8 @@ class TestCachePullFilterDataset:
                 "uploads",
                 "--dataset",
                 "downloads",
+                "--after",
+                "2000-01-01",
             ],
         )
         assert result.exit_code == 0
@@ -470,7 +493,10 @@ class TestCachePullFilterFile:
     def test_stats_only(self, mock_session_cls: MagicMock, tmp_path: Path):
         _multi_manifest(tmp_path, mock_session_cls)
         runner = CliRunner()
-        result = runner.invoke(cli, ["cache", "pull", "-d", str(tmp_path), "--file", "stats.json"])
+        result = runner.invoke(
+            cli,
+            ["cache", "pull", "-d", str(tmp_path), "--file", "stats.json", "--after", "2000-01-01"],
+        )
         assert result.exit_code == 0
         assert (tmp_path / _FILE_C).exists()
         assert not (tmp_path / _FILE_A).exists()
@@ -553,6 +579,8 @@ class TestCachePullFilterCombined:
                 "downloads",
                 "--file",
                 "data.parquet",
+                "--after",
+                "2000-01-01",
             ],
         )
         assert result.exit_code == 0

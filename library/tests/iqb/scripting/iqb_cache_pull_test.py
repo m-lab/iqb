@@ -7,8 +7,15 @@ import json
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from iqb.ghremote.cache import Manifest, load_manifest_from_dict
 from iqb.scripting import iqb_cache_pull
+
+# run() requires at least one of after/before (see TestRunRequiresBound below);
+# tests unrelated to that requirement pass this to satisfy it without actually
+# constraining which fixture entries match.
+_ANY_AFTER = "2000-01-01"
 
 _TS1 = "20241001T000000Z"
 _TS2 = "20241101T000000Z"
@@ -47,12 +54,12 @@ class TestRunNothingToDownload:
 
     def test_empty_manifest_from_disk(self, tmp_path: Path):
         _write_manifest(tmp_path, {})
-        result = iqb_cache_pull.run(data_dir=tmp_path)
+        result = iqb_cache_pull.run(data_dir=tmp_path, after=_ANY_AFTER)
         assert result is None
 
     def test_empty_provided_manifest(self, tmp_path: Path):
         manifest = Manifest(v=0, files={})
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after=_ANY_AFTER)
         assert result is None
 
     def test_all_matching(self, tmp_path: Path):
@@ -63,7 +70,7 @@ class TestRunNothingToDownload:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(content)
 
-        result = iqb_cache_pull.run(data_dir=tmp_path)
+        result = iqb_cache_pull.run(data_dir=tmp_path, after=_ANY_AFTER)
         assert result is None
 
 
@@ -81,7 +88,7 @@ class TestRunWithProvidedManifest:
         mock_session_cls.return_value = mock_session
 
         # No manifest on disk — uses provided manifest directly
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after=_ANY_AFTER)
 
         assert result is not None
         assert result.total == 1
@@ -107,7 +114,9 @@ class TestRunFiltering:
         mock_session.get.return_value = _fake_response(cb)
         mock_session_cls.return_value = mock_session
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, datasets=("uploads",))
+        result = iqb_cache_pull.run(
+            data_dir=tmp_path, manifest=manifest, datasets=("uploads",), after=_ANY_AFTER
+        )
 
         assert result is not None
         assert result.total == 1
@@ -149,7 +158,7 @@ class TestRunResult:
         mock_session.get.return_value = _fake_response(content)
         mock_session_cls.return_value = mock_session
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after=_ANY_AFTER)
 
         assert result is not None
         assert result.total == 1
@@ -169,7 +178,7 @@ class TestRunResult:
         mock_session.get.return_value = _fake_response(content)
         mock_session_cls.return_value = mock_session
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after=_ANY_AFTER)
 
         assert result is not None
         assert result.total == 1
@@ -187,7 +196,7 @@ class TestRunResult:
         mock_session.get.return_value = _fake_response(content)
         mock_session_cls.return_value = mock_session
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after=_ANY_AFTER)
 
         assert result is not None
         spans = [json.loads(line) for line in result.log_file.read_text().splitlines() if line]
@@ -210,7 +219,9 @@ class TestRunForce:
         dest.parent.mkdir(parents=True, exist_ok=True)
         dest.write_bytes(local)
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, force=False)
+        result = iqb_cache_pull.run(
+            data_dir=tmp_path, manifest=manifest, force=False, after=_ANY_AFTER
+        )
         assert result is None
         assert dest.read_bytes() == local
 
@@ -229,10 +240,31 @@ class TestRunForce:
         mock_session.get.return_value = _fake_response(remote)
         mock_session_cls.return_value = mock_session
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, force=True)
+        result = iqb_cache_pull.run(
+            data_dir=tmp_path, manifest=manifest, force=True, after=_ANY_AFTER
+        )
         assert result is not None
         assert result.ok == 1
         assert dest.read_bytes() == remote
+
+
+class TestRunRequiresBound:
+    """run() refuses to operate without at least one of after/before."""
+
+    def test_raises_without_after_or_before(self, tmp_path: Path):
+        _write_manifest(tmp_path, {_FILE_A: {"sha256": _sha256(b"x"), "url": "https://x"}})
+        with pytest.raises(iqb_cache_pull.MissingDateBoundError):
+            iqb_cache_pull.run(data_dir=tmp_path)
+
+    def test_after_only_is_sufficient(self, tmp_path: Path):
+        manifest = Manifest(v=0, files={})
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after="2024-01-01")
+        assert result is None
+
+    def test_before_only_is_sufficient(self, tmp_path: Path):
+        manifest = Manifest(v=0, files={})
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, before="2024-01-01")
+        assert result is None
 
 
 class TestRunDownloadOneException:
@@ -247,7 +279,7 @@ class TestRunDownloadOneException:
         sha = _sha256(content)
         manifest = _make_manifest({_FILE_A: {"sha256": sha, "url": "https://example.com/a"}})
 
-        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest)
+        result = iqb_cache_pull.run(data_dir=tmp_path, manifest=manifest, after=_ANY_AFTER)
 
         assert result is not None
         assert result.ok == 0

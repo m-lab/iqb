@@ -18,12 +18,20 @@ from .cache import cache
     "--file", "files", multiple=True, help="Only pull entries with this filename (repeatable)"
 )
 @click.option(
-    "--after", default=None, help="Only pull entries starting on or after this date (YYYY-MM-DD)"
+    "--after",
+    default=None,
+    help="Only pull entries starting on or after this date (YYYY-MM-DD). "
+    "Required unless --before is given",
 )
 @click.option(
-    "--before", default=None, help="Only pull entries starting before this date (YYYY-MM-DD)"
+    "--before",
+    default=None,
+    help="Only pull entries starting before this date (YYYY-MM-DD). "
+    "Required unless --after is given",
 )
+@click.pass_context
 def pull(
+    ctx: click.Context,
     data_dir: str | None,
     force: bool,
     jobs: int,
@@ -33,15 +41,25 @@ def pull(
     before: str | None,
 ) -> None:
     """Download missing cache files from the manifest."""
-    result = iqb_cache_pull.run(
-        data_dir=data_dir,
-        datasets=datasets,
-        files=files,
-        after=after,
-        before=before,
-        force=force,
-        jobs=jobs,
-    )
+    try:
+        result = iqb_cache_pull.run(
+            data_dir=data_dir,
+            datasets=datasets,
+            files=files,
+            after=after,
+            before=before,
+            force=force,
+            jobs=jobs,
+        )
+    except iqb_cache_pull.MissingDateBoundError as exc:
+        raise click.UsageError(
+            "The `iqb cache pull` subcommand needs a date range so that\n"
+            "it doesn't download the entire remote cache.\n\n"
+            "Please use the --after and/or --before flags as follows:\n\n"
+            "  iqb cache pull --after 2024-01-01\n"
+            "  iqb cache pull --before 2025-01-01 --after 2023-01-01",
+            ctx,
+        ) from exc
 
     if result is None:
         click.echo("Nothing to download.")

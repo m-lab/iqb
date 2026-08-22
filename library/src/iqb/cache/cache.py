@@ -9,7 +9,7 @@ from typing_extensions import deprecated
 
 from ..pipeline.dataset import IQBDatasetGranularity
 from ..pipeline.pipeline import PipelineCacheManager, PipelineRemoteCache
-from .mlab import IQBDataMLab, MLabCacheEntry, MLabCacheManager
+from .mlab import IQBMetrics, MLabCacheEntry, MLabCacheManager
 
 
 @dataclass(frozen=True, kw_only=True)
@@ -32,15 +32,24 @@ class IQBData:
     Data for computing the IQB score.
 
     Attributes:
-      mlab: M-Lab data.
+      mlab: M-Lab metrics (None if not available).
+      cloudflare: Cloudflare metrics (None if not available).
+      ookla: Ookla metrics (None if not available).
     """
 
-    mlab: IQBDataMLab
+    mlab: IQBMetrics | None = None
+    cloudflare: IQBMetrics | None = None
+    ookla: IQBMetrics | None = None
 
     def to_dict(self) -> dict[str, dict[str, float]]:
         """Convert to the nested dict expected by ``IQBCalculator.calculate_iqb_score``."""
         result: dict[str, dict[str, float]] = {}
-        result["m-lab"] = self.mlab.to_dict()
+        if self.mlab is not None:
+            result["m-lab"] = self.mlab.to_dict()
+        if self.cloudflare is not None:
+            result["cloudflare"] = self.cloudflare.to_dict()
+        if self.ookla is not None:
+            result["ookla"] = self.ookla.to_dict()
         return result
 
 

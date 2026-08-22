@@ -16,9 +16,11 @@ from ..pipeline.pipeline import PipelineCacheManager
 
 
 @dataclass(frozen=True, kw_only=True)
-class IQBDataMLab:
+class IQBMetrics:
     """
-    Contains M-Lab data for computing the IQB score.
+    Network metrics for computing the IQB score.
+
+    This is the common shape shared by all datasets (M-Lab, Cloudflare, Ookla).
 
     Attributes:
         download: Download speed in Mbit/s.
@@ -32,6 +34,22 @@ class IQBDataMLab:
     latency: float
     loss: float
 
+    @property
+    def download_throughput_mbps(self) -> float:
+        return self.download
+
+    @property
+    def upload_throughput_mbps(self) -> float:
+        return self.upload
+
+    @property
+    def latency_ms(self) -> float:
+        return self.latency
+
+    @property
+    def packet_loss(self) -> float:
+        return self.loss
+
     def to_dict(self) -> dict[str, float]:
         """Convert to standard dict used to compute IQB score."""
         return {
@@ -40,6 +58,10 @@ class IQBDataMLab:
             "latency_ms": float(self.latency),
             "packet_loss": float(self.loss),
         }
+
+
+IQBDataMLab = IQBMetrics
+"""Deprecated: use IQBMetrics instead."""
 
 
 @dataclass(frozen=True, kw_only=True)

@@ -421,6 +421,12 @@ matrix:
       end: "2026-06-01"
     - start: "2026-06-01"
       end: "2026-07-01"
+    - start: "2026-07-01"
+      end: "2026-08-01"
+    - start: "2026-08-01"
+      end: "2026-09-01"
+    - start: "2026-09-01"
+      end: "2026-10-01"
   granularities:
     - country
     - country_asn

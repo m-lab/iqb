@@ -25,3 +25,6 @@ them. Covers data structure, manifest design, and same-region egress.
 - [2026-01-29-sync.md](2026-01-29-sync.md): Why ThreadPoolExecutor over
 async or a download service, and why JSONL spans instead of
 OpenTelemetry for download diagnostics.
+
+- [2026-10-21-manifest.md](2026-10-21-manifest.md): Manifest publication
+inside GCS buckets to allow third parties to fetch and use it.

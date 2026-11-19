@@ -427,6 +427,8 @@ matrix:
       end: "2026-09-01"
     - start: "2026-09-01"
       end: "2026-10-01"
+    - start: "2026-10-01"
+      end: "2026-11-01"
   granularities:
     - country
     - country_asn

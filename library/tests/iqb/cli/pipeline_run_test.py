@@ -252,7 +252,10 @@ class TestPipelineRunForceFlag:
 
 
 class TestPipelineRunMultipleEntries:
-    """Multiple granularities x date ranges produce multiple sync_mlab calls."""
+    """Multiple granularities x date ranges produce multiple sync_mlab calls.
+
+    Without --since, all time periods are synced (compare TestPipelineRunSinceFilters).
+    """
 
     @patch("iqb.cli.pipeline_run.IQBPipeline")
     @patch("iqb.cli.pipeline_run.Pipeline")
@@ -270,6 +273,112 @@ class TestPipelineRunMultipleEntries:
         )
         assert result.exit_code == 0
         assert mock_pipeline.sync_mlab.call_count == 4
+        starts = {c.kwargs["start_date"] for c in mock_pipeline.sync_mlab.call_args_list}
+        assert starts == {"2024-10-01", "2024-11-01"}
+
+
+class TestPipelineRunDryRun:
+    """-n/--dry-run skips sync_mlab entirely."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_dry_run_skips_sync(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _MULTI_CONFIG)
+        mock_pipeline = MagicMock()
+        mock_pipeline_cls.return_value = mock_pipeline
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["pipeline", "run", "-d", str(tmp_path), "-n"])
+        assert result.exit_code == 0
+        mock_pipeline.sync_mlab.assert_not_called()
+
+
+class TestPipelineRunSinceInvalid:
+    """--since with an invalid date fails before syncing."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_since_invalid(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _MULTI_CONFIG)
+        mock_pipeline = MagicMock()
+        mock_pipeline_cls.return_value = mock_pipeline
+
+        runner = CliRunner()
+        result = runner.invoke(cli, ["pipeline", "run", "-d", str(tmp_path), "--since", "garbage"])
+        assert result.exit_code != 0
+        assert "must be like YYYY-MM-DD" in result.output
+        mock_pipeline.sync_mlab.assert_not_called()
+
+
+class TestPipelineRunSinceNormalizes:
+    """--since normalizes a valid but non-canonical date before filtering."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_since_normalizes(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _MULTI_CONFIG)
+        mock_pipeline = MagicMock()
+        mock_pipeline_cls.return_value = mock_pipeline
+
+        # Compared as a raw string, "2024-11-1" sorts after both window starts
+        # and would select nothing. Normalized to "2024-11-01", it keeps November.
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["pipeline", "run", "-d", str(tmp_path), "--since", "2024-11-1"]
+        )
+        assert result.exit_code == 0
+        assert mock_pipeline.sync_mlab.call_count == 2
+        starts = {c.kwargs["start_date"] for c in mock_pipeline.sync_mlab.call_args_list}
+        assert starts == {"2024-11-01"}
+
+
+class TestPipelineRunSinceFilters:
+    """--since drops time periods starting before the given date (inclusive)."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_since_filters(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _MULTI_CONFIG)
+        mock_pipeline = MagicMock()
+        mock_pipeline_cls.return_value = mock_pipeline
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["pipeline", "run", "-d", str(tmp_path), "--since", "2024-11-01"]
+        )
+        assert result.exit_code == 0
+        assert mock_pipeline.sync_mlab.call_count == 2
+        starts = {c.kwargs["start_date"] for c in mock_pipeline.sync_mlab.call_args_list}
+        assert starts == {"2024-11-01"}
+
+
+class TestPipelineRunSinceExcludesAll:
+    """--since after every time period fails before syncing."""
+
+    @patch("iqb.cli.pipeline_run.IQBPipeline")
+    @patch("iqb.cli.pipeline_run.Pipeline")
+    def test_since_excludes_all(
+        self, mock_pipeline_cls: MagicMock, mock_iqb_pipeline_cls: MagicMock, tmp_path: Path
+    ):
+        _write_config(tmp_path / "pipeline.yaml", _MULTI_CONFIG)
+        mock_pipeline = MagicMock()
+        mock_pipeline_cls.return_value = mock_pipeline
+
+        runner = CliRunner()
+        result = runner.invoke(
+            cli, ["pipeline", "run", "-d", str(tmp_path), "--since", "2025-01-01"]
+        )
+        assert result.exit_code != 0
+        assert "excluded all time periods" in result.output
+        mock_pipeline.sync_mlab.assert_not_called()
 
 
 class TestPipelineRunSyncFailure:
